@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+
+<Project Name="luaos.luaprj" Cmd="" Arg="" Dir="" Toggle="false" >
+    <Filter RelativePath=".\lua" Toggle="false" >
+        <LuaFile RelativePath=".\main.lua" />
+        <Filter RelativePath=".\wwwroot" Toggle="false" >
+            <LuaFile RelativePath=".\index.lua" />
+        </Filter>
+    </Filter>
+    <Filter RelativePath=".\usr" Toggle="false" >
+        <LuaFile RelativePath=".\luaos.lua" />
+        <Filter RelativePath=".\luaos" Toggle="false" >
+            <LuaFile RelativePath=".\bind.lua" />
+            <LuaFile RelativePath=".\classy.lua" />
+            <LuaFile RelativePath=".\conv.lua" />
+            <LuaFile RelativePath=".\curl.lua" />
+            <LuaFile RelativePath=".\heap.lua" />
+            <LuaFile RelativePath=".\random.lua" />
+            <LuaFile RelativePath=".\try.lua" />
+            <Filter RelativePath=".\nginx" Toggle="false" >
+                <LuaFile RelativePath=".\init.lua" />
+            </Filter>
+            <LuaFile RelativePath=".\parser.lua" />
+        </Filter>
+        <Filter RelativePath=".\prototype" Toggle="true" >
+            <LuaFile RelativePath=".\socket.lua" />
+            <LuaFile RelativePath=".\timingwheel.lua" />
+            <LuaFile RelativePath=".\job.lua" />
+        </Filter>
+    </Filter>
+</Project>

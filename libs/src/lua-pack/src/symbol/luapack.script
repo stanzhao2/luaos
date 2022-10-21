@@ -1,0 +1,9 @@
+VERS_1.0
+{
+    global:	
+	luaopen_pack;
+	luaopen_pack_safe;
+
+    local:
+        *;
+};

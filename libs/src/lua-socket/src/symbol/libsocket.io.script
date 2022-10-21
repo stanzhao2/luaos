@@ -1,0 +1,13 @@
+VERS_1.0
+{
+    global:
+    ltcp_create;
+	ltcp_close;
+	ltcp_connect;
+    ltcp_wait;
+    ltcp_send;
+    ltcp_update;
+
+    local:
+        *;
+};
