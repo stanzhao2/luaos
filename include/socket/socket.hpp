@@ -597,8 +597,8 @@ namespace eth
           )
         );
       }
-  };
-} //end of namespace udp
+    };
+  } //end of namespace udp
 
   namespace tcp
   {
