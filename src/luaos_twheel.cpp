@@ -188,7 +188,7 @@ LUALIB_API int lua_os_twheel_add_time(lua_State* L)
   lua_pushvalue(L, index++);
   c->ptw    = ptw;
   c->handle = luaL_ref(L, LUA_REGISTRYINDEX);
-  c->L      = L;
+  c->L      = this_thread().lua_state();
 
   int top = lua_gettop(L);
   for (int i = index; i <= top; i++) {
