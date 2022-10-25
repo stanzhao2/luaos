@@ -54,6 +54,10 @@ int main()
 #include <os/os.h>
 #include <asio.hpp>
 
+#ifdef TLS_SSL_ENABLE
+#include <asio/ssl.hpp>
+#endif
+
 #include "identifier.h"
 #include "decoder.h"
 #include "circular_buffer.h"
@@ -600,6 +604,115 @@ namespace eth
     };
   } //end of namespace udp
 
+  namespace tls
+  {
+#ifdef TLS_SSL_ENABLE
+    typedef ssl::context ssl_context;
+    typedef ssl::stream_base::handshake_type handshake_type;
+
+    class socket : public ip::tcp::socket
+    {
+      typedef ip::tcp::socket parent;
+      typedef ssl::stream<socket&> ssl_stream;
+      ssl_stream *_stream;
+
+      template <typename Handler>
+      inline void handshake(Handler handler)
+      {
+        error_code ec;
+        post(
+          get_executor(),
+          std::bind([handler](const error_code& ec) { handler(ec); }, ec)
+        );
+      }
+
+    public:
+      template <typename ExecutionContext>
+      inline explicit socket(ExecutionContext& context)
+        : parent(context)
+        , _stream(nullptr) {
+      }
+
+      virtual ~socket() {
+        delete _stream;
+      }
+
+      inline void ssl_enable(ssl_context& sslctx) {
+        _stream = new ssl_stream(*this, sslctx);
+      }
+
+      inline void handshake(handshake_type type, error_code& ec) {
+        _stream ? _stream->handshake(type, ec) : ec.clear();
+      }
+
+      template <typename Handler>
+      inline void async_handshake(handshake_type type, Handler handler) {
+        _stream ? _stream->async_handshake(type, handler) : handshake(handler);
+      }
+
+      template <typename MutableBuffers>
+      inline size_t receive(const MutableBuffers& buffers, int flag, error_code& ec) {
+        return _stream ? _stream->read_some(buffers, ec) : read_some(buffers, ec);
+      }
+
+      template <typename MutableBuffers, typename Handler>
+      inline void async_receive(const MutableBuffers& buffers, Handler handler) {
+        _stream ? _stream->async_read_some(buffers, handler) : async_read_some(buffers, handler);
+      }
+
+      template <typename MutableBuffers>
+      inline size_t send(const MutableBuffers& buffers, int flag, error_code& ec) {
+        return _stream ? write(*_stream, buffers, ec) : write(*this, buffers, ec);
+      }
+
+      template <typename MutableBuffers, typename Handler>
+      inline void async_send(const MutableBuffers& buffers, Handler handler) {
+        _stream ? async_write(*_stream, buffers, handler) : async_write(*this, buffers, handler);
+      }
+    };
+#else
+    enum struct handshake_type {
+      /// Perform handshaking as a client.
+      client,
+      /// Perform handshaking as a server.
+      server
+    };
+
+    class socket : public ip::tcp::socket {
+      typedef ip::tcp::socket parent;
+
+    public:
+      template <typename ExecutionContext>
+      inline explicit socket(ExecutionContext& context)
+        : parent(context) {
+      }
+
+      inline void handshake(handshake_type type, error_code& ec) {
+        ec.clear();
+      }
+
+      template <typename Handler>
+      inline void async_handshake(handshake_type type, Handler handler) {
+        error_code ec;
+        post(
+          get_executor(),
+          std::bind([handler](const error_code& ec) { handler(ec); }, ec)
+        );
+      }
+
+      template <typename MutableBuffers>
+      inline size_t send(const MutableBuffers& buffers, int flag, error_code& ec) {
+        return write(*this, buffers, ec);
+      }
+
+      template <typename MutableBuffers, typename Handler>
+      inline void async_send(const MutableBuffers& buffers, Handler handler) {
+        async_write(*this, buffers, handler);
+      }
+    };
+#endif
+  } //end of namespace tls
+
   namespace tcp
   {
     static ip::tcp::resolver::results_type resolve(const char* host, unsigned short port, error_code& ec)
@@ -614,17 +727,17 @@ namespace eth
       return resolver.resolve(host, service, ec);
     }
 
-    class socket : public ip::tcp::socket
+    class socket : public tls::socket
       , public std::enable_shared_from_this<socket>
     {
       friend class eth::socket;
-      typedef ip::tcp::socket parent;
+      typedef tls::socket parent;
       typedef std::shared_ptr<socket> ref;
 
-      inline socket(reactor_type ios)
+      inline explicit socket(reactor_type ios)
         : parent(*ios)
         , _timer(*ios)
-        , _ios(ios)
+        , _ios  ( ios)
         , _acceptor(0)
         , _tmsend  (0)
         , _tmrecv  (0)
@@ -633,7 +746,7 @@ namespace eth
         , _closed (false)
         , _sending(false) {
       }
-
+#if 0
       inline socket& operator=(socket&& r) noexcept
       {
         assert(!is_open());
@@ -642,7 +755,7 @@ namespace eth
         parent::operator=(std::move(r));
         return *this;
       }
-
+#endif
       inline static ref create(reactor_type ios)
       {
         return ref(new socket(ios));
@@ -789,8 +902,7 @@ namespace eth
         _widx = 1 - index;
         size = _min_size(size, async_send_size);
 
-        async_write(
-          *this,
+        parent::async_send(
           buffer(cache(index).data(), size),
           std::bind(
           &socket::commit, shared_from_this(), placeholders1, placeholders2, handler
@@ -1166,7 +1278,7 @@ namespace eth
 
   private:
     socket(reactor_type ios, family mode)
-      : _reactor(ios), _context(0)
+      : _reactor(ios), _context(0), _is_server(true)
     {
       assert(ios);
       switch (mode)
@@ -1197,6 +1309,7 @@ namespace eth
     reactor_type      _reactor;
     encoder           _encoder;
     decoder           _decoder;
+    bool              _is_server;
     tcp::socket::ref  _tcp; //tcp socket
     udp::socket::ref  _udp; //udp socket
 
@@ -1206,7 +1319,7 @@ namespace eth
       assert(ios);
       return ref(new socket(ios, mode));
     }
-
+#if 0
     inline ref swap(ref other)
     {
       if (other->_tcp) {
@@ -1217,7 +1330,7 @@ namespace eth
       }
       return shared_from_this();
     }
-
+#endif
     inline reactor_type service() const
     {
       return _reactor;
@@ -1251,6 +1364,21 @@ namespace eth
     inline void close(bool linger = true)
     {
       _tcp ? _tcp->close(linger) : _udp->close(linger);
+    }
+
+#ifdef TLS_SSL_ENABLE
+    inline void ssl_enable(tls::ssl_context& ctx)
+    {
+      assert(_tcp);
+      _tcp->ssl_enable(ctx);
+    }
+
+#endif
+
+    inline void handshake(error_code& ec)
+    {
+      assert(_tcp);
+      _tcp->handshake((_is_server ? tls::handshake_type::server : tls::handshake_type::client), ec);
     }
 
     inline size_t timeout() const
@@ -1330,17 +1458,20 @@ namespace eth
     error_code connect(const ip::udp::endpoint& remote, size_t timeout = 5000)
     {
       assert(_udp);
+      _is_server = false;
       return _udp->connect(remote, timeout);
     }
 
     error_code connect(const ip::tcp::endpoint& remote, size_t timeout = 5000)
     {
       assert(_tcp);
+      _is_server = false;
       return _tcp->connect(remote, timeout);
     }
 
     error_code connect(const ip::address& addr, unsigned short port, size_t timeout = 5000)
     {
+      _is_server = false;
       return _tcp ? _tcp->connect(
         ip::tcp::endpoint(addr, port), timeout
       ) : _udp->connect(
@@ -1351,6 +1482,7 @@ namespace eth
     error_code connect(const char* host, unsigned short port, size_t timeout = 5000)
     {
       assert(host && port);
+      _is_server = false;
       return _tcp ? _tcp->connect(host, port, timeout) : _udp->connect(host, port, timeout);
     }
 
@@ -1552,6 +1684,12 @@ namespace eth
     }
 
   public:
+    template <typename Option>
+    inline error_code set_option(const Option& option)
+    {
+      return _tcp ? _tcp->set_option(option) : _udp->set_option(option);
+    }
+
     //Handler: void(const error_code& /* ec */, size_t /* size */);
     template <typename Handler>
     error_code bind(unsigned short port, const char* host, Handler handler)
@@ -1576,12 +1714,6 @@ namespace eth
         async_accept(handler);
       }
       return ec;
-    }
-
-    template <typename Option>
-    inline error_code set_option(const Option& option)
-    {
-      return _tcp ? _tcp->set_option(option) : _udp->set_option(option);
     }
 
     //Handler: void(const error_code& /* ec */);
@@ -1639,6 +1771,14 @@ namespace eth
           &socket::on_accept, shared_from_this(), placeholders1, peer, keep_on, (Acceptor)handler
         )
       );
+    }
+
+    //Handler: void(const error_code& /* ec */);
+    template <typename Handler>
+    void async_handshake(Handler handler)
+    {
+      assert(_tcp);
+      _tcp->async_handshake((_is_server ? tls::handshake_type::server : tls::handshake_type::client), handler);
     }
 
     //Handler: void(const error_code& /* ec */, size_t /* size */);

@@ -25,9 +25,21 @@ enum struct family_type {
   acceptor = 2
 };
 
+#ifdef TLS_SSL_ENABLE
+struct shared_ctx {
+  shared_ctx(ssl::context_base::method method)
+    : ctx(new tls::ssl_context(method)) {
+  }
+  std::shared_ptr<tls::ssl_context> ctx;
+};
+#endif
+
 class lua_socket final {
   family_type      _type;
   socket_type      _socket;
+#ifdef TLS_SSL_ENABLE
+  std::shared_ptr<tls::ssl_context> _ctx;
+#endif
 
 public:
   lua_socket(socket::ref, family_type);
@@ -65,6 +77,21 @@ public:
   inline bool is_acceptor() const {
     return _type == family_type::acceptor;
   }
+#ifdef TLS_SSL_ENABLE
+  inline void ssl_enable(std::shared_ptr<tls::ssl_context> ctx) {
+    _ctx = ctx;
+    _socket->ssl_enable(*ctx);
+  }
+#endif
+  inline bool handshake() {
+    error_code ec;
+    _socket->handshake(ec);
+    return ec.value() == 0;
+  }
+  template <typename Handler>
+  void handshake(Handler handler) {
+    _socket->async_handshake(handler);
+  }
   template <typename Handler>
   size_t decode(const char* data, size_t size, int& ec, Handler handler)
   {
@@ -101,28 +128,41 @@ public:
   static const char* metatable_name();
   static void init_metatable(lua_State* L);
   static lua_socket** check_metatable(lua_State* L);
+
+  static const char* ssl_metatable_name();
+  static void init_ssl_metatable(lua_State* L);
+
+#ifdef TLS_SSL_ENABLE
+  static shared_ctx** check_ssl_metatable(lua_State* L, int index = 1);
+#endif
 };
 
 /*******************************************************************************/
 
-LUALIB_API int lua_os_socket             (lua_State* L);
-LUALIB_API int lua_os_socket_close       (lua_State* L);
-LUALIB_API int lua_os_socket_gc          (lua_State* L);
-LUALIB_API int lua_os_socket_id          (lua_State* L);
-LUALIB_API int lua_os_socket_is_open     (lua_State* L);
-LUALIB_API int lua_os_socket_timeout     (lua_State* L);
-LUALIB_API int lua_os_socket_bind        (lua_State* L);
-LUALIB_API int lua_os_socket_listen      (lua_State* L);
-LUALIB_API int lua_os_socket_connect     (lua_State* L);
-LUALIB_API int lua_os_socket_endpoint    (lua_State* L);
-LUALIB_API int lua_os_socket_nodelay     (lua_State* L);
-LUALIB_API int lua_os_socket_select      (lua_State* L);
-LUALIB_API int lua_os_socket_encode      (lua_State* L);
-LUALIB_API int lua_os_socket_send        (lua_State* L);
-LUALIB_API int lua_os_socket_send_to     (lua_State* L);
-LUALIB_API int lua_os_socket_available   (lua_State* L);
-LUALIB_API int lua_os_socket_decode      (lua_State* L);
-LUALIB_API int lua_os_socket_receive     (lua_State* L);
-LUALIB_API int lua_os_socket_receive_from(lua_State* L);
+LUALIB_API int lua_os_socket              (lua_State* L);
+LUALIB_API int lua_os_socket_close        (lua_State* L);
+LUALIB_API int lua_os_socket_gc           (lua_State* L);
+LUALIB_API int lua_os_socket_id           (lua_State* L);
+LUALIB_API int lua_os_socket_is_open      (lua_State* L);
+LUALIB_API int lua_os_socket_timeout      (lua_State* L);
+LUALIB_API int lua_os_socket_bind         (lua_State* L);
+LUALIB_API int lua_os_socket_listen       (lua_State* L);
+LUALIB_API int lua_os_socket_connect      (lua_State* L);
+LUALIB_API int lua_os_socket_endpoint     (lua_State* L);
+LUALIB_API int lua_os_socket_nodelay      (lua_State* L);
+LUALIB_API int lua_os_socket_select       (lua_State* L);
+LUALIB_API int lua_os_socket_encode       (lua_State* L);
+LUALIB_API int lua_os_socket_send         (lua_State* L);
+LUALIB_API int lua_os_socket_send_to      (lua_State* L);
+LUALIB_API int lua_os_socket_available    (lua_State* L);
+LUALIB_API int lua_os_socket_decode       (lua_State* L);
+LUALIB_API int lua_os_socket_receive      (lua_State* L);
+LUALIB_API int lua_os_socket_receive_from (lua_State* L);
+
+LUALIB_API int lua_os_socket_ssl_context  (lua_State* L);
+LUALIB_API int lua_os_socket_ssl_enable   (lua_State* L);
+LUALIB_API int lua_os_socket_ssl_gc       (lua_State* L);
+LUALIB_API int lua_os_socket_ssl_close    (lua_State* L);
+LUALIB_API int lua_os_socket_ssl_handshake(lua_State* L);
 
 /*******************************************************************************/

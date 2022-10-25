@@ -148,6 +148,7 @@ static void init_metatable(lua_State* L)
   storage::init_metatable(L);
   lua_job::init_metatable(L);
   lua_socket::init_metatable(L);
+  lua_socket::init_ssl_metatable(L);
 }
 
 static void signal_handler(int code)
