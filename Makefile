@@ -14,7 +14,7 @@ subsystem:
 	
 	cd $(SUBDIR3) && $(MAKE) clean && $(MAKE)
 	
-	cd $(SUBDIR4) && $(MAKE) clean && $(MAKE)
+	cd $(SUBDIR4) && $(MAKE) clean && $(MAKE) $(SSL)
 	
 	@echo "==== Successfully built LuaOS ===="
 	

@@ -38,7 +38,7 @@ LIBDIRS := -L$(LUA_LIBDIR) -L$(PREFIX)/lib -L$(MINIZIP_DIR)
 INCDIRS := $(LUA_INCLUDE) -I$(PREFIX)/include -I$(MINIZIP_DIR) -I../include -I../3rd/asio
 
 #precompile macro
-CC_FLAG :=
+CC_FLAG := $(SSL)
 
 #compile options
 COMPILEOPTION := -std=c++11 -fPIC -w -Wfatal-errors -O3 -pipe -m64
@@ -50,7 +50,7 @@ LIBLOADPATH := -Wl,-rpath=./ -Wl,-rpath=./lib -Wl,-rpath=/usr/local/lib
 LINKOPTION := -o $(OUTPUT) $(LIBLOADPATH)
 
 #dependency librarys
-LIBS := -llua -lunz -lz -ldl -lpthread -ltcmalloc
+LIBS := -llua -lunz -lz -ldl -lcrypto -lssl -lpthread -ltcmalloc
 
 ########################## OPTIONS END ############################
 
