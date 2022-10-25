@@ -676,23 +676,26 @@ local function on_http_callback(session, request)
 end
 
 local function on_socket_error(peer, ec)
-	if _ws_recv_handler then
-		luaos.pcall(_ws_recv_handler, peer, ec);
+	local fd = peer:id();
+	
+	if fd > 0 then
+		local session = sessions[fd];
+		if session and session.upgrade then
+			if _ws_recv_handler then
+				luaos.pcall(_ws_recv_handler, peer, ec);
+			end
+		end
+		sessions[fd] = nil;
 	end
 	
 	if peer:is_open() then
 		peer:close();
 	end
-	
-	local fd = peer:id()
-	if fd then
-		sessions[fd] = nil;
-	end
 end
 
 local function on_socket_receive(peer, ec, data)
 	if ec > 0 then
-		on_socket_error(peer, ec);
+		luaos.pcall(on_socket_error, peer, ec);
 		return;
 	end
 	
