@@ -3,7 +3,7 @@
 <Project Name="luaos.luaprj" Cmd="" Arg="" Dir="" Toggle="false" >
     <Filter RelativePath=".\lua" Toggle="false" >
         <LuaFile RelativePath=".\main.lua" />
-        <Filter RelativePath=".\wwwroot" Toggle="false" >
+        <Filter RelativePath=".\wwwroot" Toggle="true" >
             <LuaFile RelativePath=".\index.lua" />
         </Filter>
     </Filter>

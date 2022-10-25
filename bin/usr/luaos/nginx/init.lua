@@ -396,10 +396,255 @@ local function on_http_request(peer, request)
 end
 
 ----------------------------------------------------------------------------
+--[=[
+0                   1                   2                   3
+0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-------+-+-------------+-------------------------------+
+|F|R|R|R| opcode|M| Payload len |    Extended payload length    |
+|I|S|S|S|  (4)  |A|     (7)     |             (16/64)           |
+|N|V|V|V|       |S|             |   (if payload len==126/127)   |
+| |1|2|3|       |K|             |                               |
++-+-+-+-+-------+-+-------------+ - - - - - - - - - - - - - - - +
+|     Extended payload length continued, if payload len == 127  |
++ - - - - - - - - - - - - - - - +-------------------------------+
+|                               |Masking-key, if MASK set to 1  |
++-------------------------------+-------------------------------+
+| Masking-key (continued)       |          Payload Data         |
++-------------------------------- - - - - - - - - - - - - - - - +
+:                     Payload Data continued ...                :
++ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
+|                     Payload Data continued ...                |
++---------------------------------------------------------------+
+--]=]
+
+local op_code = {
+    ["frame" ] =  0x00,
+    ["text"  ] =  0x01,
+    ["binary"] =  0x02,
+    ["close" ] =  0x08,
+    ["ping"  ] =  0x09,
+    ["pong"  ] =  0x0A,
+    [ 0x00   ] = "frame",
+    [ 0x01   ] = "text",
+    [ 0x02   ] = "binary",
+    [ 0x08   ] = "close",
+    [ 0x09   ] = "ping",
+    [ 0x0A   ] = "pong",
+}
+
+local _WS_MAX_PACKET <const> = 64 * 1024 * 1024
+local _ws_recv_handler   = nil;
+local _ws_accept_handler = nil;
+
+local function ws_encode(data, op, deflate)
+	if op == nil then
+		op = op_code["text"];
+	end
+	
+	local flag = 0x80
+	if deflate then
+		flag = 0xC0
+		data = gzip.deflate(data, false)
+	end
+	
+	local size = #data
+	local cache = {}
+	table_insert(cache, string_pack("B", op | flag))
+	
+	if size < 126 then
+		table_insert(cache, string_pack("B", size))
+	elseif size <= 0xffff then
+		table_insert(cache, string_pack("B", 126))
+		table_insert(cache, string_pack(">I2", size))
+	else
+		table_insert(cache, string_pack("B", 127))
+		table_insert(cache, string_pack(">I8", size))
+	end
+	
+	table_insert(cache, string_pack("c" .. size, data))
+	return table_concat(cache)
+end
+
+local _ws_socket = {peer = false};
+
+function _ws_socket:send(data, opcode, deflate)
+	data = ws_encode(data, opcode, deflate);
+	self.peer:send(data);
+end
+
+local function on_ws_request(session, fin, data, op, deflate)
+	local peer = session.peer
+    if op == op_code.close then
+		peer:close();
+        return
+    end
+    
+    if op == op_code.ping then
+        local s = string_pack("B", op_code.pong)
+        s = s .. string_pack("B", 0)
+		peer:send(s);
+        return
+    end
+    
+    if not fin then
+        if not session.packet then
+            session.pktlen = 0
+            session.packet = {}
+        end
+		
+        table_insert(session.packet, data)
+        session.pktlen = session.pktlen + #data
+		
+        if session.pktlen > _WS_MAX_PACKET then
+            error("payload len too big")
+        end
+        return
+    end
+    
+    if session.packet then
+        data = table_concat(session.packet) .. data
+        session.pktlen = nil
+        session.packet = nil
+    end
+    
+	if _ws_recv_handler then
+		_ws_socket.peer = peer;
+		_ws_recv_handler(_ws_socket, 0, data, op, deflate);
+	end
+end
+
+local function on_ws_receive(session, data)
+    if session.cache and #session.cache > 0 then
+        data = table_concat(session.cache) .. data;
+        session.cache = nil;
+    end
+    
+    local offset = 1
+    local cache_size = #data
+    while cache_size > 1 do
+        local pos = offset
+        local v1, v2 = string_unpack("I1I1", data, pos)
+		
+        local fin = (v1 & 0x80) ~= 0
+        local deflate = (v1 & 0x40) ~= 0
+        -- unused flag
+        local rsv2 = (v1 & 0x20) ~= 0
+        local rsv3 = (v1 & 0x10) ~= 0
+		
+        local op   =  v1 & 0x0f
+        local mask = (v2 & 0x80) ~= 0
+		
+        local payload_len = (v2 & 0x7f)
+        local masking_key = nil
+        
+        pos = pos + 2
+        if payload_len == 126 then
+            if cache_size < pos + 1 then
+                break
+            end
+            payload_len = string_unpack(">I2", data, pos)
+            pos = pos + 2
+        elseif payload_len == 127 then
+            if cache_size < pos + 7 then
+                break
+            end
+            payload_len = string_unpack(">I8", data, pos)
+            pos = pos + 8
+        end
+        
+        if payload_len > _WS_MAX_PACKET then
+            error("payload len too big");
+			return;
+        end
+        
+        if mask then
+            if cache_size < pos + 3 then
+                break
+            end
+            masking_key = mask and string_unpack("c4", data, pos) or false
+            pos = pos + 4
+        end
+        
+        local frame_size = payload_len + pos - 1
+        if frame_size > cache_size then
+            break
+        end
+        
+        local packet = string_unpack("c" .. payload_len, data, pos)
+        if mask then
+            packet = conv.xor.convert(packet, masking_key)
+        end
+        
+        if deflate then --deflate
+            packet = gzip.inflate(packet)
+        end
+        
+		local peer = session.peer;
+		on_ws_request(session, fin, packet, op, deflate)
+        
+        pos = pos + payload_len
+        cache_size = cache_size - frame_size
+        offset = offset + frame_size
+    end
+    
+    if cache_size > 0 then
+        if not session.cache then
+            session.cache = {}
+        end
+        data = string_unpack("c" .. cache_size, data, offset)
+        table_insert(session.cache, data)
+    end
+end
+
+local function on_ws_accept(session, request)
+	local peer = session.peer;
+    local headers = default_headers();
+    local rheader = request:headers();
+	
+    local key = rheader[_HEADER_WEBSOCKET_KEY]
+    if not key then
+        on_http_error(peer, _STATE_ERROR)
+        return
+    end
+    
+    local origin = rheader["Origin"]
+    if origin then
+        headers["Access-Control-Allow-Credentials"] = "true"
+        headers["Access-Control-Allow-Origin"] = origin
+    end
+    
+    local deflate = false
+    local externs = rheader[_HEADER_WEBSOCKET_EXTENSIONS]
+    if externs then
+        local x = string_match(externs, "permessage%-deflate")
+        if x then
+            deflate = true
+            headers[_HEADER_WEBSOCKET_EXTENSIONS] = "permessage-deflate; client_no_context_takeover; server_max_window_bits=15"
+        end
+    end
+    
+    key = key .. "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+    local hash = conv.hash.sha1(key, true)
+    key = conv.base64.encode(hash)
+    
+    headers[_HEADER_CONNECTION]    = "Upgrade"
+    headers[_HEADER_UPGRADE]       = "websocket"
+    headers[_HEADER_PRAGMA]        = "no-cache"
+    headers[_HEADER_CACHE_CONTROL] = "max-age=0"
+    headers[_HEADER_WEBSOCKET_ACCEPT] = key
+    on_http_success(peer, headers, 101)
+	
+	if _ws_accept_handler then
+		_ws_accept_handler(peer);
+	end
+end
+
+----------------------------------------------------------------------------
 
 local sessions = {}
 
-local function on_http_callback(peer, request)
+local function on_http_callback(session, request)
+	local peer = session.peer;
     local method = request:method()
     if method ~= "GET" and method ~= "POST" then
 		peer:close();
@@ -408,8 +653,13 @@ local function on_http_callback(peer, request)
     
     local upgrade = request:is_upgrade()
     if upgrade then
-        peer:close()
-        return
+		if not _ws_recv_handler then
+			peer:close();
+		else
+			session.upgrade = true;
+			luaos.pcall(on_ws_accept, session, request);
+		end
+        return;
     end
     
 	local from = peer:endpoint()
@@ -426,12 +676,17 @@ local function on_http_callback(peer, request)
 end
 
 local function on_socket_error(peer, ec)
-	if peer:is_open() then
-		peer:close()
+	if _ws_recv_handler then
+		luaos.pcall(_ws_recv_handler, peer, ec);
 	end
+	
+	if peer:is_open() then
+		peer:close();
+	end
+	
 	local fd = peer:id()
 	if fd then
-		sessions[fd] = nil
+		sessions[fd] = nil;
 	end
 end
 
@@ -443,13 +698,22 @@ local function on_socket_receive(peer, ec, data)
 	
     local session = sessions[peer:id()]    
     if not session then
-        return
+        return;
     end
     
+    if session.upgrade then
+		if not _ws_recv_handler then
+			peer:close();
+		else
+			luaos.pcall(on_ws_receive, session, data);
+		end
+        return;
+    end
+	
 	local rsize = #data
     local request = session.parser
 	while rsize > 0 do
-		local errno, size = request:parse(data, bind(on_http_callback, peer))
+		local errno, size = request:parse(data, bind(on_http_callback, session))
 		if errno > 0 then
 			peer:close()
 			break
@@ -463,17 +727,9 @@ local function on_socket_receive(peer, ec, data)
 end
 
 local function on_receive_handler(peer, ec, data)
-	try {
-		function()
-			on_socket_receive(peer, ec, data)
-		end
-	}
-	.catch {
-		function(err)
-			error(err)
-			peer:close()
-		end
-	}
+	if not luaos.pcall(on_socket_receive, peer, ec, data) then
+		peer:close()
+	end
 end
 
 local function on_ssl_handshake(peer, ec)
@@ -506,6 +762,11 @@ end
 
 local nginx = {}
 
+function nginx.upgrade(receive_callback, handshake_callback)
+	_ws_recv_handler = receive_callback;
+	_ws_accept_handler = handshake_callback;
+end
+
 function nginx.stop()
 	if nginx.acceptor then
 		nginx.acceptor:close();
@@ -519,7 +780,7 @@ function nginx.stop()
 	sessions = {}
 end
 
-function nginx.run(wwwroot, port, host, ctx)
+function nginx.start(host, port, wwwroot, ctx)
 	if nginx.acceptor then
 		return false
 	end
@@ -535,10 +796,9 @@ function nginx.run(wwwroot, port, host, ctx)
 	if not nginx.acceptor then
 		return false
 	end
+	
 	if ctx == nil then
 		ctx = false
-	else
-		trace("https is enabled, communication will be encrypted");
 	end
 	return nginx.acceptor:listen(host, port, bind(on_socket_accept, ctx));
 end
