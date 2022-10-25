@@ -162,7 +162,6 @@ const char* lua_socket::ssl_metatable_name()
 
 void lua_socket::init_ssl_metatable(lua_State* L)
 {
-#ifdef TLS_SSL_ENABLE
   lua_newtable(L);
   lua_pushcfunction(L, lua_os_socket_ssl_context);
   lua_setfield(L, -2, "context");
@@ -175,7 +174,6 @@ void lua_socket::init_ssl_metatable(lua_State* L)
   };
   lexnew_metatable(L, ssl_metatable_name(), methods);
   lua_pop(L, 1);
-#endif
 }
 
 #ifdef TLS_SSL_ENABLE
