@@ -63,6 +63,9 @@ local private = {
 		erase   = storage.erase,
 		clear   = storage.clear,
 	},
+	ssl = {
+		context = ssl.context,
+	},
 	socket      = io.socket,
 	deadline    = os.deadline,
 	files       = os.files,
@@ -78,6 +81,7 @@ local private = {
 }
 
 storage         = nil; --disused
+ssl             = nil; --disused
 io.socket       = nil; --disused
 os.deadline     = nil; --disused
 os.files        = nil; --disused
@@ -102,6 +106,12 @@ local luaos = {
     socket = function(family)
 		return private.socket(family);
 	end,
+	
+	ssl = {
+		context = function(cert, key, pwd)
+			return private.ssl.context(cert, key, pwd);
+		end
+	},
 	
 	---遍历目录下所有文件
 	---@param handler fun(filename:string, ext:string):void

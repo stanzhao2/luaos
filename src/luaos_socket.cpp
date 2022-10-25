@@ -117,26 +117,27 @@ void lua_socket::init_metatable(lua_State* L)
   lua_pop(L, 1); //pop os from stack
 
   struct luaL_Reg methods[] = {
-    { "__gc",         lua_os_socket_gc           },
-    { "listen",       lua_os_socket_listen       },
-    { "bind",         lua_os_socket_bind         },
-    { "connect",      lua_os_socket_connect      },
-    { "close",        lua_os_socket_close        },
-    { "is_open",      lua_os_socket_is_open      },
-    { "id",           lua_os_socket_id           },
-    { "nodelay",      lua_os_socket_nodelay      },
-    { "available",    lua_os_socket_available    },
-    { "timeout",      lua_os_socket_timeout      },
-    { "endpoint",     lua_os_socket_endpoint     },
-    { "select",       lua_os_socket_select       },
-    { "encode",       lua_os_socket_encode       },
-    { "send",         lua_os_socket_send         },
-    { "send_to",      lua_os_socket_send_to      },
-    { "decode",       lua_os_socket_decode       },
-    { "receive",      lua_os_socket_receive      },
-    { "receive_from", lua_os_socket_receive_from },
-    { "ssl_enable",   lua_os_socket_ssl_enable   },
-    { "ssl_context",  lua_os_socket_ssl_context  },
+    { "__gc",         lua_os_socket_gc            },
+    { "listen",       lua_os_socket_listen        },
+    { "bind",         lua_os_socket_bind          },
+    { "connect",      lua_os_socket_connect       },
+    { "close",        lua_os_socket_close         },
+    { "is_open",      lua_os_socket_is_open       },
+    { "id",           lua_os_socket_id            },
+    { "nodelay",      lua_os_socket_nodelay       },
+    { "available",    lua_os_socket_available     },
+    { "timeout",      lua_os_socket_timeout       },
+    { "endpoint",     lua_os_socket_endpoint      },
+    { "select",       lua_os_socket_select        },
+    { "encode",       lua_os_socket_encode        },
+    { "send",         lua_os_socket_send          },
+    { "send_to",      lua_os_socket_send_to       },
+    { "decode",       lua_os_socket_decode        },
+    { "receive",      lua_os_socket_receive       },
+    { "receive_from", lua_os_socket_receive_from  },
+    { "handshake",    lua_os_socket_ssl_handshake },
+    { "ssl_enable",   lua_os_socket_ssl_enable    },
+    { "ssl_context",  lua_os_socket_ssl_context   },
     { NULL,           NULL },
   };
   lexnew_metatable(L, metatable_name(), methods);
@@ -863,19 +864,20 @@ LUALIB_API int lua_os_socket_ssl_context(lua_State* L)
     return 0;
   }
   auto ctx = shared->ctx;
-  const char* certfile = luaL_checkstring(L, 2);
+  const char* certfile = luaL_optstring(L, 2, nullptr);
   const char* key = luaL_optstring(L, 3, nullptr);
   const char* pwd = luaL_optstring(L, 4, nullptr);
 
+  FILE* fp = nullptr;
   char buffer[1024];
-  FILE* fp = fopen(certfile, "r");
-  if (!fp) {
-    delete shared;
-    return 0;
-  }
   std::string cert;
   if (certfile)
   {
+    fp = fopen(certfile, "r");
+    if (!fp) {
+      delete shared;
+      return 0;
+    }
     while (!feof(fp)) {
       size_t n = fread(buffer, 1, sizeof(buffer), fp);
       cert.append(buffer, n);
