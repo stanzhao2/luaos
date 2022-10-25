@@ -135,9 +135,8 @@ void lua_socket::init_metatable(lua_State* L)
     { "decode",       lua_os_socket_decode        },
     { "receive",      lua_os_socket_receive       },
     { "receive_from", lua_os_socket_receive_from  },
+    { "sslv23",       lua_os_socket_ssl_enable    },
     { "handshake",    lua_os_socket_ssl_handshake },
-    { "ssl_enable",   lua_os_socket_ssl_enable    },
-    { "ssl_context",  lua_os_socket_ssl_context   },
     { NULL,           NULL },
   };
   lexnew_metatable(L, metatable_name(), methods);

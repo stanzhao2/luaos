@@ -22,7 +22,7 @@
             </Filter>
             <LuaFile RelativePath=".\parser.lua" />
         </Filter>
-        <Filter RelativePath=".\prototype" Toggle="true" >
+        <Filter RelativePath=".\prototype" Toggle="false" >
             <LuaFile RelativePath=".\socket.lua" />
             <LuaFile RelativePath=".\timingwheel.lua" />
             <LuaFile RelativePath=".\job.lua" />

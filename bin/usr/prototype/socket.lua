@@ -114,6 +114,16 @@ function i_socket:receive(size) end;
 ---@return string,string,integer|nil
 function i_socket:receive_from(size) end;
 
+---开启 socket SSL 功能
+---@param ctx ssl-context
+---@return boolean
+function i_socket:sslv23(ctx) end;
+
+---SSL 握手
+---@overload fun(handler:fun(ec:integer):void):boolean
+---@return boolean
+function i_socket:handshake() end
+
 ----------------------------------------------------------------------------
 
 return i_socket;
