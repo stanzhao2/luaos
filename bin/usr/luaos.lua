@@ -63,9 +63,6 @@ local private = {
 		erase   = storage.erase,
 		clear   = storage.clear,
 	},
-	ssl = {
-		context = ssl.context,
-	},
 	socket      = io.socket,
 	deadline    = os.deadline,
 	files       = os.files,
@@ -80,8 +77,12 @@ local private = {
 	subscribe   = os.subscribe,
 }
 
+if type(ssl) == "table" then
+	private.ssl = ssl;
+	ssl = nil; --disused
+end
+
 storage         = nil; --disused
-ssl             = nil; --disused
 io.socket       = nil; --disused
 os.deadline     = nil; --disused
 os.files        = nil; --disused
@@ -109,6 +110,9 @@ local luaos = {
 	
 	ssl = {
 		context = function(cert, key, pwd)
+			if not private.ssl then
+				return nil;
+			end
 			return private.ssl.context(cert, key, pwd);
 		end
 	},
