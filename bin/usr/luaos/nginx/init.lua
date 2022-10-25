@@ -476,7 +476,12 @@ local function on_receive_handler(peer, ec, data)
 	}
 end
 
-local function on_socket_accept(peer)
+local function on_ssl_handshake(peer, ec)
+	if ec > 0 then
+		peer:close();
+		return;
+	end
+	
     local fd      = peer:id()
     local from    = peer:endpoint()
     local session = sessions[fd]
@@ -488,6 +493,13 @@ local function on_socket_accept(peer)
         sessions[fd]   = session
 		peer:select(luaos.read, bind(on_receive_handler, peer))
     end
+end
+
+local function on_socket_accept(ctx, peer)
+	if ctx then
+		peer:sslv23(ctx);
+	end
+	peer:handshake(bind(on_ssl_handshake, peer));
 end
 
 ----------------------------------------------------------------------------
@@ -507,7 +519,7 @@ function nginx.stop()
 	sessions = {}
 end
 
-function nginx.run(wwwroot, port, host)
+function nginx.run(wwwroot, port, host, ctx)
 	if nginx.acceptor then
 		return false
 	end
@@ -523,7 +535,12 @@ function nginx.run(wwwroot, port, host)
 	if not nginx.acceptor then
 		return false
 	end
-	return nginx.acceptor:listen(host, port, on_socket_accept);
+	if ctx == nil then
+		ctx = false
+	else
+		trace("https is enabled, communication will be encrypted");
+	end
+	return nginx.acceptor:listen(host, port, bind(on_socket_accept, ctx));
 end
 
 return nginx

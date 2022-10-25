@@ -861,9 +861,9 @@ LUALIB_API int lua_os_socket_ssl_context(lua_State* L)
     return 0;
   }
   auto ctx = shared->ctx;
-  const char* certfile = luaL_optstring(L, 2, nullptr);
-  const char* key = luaL_optstring(L, 3, nullptr);
-  const char* pwd = luaL_optstring(L, 4, nullptr);
+  const char* certfile = luaL_optstring(L, 1, nullptr);
+  const char* key = luaL_optstring(L, 2, nullptr);
+  const char* pwd = luaL_optstring(L, 3, nullptr);
 
   FILE* fp = nullptr;
   char buffer[1024];
