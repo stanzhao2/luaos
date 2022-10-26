@@ -31,7 +31,7 @@ static topic_array _watchs;
 
 /*******************************************************************************/
 
-static void on_publish(int publisher, int index, const params_type& params)
+static void on_publish(size_t publisher, int index, const params_type& params)
 {
   lua_State* L = this_thread().lua_state();
   stack_checker checker(L);
@@ -40,7 +40,7 @@ static void on_publish(int publisher, int index, const params_type& params)
   int error_fn_index = lua_gettop(L);
 
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
-  lua_pushinteger(L, publisher);
+  lua_pushinteger(L, (lua_Integer)publisher);
 
   for (size_t i = 0; i < params.size(); i++) {
     lexpush_any(L, params[i]);
@@ -252,6 +252,9 @@ LUALIB_API int lua_os_publish(lua_State* L)
   size_t mask = luaL_checkinteger(L, 2);
   size_t receiver = luaL_checkinteger(L, 3);
 
+  size_t highbits = receiver >> 16;
+  receiver = receiver & 0xffff;
+
   auto this_ios = this_thread().lua_reactor();
   const int self_id = this_ios->id();
   if (receiver > 0)
@@ -289,6 +292,9 @@ LUALIB_API int lua_os_publish(lua_State* L)
     return 1;
   }
 
+  size_t publisher = self_id;
+  publisher = (highbits << 16) | publisher;
+
   if (mask > 0)
   {
     size_t i = mask % count;
@@ -296,7 +302,7 @@ LUALIB_API int lua_os_publish(lua_State* L)
       i++;
     }
     int index = items[i].index;
-    items[i].ios->post(std::bind(&on_publish, self_id, index, params));
+    items[i].ios->post(std::bind(&on_publish, publisher, index, params));
     lua_pushinteger(L, 1);
     return 1;
   }
@@ -311,7 +317,7 @@ LUALIB_API int lua_os_publish(lua_State* L)
       }
     }
     total++;
-    item->ios->post(std::bind(&on_publish, self_id, item->index, params));
+    item->ios->post(std::bind(&on_publish, publisher, item->index, params));
     if (receiver > 0) {
       break;
     }
