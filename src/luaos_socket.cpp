@@ -193,27 +193,27 @@ static void on_error(const error_code& ec, int index, socket_type peer)
   lua_State* L = this_thread().lua_state();
   stack_checker checker(L);
 
+  int sndref = (int)(size_t)peer->context();
+  if (sndref > 0) {
+    luaL_unref(L, LUA_REGISTRYINDEX, sndref);
+    peer->context(0);
+  }
+
+  lua_pushcfunction(L, lua_pcall_error);
+  int error_fn_index = lua_gettop(L);
+
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   if (!lua_isfunction(L, -1)) {
-    lua_pop(L, 1);
     return;
   }
   luaL_unref(L, LUA_REGISTRYINDEX, index);
   if (peer->is_open()) {
     peer->close();
   }
-  int sndref = (int)(size_t)peer->context();
-  if (sndref > 0) {
-    luaL_unref(L, LUA_REGISTRYINDEX, sndref);
-    peer->context(0);
-  }
+
   lua_pushinteger(L, ec.value());
   lua_pushnil(L);
-  if (lua_pcall(L, 2, 0, 0) != LUA_OK)
-  {
-    checker.disable();
-    luaos_throw_error(L);
-  }
+  lua_pcall(L, 2, 0, error_fn_index);
   collectgarbage(L); //DEBUG: for windows only
 }
 
@@ -223,32 +223,27 @@ static error_code on_read(size_t size, int index, socket_type peer)
   lua_State* L = this_thread().lua_state();
   stack_checker checker(L);
 
-  lua_rawgeti(L, LUA_REGISTRYINDEX, index);
-  if (!lua_isfunction(L, -1)) {
-    lua_pop(L, 1);
-    return error::invalid_argument;
-  }
-
   if (data.size() < size) {
     data.resize(size);
   }
-
   error_code ec;
-  lua_pushinteger(L, 0); //no error
   size = peer->receive((char*)data.c_str(), size, ec);
-  if (ec) {
+  if (ec || size == 0) {
     return ec;
   }
 
-  if (size > 0)
-  {
-    lua_pushlstring(L, data.c_str(), size);
-    if (lua_pcall(L, 2, 0, 0) != LUA_OK)
-    {
-      checker.disable();
-      peer->close();
-      luaos_throw_error(L);
-    }
+  lua_pushcfunction(L, lua_pcall_error);
+  int error_fn_index = lua_gettop(L);
+
+  lua_rawgeti(L, LUA_REGISTRYINDEX, index);
+  if (!lua_isfunction(L, -1)) {
+    return error::invalid_argument;
+  }
+
+  lua_pushinteger(L, 0); //no error
+  lua_pushlstring(L, data.c_str(), size);
+  if (lua_pcall(L, 2, 0, error_fn_index) != LUA_OK) {
+    peer->close();
   }
   return ec;
 }
@@ -272,16 +267,22 @@ static void on_receive(const error_code& ec, size_t size, int index, socket_type
 static void on_send(const error_code& ec, size_t size, int index, socket_type peer)
 {
   lua_State* L = this_thread().lua_state();
-  lua_rawgeti(L, LUA_REGISTRYINDEX, index);
-  if (!lua_isfunction(L, -1)) {
-    lua_pop(L, 1);
-    return;
-  }
+  stack_checker checker(L);
+
   if (ec) {
     peer->close();
   }
+
+  lua_pushcfunction(L, lua_pcall_error);
+  int error_fn_index = lua_gettop(L);
+
+  lua_rawgeti(L, LUA_REGISTRYINDEX, index);
+  if (!lua_isfunction(L, -1)) {
+    return;
+  }
+
   lua_pushinteger(L, ec.value());
-  if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+  if (lua_pcall(L, 1, 0, error_fn_index) != LUA_OK) {
     peer->close();
   }
 }
@@ -290,6 +291,7 @@ static void on_accept(const error_code& ec, socket_type peer, int index, socket_
 {
   lua_State* L = this_thread().lua_state();
   stack_checker checker(L);
+
   if (ec) {
     if (!acceptor->is_open())
     {
@@ -299,28 +301,28 @@ static void on_accept(const error_code& ec, socket_type peer, int index, socket_
     return;
   }
 
-  lua_rawgeti(L, LUA_REGISTRYINDEX, index);
-  if (!lua_isfunction(L, -1)) {
-    lua_pop(L, 1);
+  lua_socket* lua_sock = new lua_socket(peer, family_type::tcp);
+  if (!lua_sock) {
     return;
   }
 
-  lua_socket* lua_sock = new lua_socket(peer, family_type::tcp);
-  if (!lua_sock) {
-    lua_pop(L, 1);
+  lua_pushcfunction(L, lua_pcall_error);
+  int error_fn_index = lua_gettop(L);
+
+  lua_rawgeti(L, LUA_REGISTRYINDEX, index);
+  if (!lua_isfunction(L, -1)) {
     return;
   }
 
   lua_socket** userdata = lexnew_userdata<lua_socket*>(L, lua_socket::metatable_name());
-  if (userdata) {
-    *userdata = lua_sock;
+  if (!userdata) {
+    delete lua_sock;
+    return;
   }
 
-  if (lua_pcall(L, 1, 0, 0) != LUA_OK)
-  {
-    checker.disable();
+  *userdata = lua_sock;
+  if (lua_pcall(L, 1, 0, error_fn_index) != LUA_OK) {
     peer->close();
-    luaos_throw_error(L);
   }
 
   if (peer->is_open()) {
@@ -338,20 +340,20 @@ static void on_connect(const error_code& ec, int index, socket_type peer)
   lua_State* L = this_thread().lua_state();
   stack_checker checker(L);
 
+  lua_pushcfunction(L, lua_pcall_error);
+  int error_fn_index = lua_gettop(L);
+
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   luaL_unref (L, LUA_REGISTRYINDEX, index);
   if (!lua_isfunction(L, -1)) {
-    lua_pop(L, 1);
     return;
   }
 
   lua_pushinteger(L, ec.value());
-  if (lua_pcall(L, 1, 0, 0) != LUA_OK)
-  {
-    checker.disable();
+  if (lua_pcall(L, 1, 0, error_fn_index) != LUA_OK) {
     peer->close();
-    luaos_throw_error(L);
   }
+
   if (peer->is_open()) {
     if (peer->timeout() == 0) {
       peer->timeout(300 * 1000);
@@ -367,19 +369,18 @@ static void on_handshake(const error_code& ec, int index, socket_type peer)
   lua_State* L = this_thread().lua_state();
   stack_checker checker(L);
 
+  lua_pushcfunction(L, lua_pcall_error);
+  int error_fn_index = lua_gettop(L);
+
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   luaL_unref (L, LUA_REGISTRYINDEX, index);
   if (!lua_isfunction(L, -1)) {
-    lua_pop(L, 1);
     return;
   }
 
   lua_pushinteger(L, ec.value());
-  if (lua_pcall(L, 1, 0, 0) != LUA_OK)
-  {
-    checker.disable();
+  if (lua_pcall(L, 1, 0, error_fn_index) != LUA_OK) {
     peer->close();
-    luaos_throw_error(L);
   }
 
   if (!peer->is_open()) {
@@ -673,15 +674,18 @@ LUALIB_API int lua_os_socket_decode(lua_State* L)
 
   int ec = 0;
   lua_socket* lua_sock = *mt;
-  size = lua_sock->decode(data, size, ec, [L](const char* p, size_t n, const decoder::header* h)
+  lua_pushcfunction(L, lua_pcall_error);
+  int error_fn_index = lua_gettop(L);
+
+  size = lua_sock->decode(data, size, ec, [L, error_fn_index](const char* p, size_t n, const decoder::header* h)
   {
     lua_pushvalue(L, 3);
     lua_pushlstring(L, p, n);
     lua_pushinteger(L, h->opcode);
-    if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
-      luaos_throw_error(L);
-    }
+    lua_pcall(L, 2, 0, error_fn_index);
   });
+
+  lua_pop(L, 1); //pop lua_pcall_error from stack
   if (ec > 0) {
     return 0;
   }

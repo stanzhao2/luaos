@@ -19,6 +19,7 @@
 
 /***********************************************************************************/
 
+#include "luaos.h"
 #include "luaos_loader.h"
 
 typedef struct {
@@ -232,13 +233,16 @@ static int ll_require(lua_State* L)
 /* private / internal */
 static int ll_dofile(lua_State* L)
 {
+  lua_pushcfunction(L, lua_pcall_error);
+  int error_fn_index = lua_gettop(L);
+
   if (ll_require(L) <= 0) {
+    lua_pop(L, 1);
     return luaL_error(L, "module %s not found", luaL_checkstring(L, -1));
   }
-  lua_rotate(L, -2, 1);
-  if (lua_pcall(L, 0, LUA_MULTRET, 0) != LUA_OK) {
-    lua_error(L);
-  }
+
+  lua_rotate(L, -3, 1);
+  lua_pcall(L, 0, LUA_MULTRET, error_fn_index);
   lua_pop(L, lua_gettop(L));
   return LUA_OK;
 }
@@ -269,22 +273,26 @@ int lua_dofile(lua_State* L, const char* filename)
   lua_getfield(L, -1, LUA_LOADER_NAME);
   lua_rawgeti(L, -1, 2);
 
-  if (lua_tocfunction(L, -1) != ll_require)
-  {
+  if (lua_tocfunction(L, -1) != ll_require) {
     lua_pop(L, 3);
     return luaL_dofile(L, filename);
   }
   lua_pop(L, 3);
+
+  lua_pushcfunction(L, lua_pcall_error);
+  int error_fn_index = lua_gettop(L);
+
   lua_pushcfunction(L, ll_dofile);
   pend = strrchr(filename, '.');
-
   if (pend) {
     lua_pushlstring(L, filename, pend - filename);
   }
   else {
     lua_pushstring(L, filename);
   }
-  return lua_pcall(L, 1, LUA_MULTRET, 0);
+  int result = lua_pcall(L, 1, LUA_MULTRET, error_fn_index);
+  lua_remove(L, (result == LUA_OK) ? -1 : -2);
+  return result;
 }
 
 /***********************************************************************************/

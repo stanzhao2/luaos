@@ -105,30 +105,13 @@ bool lua_decode(const char* filename, const char* romname, std::string& data);
 
 /*******************************************************************************/
 
-#ifdef  OS_WINDOWS
-
 class stack_checker final {
-  int _size = 0;
+  int _topidx = 0;
   bool enable = true;
   lua_State* ls = 0;
 public:
-  inline void disable() { enable = false; }
-  inline stack_checker(lua_State* L) : ls(L) { _size = lua_gettop(L); }
-  inline ~stack_checker() { if (enable) assert(lua_gettop(ls) == _size); }
+  inline stack_checker(lua_State* L) : ls(L) { _topidx = lua_gettop(L); }
+  inline ~stack_checker() { lua_settop(ls, _topidx); }
 };
-
-#define luaos_throw_error(ls) lua_error(ls)
-
-#else
-
-class stack_checker final {
-public:
-  inline void disable() {}
-  inline stack_checker(lua_State* L) {}
-};
-
-#define luaos_throw_error(ls) _printf(color_type::red, true, "%s\n", luaL_checkstring(ls, -1)); lua_pop(ls, 1);
-
-#endif
 
 /*******************************************************************************/

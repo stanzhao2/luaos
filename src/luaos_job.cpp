@@ -47,7 +47,7 @@ void lua_job::job_task(const job_params& params)
   }
 
   lua_pushcfunction(L, lua_pcall_error);
-  int eindex = lua_gettop(L);
+  int error_fn_index = lua_gettop(L);
   lua_getglobal(L, LUAOS_MAIN);
 
   if (!lua_isfunction(L, -1)) {
@@ -59,7 +59,7 @@ void lua_job::job_task(const job_params& params)
     lexpush_any(L, params[i]);
   }
 
-  lua_pcall(L, (int)params.size(), 0, eindex);
+  lua_pcall(L, (int)params.size(), 0, error_fn_index);
   lua_pop(L, lua_gettop(L));
 }
 

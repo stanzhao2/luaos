@@ -35,17 +35,16 @@ static void on_publish(int publisher, int index, const params_type& params)
   lua_State* L = this_thread().lua_state();
   stack_checker checker(L);
 
+  lua_pushcfunction(L, lua_pcall_error);
+  int error_fn_index = lua_gettop(L);
+
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   lua_pushinteger(L, publisher);
 
   for (size_t i = 0; i < params.size(); i++) {
     lexpush_any(L, params[i]);
   }
-
-  if (lua_pcall(L, (int)params.size() + 1, 0, 0) != LUA_OK) {
-    checker.disable();
-    luaos_throw_error(L);
-  }
+  lua_pcall(L, (int)params.size() + 1, 0, error_fn_index);
 }
 
 namespace luaos_subscriber

@@ -341,20 +341,18 @@ int main(int argc, char* argv[])
   else
   {
     lua_pushcfunction(L, lua_pcall_error);
-    int eindex = lua_gettop(L);
+    int error_fn_index = lua_gettop(L);
     lua_getglobal(L, LUAOS_MAIN);
 
-    if (lua_isfunction(L, -1))
-    {
+    if (lua_isfunction(L, -1)) {
       for (size_t i = 1; i < argc; i++) {
         lua_pushstring(L, argv[i]);
       }
       _printf(color_type::yellow, true, "running main function in protected mode\n");
-      lua_pcall(L, argc - 1, 0, eindex);
+      lua_pcall(L, argc - 1, 0, error_fn_index);
     }
-
-    lua_pop(L, lua_gettop(L));
   }
+  lua_pop(L, lua_gettop(L));
   if (check_thd.joinable()) {
     check_ios()->stop(), check_thd.join(); //wait for thread exit
   }

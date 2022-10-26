@@ -38,15 +38,21 @@ LUALIB_API int lua_storage_set(lua_State* L)
   if (iter != _storage.end()) {
     value = iter->second;
   }
+
+  lua_pushcfunction(L, lua_pcall_error);
+  int error_fn_index = lua_gettop(L);
+
   if (lua_isfunction(L, 2))
   {
     lua_pushvalue(L, 2);
     lexpush_any(L, value);
-    if (lua_pcall(L, 1, 1, 0) != LUA_OK) {
-      luaos_throw_error(L);
+    if (lua_pcall(L, 1, 1, error_fn_index) != LUA_OK) {
+      lua_pop(L, 2); //pop error and lua_pcall_error from stack
       return 0;
     }
   }
+
+  lua_pop(L, 1); //pop lua_pcall_error from stack
   _storage[key] = lexget_any(L, -1);
   lua_settop(L, 2);
   lexpush_any(L, value);

@@ -130,21 +130,19 @@ static void twheel_callback(void* arg)
     int handle = c->handle;
     std::list<std::any>& params = c->params;
 
-    int top = lua_gettop(L);
+    lua_pushcfunction(L, lua_pcall_error);
+    int error_fn_index = lua_gettop(L);
+
     lua_rawgeti(L, LUA_REGISTRYINDEX, handle);
-    int n = lua_type(L, -1);
-
-    auto iter = params.begin();
-    for (; iter != params.end(); iter++) {
-      lexpush_anyref(L, *iter, true);
+    if (lua_isfunction(L, -1))
+    {
+      auto iter = params.begin();
+      for (; iter != params.end(); iter++) {
+        lexpush_anyref(L, *iter, true);
+      }
+      int argc = (int)params.size();
+      lua_pcall(L, argc, 0, error_fn_index);
     }
-
-    int argc = (int)params.size();
-    if (lua_pcall(L, argc, 0, 0) != LUA_OK) {
-      checker.disable();
-      luaos_throw_error(L);
-    }
-    lua_settop(L, top);
   }
   free_handler(ptw, c);
 }

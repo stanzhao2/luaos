@@ -217,7 +217,7 @@ local function on_http_success(peer, headers, code)
     if not code then
         code = _STATE_OK
     end
-    
+	
     local text = http_status_text[code]
     local location = headers[_HEADER_LOCATION]
     if location then
@@ -280,7 +280,7 @@ local function on_http_download(peer, headers, filename, ext)
         return on_http_error(peer, headers, code)
     end
     
-    local ok, data = pcall(fs.read, fs, "a")
+    local ok, data = luaos.pcall(fs.read, fs, "a")
     fs:close()
     if not ok or not data or #data == 0 then
         return on_http_error(peer, headers, code)
@@ -379,16 +379,14 @@ local function on_http_request(peer, request)
     end
 	
     ---加载脚本文件
-    local ok, script = pcall(require, _WWWROOT .. filename)
+    local ok, script = luaos.pcall(require, _WWWROOT .. filename)
     if not ok then
-		error(script)
         return on_http_error(peer, headers, _STATE_ERROR)
     end
     
     ---运行脚本文件
-    local ok, result = pcall(script, request, headers, params)
+    local ok, result = luaos.pcall(script, request, headers, params)
     if not ok then
-		error(script)
         return on_http_error(peer, headers, _STATE_ERROR)
     end
     
@@ -663,7 +661,7 @@ local function on_http_callback(session, request)
     end
     
 	local from = peer:endpoint()
-    local ok, result = pcall(on_http_request, peer, request)
+    local ok, result = luaos.pcall(on_http_request, peer, request)
 	if not ok then
 		peer:close();
 		return;

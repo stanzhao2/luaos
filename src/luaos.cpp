@@ -334,7 +334,7 @@ LUALIB_API int lua_pcall_error(lua_State* L)
 {
   const char* err = luaL_checkstring(L, -1);
   _printf(color_type::red, true, "%s\n", err);
-  for (int i = 1; i <= 10; i++)
+  for (int i = 1; i < 100; i++)
   {
     lua_Debug ar;
     int result = lua_getstack(L, i, &ar);
@@ -391,7 +391,10 @@ LUALIB_API int lua_os_files(lua_State* L)
       std::string fullpath(path);
       fullpath += LUA_DIRSEP;
       fullpath += file.name;
-      
+
+      lua_pushcfunction(L, lua_pcall_error);
+      int error_fn_index = lua_gettop(L);
+
       lua_pushvalue(L, 1);
       lua_pushlstring(L, fullpath.c_str(), fullpath.size());
       if (!file.extension) {
@@ -400,9 +403,10 @@ LUALIB_API int lua_os_files(lua_State* L)
       else {
         lua_pushstring(L, file.extension);
       }
-      if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
-        luaos_throw_error(L);
+      if (lua_pcall(L, 2, 0, error_fn_index) != LUA_OK) {
+        lua_pop(L, 1); //pop error from stack
       }
+      lua_pop(L, 1); //pop lua_pcall_error from stack
     }
   );
   return 0;
