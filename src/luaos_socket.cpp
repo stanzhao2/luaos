@@ -392,7 +392,9 @@ LUALIB_API int lua_os_socket_bind(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
 
   lua_socket* lua_sock = *mt;
@@ -408,11 +410,16 @@ LUALIB_API int lua_os_socket_bind(lua_State* L)
   unsigned short port = (unsigned short)luaL_checkinteger(L, 3);
 
   int handler_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-  int result = lua_sock->bind(
+  error_code ec = lua_sock->bind(
     port, host, std::bind(&on_receive, placeholders1, placeholders2, handler_ref, lua_sock->get_socket())
   );
 
-  lua_pushboolean(L, result == LUA_OK ? 1 : 0);
+  if (ec) {
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, ec.message().c_str());
+    return 2;
+  }
+  lua_pushboolean(L, 1);
   return 1;
 }
 
@@ -420,7 +427,9 @@ LUALIB_API int lua_os_socket_listen(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
 
   lua_socket* lua_sock = *mt;
@@ -435,11 +444,16 @@ LUALIB_API int lua_os_socket_listen(lua_State* L)
   }
 
   int handler_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-  int result = lua_sock->listen(
+  error_code ec = lua_sock->listen(
     port, host, std::bind(&on_accept, placeholders1, placeholders2, handler_ref, lua_sock->get_socket())
   );
 
-  lua_pushboolean(L, result == LUA_OK ? 1 : 0);
+  if (ec) {
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, ec.message().c_str());
+    return 2;
+  }
+  lua_pushboolean(L, 1);
   return 1;
 }
 
@@ -447,7 +461,9 @@ LUALIB_API int lua_os_socket_connect(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
 
   int handler_ref = 0, timeout = 5000;
@@ -490,7 +506,12 @@ LUALIB_API int lua_os_socket_connect(lua_State* L)
     );
   }
 
-  lua_pushboolean(L, ec ? 0 : 1);
+  if (ec) {
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, ec.message().c_str());
+    return 2;
+  }
+  lua_pushboolean(L, 1);
   return 1;
 }
 
@@ -498,7 +519,9 @@ LUALIB_API int lua_os_socket_select(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
 
   size_t type = luaL_checkinteger(L, 2);
@@ -534,7 +557,9 @@ LUALIB_API int lua_os_socket_endpoint(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushnil(L);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
 
   ip::address addr;
@@ -553,7 +578,9 @@ LUALIB_API int lua_os_socket_encode(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushnil(L);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
 
   error_code ec;
@@ -580,21 +607,28 @@ LUALIB_API int lua_os_socket_send(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushnil(L);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
 
-  error_code ec;
   size_t size = 0;
   const char* data = luaL_checklstring(L, 2, &size);
 
+  error_code ec;
   lua_socket* lua_sock = *mt;
-  if (lexget_optboolean(L, 3, true)) {
+  if (lexget_optboolean(L, 3, false)) {
     lua_sock->send(data, size);
   }
   else {
     size = lua_sock->send(data, size, ec);
   }
 
+  if (ec) {
+    lua_pushnil(L);
+    lua_pushstring(L, ec.message().c_str());
+    return 2;
+  }
   lua_pushinteger(L, (lua_Integer)size);
   return 1;
 }
@@ -603,7 +637,9 @@ LUALIB_API int lua_os_socket_send_to(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushnil(L);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
 
   lua_socket* lua_sock = *mt;
@@ -615,12 +651,14 @@ LUALIB_API int lua_os_socket_send_to(lua_State* L)
   const char* data = luaL_checklstring(L, 2, &size);
   const char* host = luaL_checkstring(L, 3);
   unsigned short port = (unsigned short)luaL_checkinteger(L, 4);
-  bool async_send = lexget_optboolean(L, 5, true);
+  bool async_send = lexget_optboolean(L, 5, false);
 
   error_code ec;
   auto remote = udp::resolve(host, port, ec);
   if (ec) {
-    return 0;
+    lua_pushnil(L);
+    lua_pushstring(L, ec.message().c_str());
+    return 2;
   }
 
   if (async_send) {
@@ -630,6 +668,11 @@ LUALIB_API int lua_os_socket_send_to(lua_State* L)
     size = lua_sock->send_to(data, size, *remote.begin(), ec);
   }
 
+  if (ec) {
+    lua_pushnil(L);
+    lua_pushstring(L, ec.message().c_str());
+    return 2;
+  }
   lua_pushinteger(L, (lua_Integer)size);
   return 1;
 }
@@ -638,7 +681,9 @@ LUALIB_API int lua_os_socket_available(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushnil(L);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
   lua_socket* lua_sock = *mt;
   size_t available = lua_sock->get_socket()->available();
@@ -650,12 +695,19 @@ LUALIB_API int lua_os_socket_nodelay(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
 
   lua_socket* lua_sock = *mt;
   error_code ec = lua_sock->get_socket()->no_delay();
-  lua_pushboolean(L, ec ? 0 : 1);
+  if (ec) {
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, ec.message().c_str());
+    return 2;
+  }
+  lua_pushboolean(L, 1);
   return 1;
 }
 
@@ -663,7 +715,9 @@ LUALIB_API int lua_os_socket_decode(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushnil(L);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
 
   size_t size = 0;
@@ -698,7 +752,9 @@ LUALIB_API int lua_os_socket_receive(lua_State* L)
   static thread_local std::string data;
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushnil(L);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
 
   error_code ec;
@@ -717,6 +773,11 @@ LUALIB_API int lua_os_socket_receive(lua_State* L)
     return 0;
   }
 
+  if (ec) {
+    lua_pushnil(L);
+    lua_pushstring(L, ec.message().c_str());
+    return 2;
+  }
   lua_pushlstring(L, data.c_str(), size);
   return 1;
 }
@@ -726,7 +787,9 @@ LUALIB_API int lua_os_socket_receive_from(lua_State* L)
   static thread_local std::string data;
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushnil(L);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
 
   lua_socket* lua_sock = *mt;
@@ -750,6 +813,11 @@ LUALIB_API int lua_os_socket_receive_from(lua_State* L)
     return 0;
   }
 
+  if (ec) {
+    lua_pushnil(L);
+    lua_pushstring(L, ec.message().c_str());
+    return 2;
+  }
   lua_pushlstring(L, data.c_str(), size);
   lua_pushstring (L, remote.address().to_string().c_str());
   lua_pushinteger(L, remote.port());
@@ -760,7 +828,9 @@ LUALIB_API int lua_os_socket_timeout(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
 
   lua_socket* lua_sock = *mt;
@@ -777,7 +847,9 @@ LUALIB_API int lua_os_socket_id(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushnil(L);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
   lua_socket* lua_sock = *mt;
   lua_pushinteger(L, lua_sock->id());
@@ -788,7 +860,9 @@ LUALIB_API int lua_os_socket_is_open(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
   lua_socket* lua_sock = *mt;
   lua_pushboolean(L, lua_sock->is_open() ? 1 : 0);
@@ -974,7 +1048,9 @@ LUALIB_API int lua_os_socket_ssl_enable(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
 #ifdef TLS_SSL_ENABLE
   shared_ctx** userdata = lua_socket::check_ssl_metatable(L, 2);
@@ -994,7 +1070,9 @@ LUALIB_API int lua_os_socket_ssl_handshake(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
-    return 0;
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, "#1 not a socket object");
+    return 2;
   }
   int handler_ref = 0;
   if (!lua_isnoneornil(L, 2))
@@ -1007,17 +1085,22 @@ LUALIB_API int lua_os_socket_ssl_handshake(lua_State* L)
     }
   }
 
-  bool result = true;
+  error_code ec;
   lua_socket* lua_sock = *mt;
   if (handler_ref == 0) {
-    result = lua_sock->handshake();
+    ec = lua_sock->handshake();
   }
   else {
     lua_sock->handshake(
       std::bind(&on_handshake, placeholders1, handler_ref, lua_sock->get_socket())
     );
   }
-  lua_pushboolean(L, result ? 1 : 0);
+  if (ec) {
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, ec.message().c_str());
+    return 2;
+  }
+  lua_pushboolean(L, 1);
   return 1;
 }
 

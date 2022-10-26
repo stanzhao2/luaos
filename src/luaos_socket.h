@@ -83,10 +83,10 @@ public:
     _socket->ssl_enable(*ctx);
   }
 #endif
-  inline bool handshake() {
+  inline error_code handshake() {
     error_code ec;
     _socket->handshake(ec);
-    return ec.value() == 0;
+    return ec;
   }
   template <typename Handler>
   void handshake(Handler handler) {
@@ -103,17 +103,15 @@ public:
     _socket->encode(opcode, data, size, encrypt, compress, handler);
   }
   template <typename Handler>
-  int bind(unsigned short port, const char* host, Handler handler)
+  error_code bind(unsigned short port, const char* host, Handler handler)
   {
-    auto ec = _socket->bind(port, host, handler);
-    return ec.value();
+    return _socket->bind(port, host, handler);
   }
   template <typename Handler>
-  int listen(unsigned short port, const char* host, Handler handler)
+  error_code listen(unsigned short port, const char* host, Handler handler)
   {
     _type = family_type::acceptor;
-    auto ec = _socket->listen(port, host, 16, handler);
-    return ec.value();
+    return _socket->listen(port, host, 16, handler);
   }
   template <typename Handler>
   void async_connect(const char* host, unsigned short port, Handler handler) {

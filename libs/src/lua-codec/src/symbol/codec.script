@@ -1,0 +1,9 @@
+VERS_1.0
+{
+    global:
+	luaopen_codec_encoder;
+	luaopen_codec_decoder;
+
+    local:
+        *;
+};

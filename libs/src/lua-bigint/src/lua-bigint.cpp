@@ -37,27 +37,27 @@
 static int bigint_metatable(lua_State* L)
 {
   struct luaL_Reg methods[] = {
-  { "__gc",         bigint_destroy        },
-  { "__tostring",   bigint_tostring       },
-  { "__concat",     bigint_concat         },
-  { "__add",        bigint_add            },
-  { "__sub",        bigint_sub            },
-  { "__mul",        bigint_mul            },
-  { "__div",        bigint_div            },
-  { "__idiv",       bigint_div            },
-  { "__mod",        bigint_mod            },
-  { "__pow",        bigint_pow            },
-  { "__unm",        bigint_negate         },
-  { "__band",       bigint_and            },
-  { "__bor",        bigint_or             },
-  { "__bxor",       bigint_xor            },
-  { "__shl",        bigint_lshift         },
-  { "__shr",        bigint_rshift         },
-  { "__eq",         bigint_equal          },
-  { "__lt",         bigint_lt             },
-  { "__le",         bigint_le             },
-  { "tostring",     bigint_tostring       },
-  { NULL,           NULL                  }
+    { "__gc",         bigint_destroy        },
+    { "__tostring",   bigint_tostring       },
+    { "__concat",     bigint_concat         },
+    { "__add",        bigint_add            },
+    { "__sub",        bigint_sub            },
+    { "__mul",        bigint_mul            },
+    { "__div",        bigint_div            },
+    { "__idiv",       bigint_div            },
+    { "__mod",        bigint_mod            },
+    { "__pow",        bigint_pow            },
+    { "__unm",        bigint_negate         },
+    { "__band",       bigint_and            },
+    { "__bor",        bigint_or             },
+    { "__bxor",       bigint_xor            },
+    { "__shl",        bigint_lshift         },
+    { "__shr",        bigint_rshift         },
+    { "__eq",         bigint_equal          },
+    { "__lt",         bigint_lt             },
+    { "__le",         bigint_le             },
+    { "tostring",     bigint_tostring       },
+    { NULL,           NULL                  }
   };
   lexnew_metatable(L, BIGINT_NAME, methods);
   lua_pop(L, 1);
