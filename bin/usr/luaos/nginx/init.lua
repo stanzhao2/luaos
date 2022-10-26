@@ -180,6 +180,10 @@ local function http_encode_data(headers, data)
     return data
 end
 
+local function send_message(peer, data)
+	peer:send(data, true);
+end
+
 local function on_http_error(peer, headers, code)
     local cache, head = {}
     if not code then
@@ -204,8 +208,8 @@ local function on_http_error(peer, headers, code)
     end
     
     table_insert(cache, "\r\n");
-	peer:send(table_concat(cache))
-	peer:send(text)
+	send_message(peer, able_concat(cache))
+	send_message(peer, text)
 	if "close" == headers[_HEADER_CONNECTION] then
 		peer:close()
 	end
@@ -253,9 +257,9 @@ local function on_http_success(peer, headers, code)
     end
     
     table_insert(cache, "\r\n");
-	peer:send(table_concat(cache))
+	send_message(peer, table_concat(cache))
     if has_body then
-        peer:send(data)
+        send_message(peer, data)
     end
 	if "close" == headers[_HEADER_CONNECTION] then
 		peer:close()
@@ -465,9 +469,24 @@ end
 
 local _ws_socket = {peer = false};
 
+function _ws_socket:endpoint()
+	return self.peer:endpoint();
+end
+
+function _ws_socket:id()
+	return self.peer:id();
+end
+
 function _ws_socket:send(data, opcode, deflate)
 	data = ws_encode(data, opcode, deflate);
-	self.peer:send(data);
+	send_message(self.peer, data);
+end
+
+function _ws_socket:close()
+	local s = string_pack("B", op_code.close | 0x80);
+	s = s .. string_pack("B", 0);
+	send_message(self.peer, s);
+	self.peer:close();
 end
 
 local function on_ws_request(session, fin, data, op, deflate)
@@ -478,9 +497,9 @@ local function on_ws_request(session, fin, data, op, deflate)
     end
     
     if op == op_code.ping then
-        local s = string_pack("B", op_code.pong)
+        local s = string_pack("B", op_code.pong | 0x80)
         s = s .. string_pack("B", 0)
-		peer:send(s);
+		send_message(peer, s);
         return
     end
     
