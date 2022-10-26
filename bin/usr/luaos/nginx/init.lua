@@ -467,26 +467,29 @@ local function ws_encode(data, op, deflate)
 	return table_concat(cache)
 end
 
-local _ws_socket = {peer = false};
+local function wrap_ws_socket(peer)
+	local _ws_socket = {peer = peer};
 
-function _ws_socket:endpoint()
-	return self.peer:endpoint();
-end
+	function _ws_socket:endpoint()
+		return self.peer:endpoint();
+	end
 
-function _ws_socket:id()
-	return self.peer:id();
-end
+	function _ws_socket:id()
+		return self.peer:id();
+	end
 
-function _ws_socket:send(data, opcode, deflate)
-	data = ws_encode(data, opcode, deflate);
-	send_message(self.peer, data);
-end
+	function _ws_socket:send(data, opcode, deflate)
+		data = ws_encode(data, opcode, deflate);
+		send_message(self.peer, data);
+	end
 
-function _ws_socket:close()
-	local s = string_pack("B", op_code.close | 0x80);
-	s = s .. string_pack("B", 0);
-	send_message(self.peer, s);
-	self.peer:close();
+	function _ws_socket:close()
+		local s = string_pack("B", op_code.close | 0x80);
+		s = s .. string_pack("B", 0);
+		send_message(self.peer, s);
+		self.peer:close();
+	end
+	return _ws_socket;
 end
 
 local function on_ws_request(session, fin, data, op, deflate)
@@ -525,8 +528,8 @@ local function on_ws_request(session, fin, data, op, deflate)
     end
     
 	if _ws_recv_handler then
-		_ws_socket.peer = peer;
-		_ws_recv_handler(_ws_socket, 0, data, op, deflate);
+		local ws_peer = session.ws_peer;
+		_ws_recv_handler(ws_peer, 0, data, op, deflate);
 	end
 end
 
@@ -651,6 +654,7 @@ local function on_ws_accept(session, request)
     headers[_HEADER_WEBSOCKET_ACCEPT] = key
     on_http_success(peer, headers, 101)
 	
+	session.ws_peer = wrap_ws_socket(peer);
 	if _ws_accept_handler then
 		_ws_accept_handler(peer);
 	end
