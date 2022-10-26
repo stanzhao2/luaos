@@ -693,7 +693,7 @@ end
 
 local function on_socket_receive(peer, ec, data)
 	if ec > 0 then
-		luaos.pcall(on_socket_error, peer, ec);
+		on_socket_error(peer, ec);
 		return;
 	end
 	
@@ -706,7 +706,7 @@ local function on_socket_receive(peer, ec, data)
 		if not _ws_recv_handler then
 			peer:close();
 		else
-			luaos.pcall(on_ws_receive, session, data);
+			on_ws_receive(session, data);
 		end
         return;
     end
