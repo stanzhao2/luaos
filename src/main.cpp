@@ -197,6 +197,7 @@ lua_State* new_lua_state()
 }
 
 static int __deadline_time = 30;
+static std::map<std::string, std::string> params;
 static std::map<lua_State*, int> __lua_runtime;
 
 LUALIB_API int lua_os_deadline(lua_State* L)
@@ -269,6 +270,12 @@ static void check_thread()
   }
 }
 
+const char* get_params(const std::string& key)
+{
+  auto iter = params.find(key);
+  return iter == params.end() ? 0 : iter->second.c_str();
+}
+
 int main(int argc, char* argv[])
 {
 #ifndef OS_WINDOWS
@@ -282,6 +289,11 @@ int main(int argc, char* argv[])
   std::string rundir = dir::current();
   int result = chdir(rundir.c_str());
 
+  if ((argc - 1) & 1) {
+    _printf(color_type::red, true, "invalid arguments\n");
+    return 0;
+  }
+
 #ifdef OS_WINDOWS
   char env[2048] = { ".\\lib;" };
   GetEnvironmentVariableA("PATH", env + 6, sizeof(env) - 6);
@@ -294,27 +306,25 @@ int main(int argc, char* argv[])
     return 0;
   }
 
-  if (argc > 1) {
-    rom_fname = argv[1];
+  for (int i = 1; i < argc; i += 2)
+  {
+    if (argv[i][0] != '-') {
+      _printf(color_type::red, true, "invalid argument: %s\n", argv[i]);
+      return 0;
+    }
+    params[argv[i]] = argv[i + 1];
   }
 
-  if (argc > 2)
+  const char* compile = get_params("-c");
+  if (compile)
   {
-    const char* option = argv[2];
-    //compiling lua files
-    if (strcmp(option, "-c") == 0) {
-      _printf(color_type::yellow, true, "compiling lua files...\n");
-      lua_compile(rom_fname);
-      _printf(color_type::yellow, true, "compilation completed\n");
-    }
-    else {
-      _printf(
-        color_type::red, true, "unknown command parameter: %s\n", option
-      );
-    }
+    _printf(color_type::yellow, true, "compiling lua files...\n");
+    lua_compile(compile);
+    _printf(color_type::yellow, true, "compilation completed\n");
     return printf("\n"), 0;
   }
 
+  rom_fname = get_params("-r");
   if (rom_fname)
   {
     if (access(rom_fname, 0) < 0) {
