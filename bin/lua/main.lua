@@ -2,12 +2,12 @@
 
 local luaos = require("luaos")
 
-local function on_ws_receive(peer, ec, data, op, deflate)
+local function on_ws_receive(peer, ec, data, opcode, deflate)
 	if ec > 0 then
 		trace("websocket error: ", ec);
 		return;
 	end
-	peer:send(data, op, deflate);
+	peer:send(data, opcode, deflate);
 end
 
 function main()

@@ -77,6 +77,8 @@ local private = {
 	wait        = os.wait,
 	stopped     = os.stopped,
 	publish     = os.publish,
+	watch       = os.watch,
+	cancel      = os.cancel,
 	subscribe   = os.subscribe,
 }
 
@@ -93,6 +95,8 @@ os.exit         = nil; --disused
 os.wait         = nil; --disused
 os.stopped      = nil; --disused
 os.publish      = nil; --disused
+os.cancel       = nil; --disused
+os.watch        = nil; --disused
 os.subscribe    = nil; --disused
 
 ----------------------------------------------------------------------------
@@ -184,8 +188,14 @@ local luaos = {
 	
 	---取消一个消息订阅
 	---@param id integer
-    cancel = function(id)
-		return private.cancel(id);
+    cancel = function(topic)
+		return private.cancel(topic);
+	end,
+	
+	---取消一个消息订阅
+	---@param id integer
+    watch = function(topic, handler)
+		return private.watch(topic, handler);
 	end,
 	
 	---订阅一个系统消息
