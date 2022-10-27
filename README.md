@@ -9,7 +9,8 @@
 5. 内置全局存储 (storage)，可以让不同的 lua 虚拟机实现数据共享；
 6. 内置常用编码/HASH算法，包括 md5, sha, base64 等，还包括rsa加密签名等功能；
 7. 内置 curl 模块，方便程序调用外部 http/https 接口；
-8. 使用简单，只需要 local luaos = require("luaos") 即可包含所有功能
+8. 内置集群模块，可以让多个 LuaOS 组建成集群；
+9. 使用简单，只需要 local luaos = require("luaos") 即可包含所有功能
 
 LuaOS 启动后默认加载lua/main.lua 或者 lua/main/init.lua 文件作为启动文件，如果该 lua 文件有 main 函数，则启动后自动调用该函数
 使用者可以在该模块内通过调用 luaos.execute 启动其他需要的 lua 模块(被启动的模块在独立 lua 虚拟机和线程下运行)

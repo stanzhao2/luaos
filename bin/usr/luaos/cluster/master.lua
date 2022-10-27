@@ -60,7 +60,7 @@ sessions = {fd={topic={subscriber,...}, peer}, ...}
 ----------------------------------------------------------------------------
 
 local function send_to_peer(peer, data)
-	peer:send(peer:encode(data));
+	peer:send(peer:encode(data), true);
 end
 
 ---Forward to all sessions except fd
@@ -69,9 +69,9 @@ local function send_to_others(session, tb)
 	local fd      = peer:id();
 	local message = pack.encode(tb);
 	
-	for k, _ in pairs(sessions) do
+	for k, v in pairs(sessions) do
 		if k ~= fd then
-			send_to_peer(peer, message);
+			send_to_peer(v.peer, message);
 		end
 	end
 end
@@ -97,7 +97,7 @@ local function on_publish_request(session, tb)
 	for k, v in pairs(sessions) do
 		if k ~= fd then
 			if is_subscribed(v, topic) then
-				table.insert(target, session);
+				table.insert(target, v);
 			end
 		end
 	end
@@ -126,7 +126,8 @@ local function on_cancel_request(session, tb)
 		return;
 	end
 	
-	send_to_others(session, tb)	
+	send_to_others(session, tb);
+	
 	for i = 1, #session[topic] do
 		if session[topic][i] == subscriber then
 			table.remove(session[topic], i);
@@ -244,10 +245,12 @@ local function on_socket_accept(acceptor, peer)
 	tb.type = cmd_subscribe;
 	for k, v in pairs(sessions) do
 		for topic, _ in pairs(v) do
-			if subscribed[topic] == nil then
-				tb.topic = topic;
-				subscribed[topic] = true;
-				send_to_peer(peer, pack.encode(tb));
+			if topic ~= "peer" then
+				if subscribed[topic] == nil then
+					tb.topic = topic;
+					send_to_peer(peer, pack.encode(tb));
+					subscribed[topic] = true;
+				end
 			end
 		end
 	end

@@ -3,8 +3,9 @@
 <Project Name="luaos.luaprj" Cmd="" Arg="" Dir="" Toggle="false" >
     <Filter RelativePath=".\lua" Toggle="false" >
         <LuaFile RelativePath=".\main.lua" />
-        <Filter RelativePath=".\wwwroot" Toggle="true" >
+        <Filter RelativePath=".\wwwroot" Toggle="false" >
             <LuaFile RelativePath=".\index.lua" />
+            <Filter RelativePath=".\images" Toggle="true" />
         </Filter>
     </Filter>
     <Filter RelativePath=".\usr" Toggle="false" >
@@ -17,13 +18,13 @@
             <LuaFile RelativePath=".\heap.lua" />
             <LuaFile RelativePath=".\random.lua" />
             <LuaFile RelativePath=".\try.lua" />
-            <Filter RelativePath=".\nginx" Toggle="false" >
+            <Filter RelativePath=".\nginx" Toggle="true" >
                 <LuaFile RelativePath=".\init.lua" />
             </Filter>
             <LuaFile RelativePath=".\parser.lua" />
-            <Filter RelativePath=".\cluster" Toggle="false" >
+            <Filter RelativePath=".\cluster" Toggle="true" >
                 <LuaFile RelativePath=".\master.lua" />
-                <LuaFile RelativePath=".\bridge.lua" />
+                <LuaFile RelativePath=".\proxy.lua" />
             </Filter>
         </Filter>
         <Filter RelativePath=".\prototype" Toggle="false" >

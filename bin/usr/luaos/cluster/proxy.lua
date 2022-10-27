@@ -52,7 +52,7 @@ local server = { peer = nil, ready = false };
 ----------------------------------------------------------------------------
 
 local function send_to_peer(peer, data)
-	peer:send(peer:encode(data));
+	peer:send(peer:encode(data), true);
 end
 
 local function send_to_master(message)
@@ -92,6 +92,7 @@ local function on_subscribe_request(topic, subscriber, option)
 	end
 	
 	send_to_master(message);
+	luaos.subscribe(topic, bind(on_publish_request, topic));
 end
 
 ----------------------------------------------------------------------------
@@ -120,7 +121,8 @@ local function do_cancel_request(message)
 end
 
 local function do_subscribe_request(message)
-	luaos.subscribe(message.topic, bind(on_publish_request, message.topic));
+	local topic = message.topic;
+	luaos.subscribe(topic, bind(on_publish_request, topic));
 end
 
 ----------------------------------------------------------------------------
@@ -170,7 +172,7 @@ function proxy.watch(topic)
 	luaos.watch(topic, bind(on_subscribe_request, topic));
 end
 
-function server.stop()
+function proxy.stop()
 	if server.peer then
 		server.peer:close();
 		server.peer = nil;
