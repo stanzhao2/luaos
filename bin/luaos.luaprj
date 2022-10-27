@@ -21,6 +21,10 @@
                 <LuaFile RelativePath=".\init.lua" />
             </Filter>
             <LuaFile RelativePath=".\parser.lua" />
+            <Filter RelativePath=".\cluster" Toggle="false" >
+                <LuaFile RelativePath=".\master.lua" />
+                <LuaFile RelativePath=".\bridge.lua" />
+            </Filter>
         </Filter>
         <Filter RelativePath=".\prototype" Toggle="false" >
             <LuaFile RelativePath=".\socket.lua" />

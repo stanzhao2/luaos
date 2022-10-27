@@ -187,21 +187,23 @@ local luaos = {
 	end,
 	
 	---取消一个消息订阅
-	---@param id integer
+	---@param topic integer
     cancel = function(topic)
 		return private.cancel(topic);
 	end,
 	
-	---取消一个消息订阅
-	---@param id integer
+	---监视一个消息订阅
+	---@param topic integer
+	---@param handler fun(subscriber:integer, type:string):void
+	---@return boolean
     watch = function(topic, handler)
 		return private.watch(topic, handler);
 	end,
 	
 	---订阅一个系统消息
 	---@param topic integer
-	---@param handler fun(publisher:integer, ...):void
-	---@return integer
+	---@param handler fun(publisher:integer, mask:integer, ...):void
+	---@return boolean
     subscribe = function(topic, handler)
 		return private.subscribe(topic, handler);
 	end,

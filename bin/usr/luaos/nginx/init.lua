@@ -714,11 +714,7 @@ local function on_socket_error(peer, ec)
 	end
 end
 
-local function on_socket_receive(peer, ec, data)
-	if ec > 0 then
-		on_socket_error(peer, ec);
-		return;
-	end
+local function on_socket_receive(peer, data)
 	
     local session = sessions[peer:id()]    
     if not session then
@@ -751,7 +747,11 @@ local function on_socket_receive(peer, ec, data)
 end
 
 local function on_receive_handler(peer, ec, data)
-	if not luaos.pcall(on_socket_receive, peer, ec, data) then
+	if ec > 0 then
+		on_socket_error(peer, ec);
+		return;
+	end
+	if not luaos.pcall(on_socket_receive, peer, data) then
 		peer:close()
 	end
 end
