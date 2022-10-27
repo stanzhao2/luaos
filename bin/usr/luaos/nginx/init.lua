@@ -208,7 +208,7 @@ local function on_http_error(peer, headers, code)
     end
     
     table_insert(cache, "\r\n");
-	send_message(peer, able_concat(cache))
+	send_message(peer, table_concat(cache))
 	send_message(peer, text)
 	if "close" == headers[_HEADER_CONNECTION] then
 		peer:close()
