@@ -20,6 +20,7 @@ local luaos  = require("luaos");
 local socket = luaos.socket;
 local bind   = luaos.bind;
 local pack   = luaos.conv.pack;
+local unpack = table.unpack;
 
 ----------------------------------------------------------------------------
 
@@ -30,20 +31,6 @@ local cmd_publish    = "publish"
 local cmd_heartbeat  = "heartbeat"
 
 local _MAX_PACKET    = 64 * 1024 * 1024
-
-----------------------------------------------------------------------------
-
-local function lshift(v, n)
-	return v << n;
-end
-
-local function rshift(v, n)
-	return v >> n;
-end
-
-local function bitand(v, n)
-	return v & n;
-end
 
 ----------------------------------------------------------------------------
 
@@ -61,11 +48,9 @@ local function send_to_master(message)
 	end
 end
 
-local function send_keepalive(now)
+local function send_keepalive()
 	local message = {};
-	message.type = cmd_heartbeat;
-	server.keepalive = now;
-	
+	message.type = cmd_heartbeat;	
 	send_to_master(message);
 end
 
@@ -104,16 +89,16 @@ end
 
 local function do_publish_request(message)
 	local publisher = message.publisher;
-	local receiver  = rshift(publisher, 32) -- >>32bits
+	local receiver  = publisher >> 32; -- >>32bits
 	
 	if receiver > 0 then
-		publisher = receiver;
+		publisher = ((publisher & 0xFFFF) << 32) | (publisher & 0xFFFF0000) | receiver;
 	else
-		publisher = lshift(publisher, 16); -- <<16bits
+		publisher = publisher << 16; -- <<16bits
 	end
 	
 	local params = message.argv;
-	luaos.publish(message.topic, message.mask, publisher, table.unpack(params));
+	luaos.publish(message.topic, message.mask, publisher, unpack(params));
 end
 
 local function do_cancel_request(message)
@@ -179,17 +164,20 @@ function proxy.stop()
 	end
 end
 
-function proxy.update(now)
+function proxy.update()
+	local now = os.clock();
+	
 	if proxy.keepalive == nil then
-		proxy.keepalive = now
-		return
+		proxy.keepalive = now;
+		return;
 	end
 	
-	if now - proxy.keepalive < 10000 then
-		return
+	if now - proxy.keepalive < 10 then
+		return;
 	end
 	
-	send_keepalive(now)
+	send_keepalive()
+	proxy.keepalive = now;
 end
 
 function proxy.start(host, port, timeout)

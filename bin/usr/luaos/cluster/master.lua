@@ -20,6 +20,8 @@ local luaos  = require("luaos");
 local socket = luaos.socket;
 local bind   = luaos.bind;
 local pack   = luaos.conv.pack;
+local insert = table.insert;
+local remove = table.remove;
 
 ----------------------------------------------------------------------------
 
@@ -30,24 +32,6 @@ local cmd_publish    = "publish";
 local cmd_heartbeat  = "heartbeat";
 
 local _MAX_PACKET    = 64 * 1024 * 1024
-
-----------------------------------------------------------------------------
-
-local function bitmod(v, n)
-	return v % n;
-end
-
-local function lshift(v, n)
-	return v << n;
-end
-
-local function rshift(v, n)
-	return v >> n;
-end
-
-local function bitand(v, n)
-	return v & n;
-end
 
 ----------------------------------------------------------------------------
 
@@ -97,7 +81,7 @@ local function on_publish_request(session, tb)
 	for k, v in pairs(sessions) do
 		if k ~= fd then
 			if is_subscribed(v, topic) then
-				table.insert(target, v);
+				insert(target, v);
 			end
 		end
 	end
@@ -106,7 +90,7 @@ local function on_publish_request(session, tb)
 	
 	--only send to one session
 	if tb.mask > 0 and count > 1 then
-		local i = bitmod(tb.mask, count) + 1;
+		local i = (tb.mask % count) + 1;
 		send_to_peer(target[i].peer, message);
 		return
 	end
@@ -128,9 +112,10 @@ local function on_cancel_request(session, tb)
 	
 	send_to_others(session, tb);
 	
-	for i = 1, #session[topic] do
+	local count = #session[topic];
+	for i = 1, count do
 		if session[topic][i] == subscriber then
-			table.remove(session[topic], i);
+			remove(session[topic], i);
 			break
 		end
 	end
@@ -156,7 +141,7 @@ local function on_subscribe_request(session, tb)
 		end
 	end
 	
-	table.insert(session[topic], subscriber);
+	insert(session[topic], subscriber);
 	send_to_others(session, tb);
 	print("subscribe topic: " .. topic);
 end
@@ -184,6 +169,10 @@ local function on_socket_dispatch(session, data)
 	end
 	
 	local cmd = tb.type;
+	if cmd == cmd_heartbeat then
+		return;
+	end
+	
 	if cmd == cmd_subscribe then
 		on_subscribe_request(session, tb);
 		return;
@@ -201,17 +190,18 @@ local function on_socket_dispatch(session, data)
 	
 	performance = performance + 1;
 	local publisher = tb.publisher;
-	local high = rshift(publisher, 16); -- >>16bits
+	local high = publisher >> 16; -- >>16bits
 	
 	local fd = peer:id();	
 	if high == 0 then
-		publisher = lshift(publisher, 16); -- <<16bits
+		publisher = publisher << 16; -- <<16bits
 		tb.publisher = publisher + fd;
 		on_publish_request(session, tb);
 	else
-		fd = bitand(high, 0xffff);
-		session = sessions[fd];
+		session = sessions[high & 0xffff];
 		if session then
+			tb.publisher = (publisher & 0xFFFF0000FFFF) | (fd << 16)
+			data = pack.encode(tb);
 			send_to_peer(session.peer, data);
 		end
 	end
@@ -244,8 +234,8 @@ local function on_socket_accept(acceptor, peer)
 	
 	tb.type = cmd_subscribe;
 	for k, v in pairs(sessions) do
-		for topic, _ in pairs(v) do
-			if topic ~= "peer" then
+		for topic, x in pairs(v) do
+			if type(x) == "table" then
 				if subscribed[topic] == nil then
 					tb.topic = topic;
 					send_to_peer(peer, pack.encode(tb));
@@ -271,13 +261,26 @@ local master = {};
 
 ----------------------------------------------------------------------------
 
-function master:update(now)
+function master:update()
+	local now = os.clock();
+	
+	if master.keepalive == nil then
+		master.keepalive = now;
+		return
+	end
+	
+	if now - master.keepalive < 1 then
+		return
+	end
+	
 	if onlines ~= last_onlines or performance ~= last_performance then
 		last_onlines = onlines;
 		last_performance = performance;
 		print(string.format("Number of sessions: %d, Forwarding quantity: %d", onlines, performance));
 	end
+	
 	performance = 0;
+	master.keepalive = now;
 end
 
 function master.stop()

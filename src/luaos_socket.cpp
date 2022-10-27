@@ -740,8 +740,13 @@ LUALIB_API int lua_os_socket_decode(lua_State* L)
   });
 
   lua_pop(L, 1); //pop lua_pcall_error from stack
-  if (ec > 0) {
-    return 0;
+  if (ec > 0)
+  {
+    char estr[128];
+    sprintf(estr, "decode error: %d", ec);
+    lua_pushnil(L);
+    lua_pushstring(L, estr);
+    return 2;
   }
   lua_pushinteger(L, (lua_Integer)size);
   return 1;

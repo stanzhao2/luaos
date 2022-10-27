@@ -317,7 +317,7 @@ namespace eth
     public:
       inline void close(bool linger = true)
       {
-        service()->dispatch(
+        service()->post(
           std::bind(
             &socket::shutdown, shared_from_this(), linger
           )
@@ -529,7 +529,7 @@ namespace eth
         error_code ec;
         auto peers = resolve(host, port, ec);
         if (ec) {
-          service()->dispatch([=]() { handler(ec); });
+          service()->post([=]() { handler(ec); });
           return;
         }
         asio::async_connect(
@@ -550,7 +550,7 @@ namespace eth
       template <typename Handler>
       void async_send(const std::string& data, Handler handler)
       {
-        service()->dispatch(
+        service()->post(
           std::bind(
             &socket::write, shared_from_this(), data, (handler_t)handler
           )
@@ -567,7 +567,7 @@ namespace eth
       template <typename Handler>
       void async_send_to(const std::string& data, const endpoint_type& peer, Handler handler)
       {
-        service()->dispatch(
+        service()->post(
           std::bind(
             &socket::write_to, shared_from_this(), data, peer, (handler_t)handler
           )
@@ -969,7 +969,7 @@ namespace eth
 
       inline void close(bool linger = true)
       {
-        service()->dispatch(
+        service()->post(
           std::bind(
             &socket::shutdown, shared_from_this(), linger
           )
@@ -1203,7 +1203,7 @@ namespace eth
         error_code ec;
         auto peers = resolve(host, port, ec);
         if (ec) {
-          service()->dispatch([=]() { handler(ec); });
+          service()->post([=]() { handler(ec); });
           return;
         }
         asio::async_connect(
@@ -1223,7 +1223,7 @@ namespace eth
       template <typename Handler>
       void async_send(const std::string& data, Handler handler)
       {
-        service()->dispatch(
+        service()->post(
           std::bind(
             &socket::write, shared_from_this(), data, (handler_t)handler
           )
