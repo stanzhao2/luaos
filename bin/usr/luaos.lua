@@ -235,11 +235,12 @@ luaos.cluster = {
 		);
 		
 		if not ok then
-			return nil;
+			return nil, "not found";
 		end
 		
-		if not master.start(host, port) then
-			return nil;
+		local ok, reason = master.start(host, port);
+		if not ok then
+			return nil, reason;
 		end
 		
 		local result = {};
@@ -262,11 +263,12 @@ luaos.cluster = {
 		);
 		
 		if not ok then
-			return nil;
+			return nil, "not found";
 		end
 		
-		if not proxy.start(host, port, timeout) then
-			return nil;
+		local ok, reason = proxy.start(host, port, timeout);
+		if not ok then
+			return nil, reason;
 		end
 		
 		local result = {};
