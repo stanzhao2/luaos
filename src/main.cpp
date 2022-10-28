@@ -175,6 +175,11 @@ lua_State* new_lua_state()
   {
     luaL_openlibs(L);
 
+#ifdef OS_WINDOWS
+    lua_pushboolean(L, 1);
+    lua_setglobal(L, "_DEBUG");
+#endif
+
 #if defined LUA_VERSION_NUM && LUA_VERSION_NUM >= 504 
     lua_gc(L, LUA_GCGEN, 0, 0);
 #endif

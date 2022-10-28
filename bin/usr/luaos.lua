@@ -104,6 +104,7 @@ os.subscribe    = nil; --disused
 ---@class luaos
 local luaos = {
 	read = 1, write = 2,
+	
 	---创建一个 socket
 	---@param family string
 	---@return luaos_socket
