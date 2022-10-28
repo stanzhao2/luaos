@@ -158,7 +158,7 @@ local function on_socket_error(session, ec)
 	end
 	
 	peer:close();
-	error("session error, errno " .. ec);
+	trace("session error, errno " .. ec);
 end
 
 local function on_socket_dispatch(session, data)	
