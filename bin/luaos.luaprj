@@ -18,11 +18,11 @@
             <LuaFile RelativePath=".\heap.lua" />
             <LuaFile RelativePath=".\random.lua" />
             <LuaFile RelativePath=".\try.lua" />
-            <Filter RelativePath=".\nginx" Toggle="true" >
+            <Filter RelativePath=".\nginx" Toggle="false" >
                 <LuaFile RelativePath=".\init.lua" />
             </Filter>
             <LuaFile RelativePath=".\parser.lua" />
-            <Filter RelativePath=".\cluster" Toggle="true" >
+            <Filter RelativePath=".\cluster" Toggle="false" >
                 <LuaFile RelativePath=".\master.lua" />
                 <LuaFile RelativePath=".\proxy.lua" />
             </Filter>

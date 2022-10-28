@@ -742,10 +742,18 @@ LUALIB_API int lua_os_socket_decode(lua_State* L)
   lua_pop(L, 1); //pop lua_pcall_error from stack
   if (ec > 0)
   {
-    char estr[128];
-    sprintf(estr, "decode error: %d", ec);
     lua_pushnil(L);
-    lua_pushstring(L, estr);
+    switch (ec) {
+    case 1:
+      lua_pushstring(L, "rsv3 is not zero");
+      break;
+    case 2:
+      lua_pushstring(L, "hash check failed");
+      break;
+    default:
+      lua_pushstring(L, "decompress failed");
+      break;
+    }
     return 2;
   }
   lua_pushinteger(L, (lua_Integer)size);
@@ -774,10 +782,6 @@ LUALIB_API int lua_os_socket_receive(lua_State* L)
   }
 
   size = lua_sock->receive((char*)data.c_str(), size, ec);
-  if (ec) {
-    return 0;
-  }
-
   if (ec) {
     lua_pushnil(L);
     lua_pushstring(L, ec.message().c_str());
@@ -814,10 +818,6 @@ LUALIB_API int lua_os_socket_receive_from(lua_State* L)
   }
 
   size = lua_sock->receive_from((char*)data.c_str(), size, remote, ec);
-  if (ec) {
-    return 0;
-  }
-
   if (ec) {
     lua_pushnil(L);
     lua_pushstring(L, ec.message().c_str());

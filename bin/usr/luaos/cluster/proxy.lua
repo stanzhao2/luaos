@@ -20,6 +20,7 @@ local luaos  = require("luaos");
 local socket = luaos.socket;
 local bind   = luaos.bind;
 local pack   = luaos.conv.pack;
+local timer  = luaos.timingwheel();
 local unpack = table.unpack;
 
 ----------------------------------------------------------------------------
@@ -46,12 +47,6 @@ local function send_to_master(message)
 	if server.peer then
 		send_to_peer(server.peer, pack.encode(message));
 	end
-end
-
-local function send_keepalive()
-	local message = {};
-	message.type = cmd_heartbeat;	
-	send_to_master(message);
 end
 
 local function on_publish_request(topic, publisher, mask, ...)
@@ -153,31 +148,24 @@ end
 
 local proxy = {};
 
+local function update_proxy(interval)
+	local message = {};
+	message.type = cmd_heartbeat;	
+	send_to_master(message);
+	
+	timer:scheme(interval, bind(update_proxy, interval));
+end
+
 function proxy.watch(topic)
 	luaos.watch(topic, bind(on_subscribe_request, topic));
 end
 
 function proxy.stop()
 	if server.peer then
+        timer:close();
 		server.peer:close();
 		server.peer = nil;
 	end
-end
-
-function proxy.update()
-	local now = os.clock();
-	
-	if proxy.keepalive == nil then
-		proxy.keepalive = now;
-		return;
-	end
-	
-	if now - proxy.keepalive < 10 then
-		return;
-	end
-	
-	send_keepalive()
-	proxy.keepalive = now;
 end
 
 function proxy.start(host, port, timeout)
@@ -186,18 +174,19 @@ function proxy.start(host, port, timeout)
 	end
 	
 	host = host or "0.0.0.0";
-	port = port or 8899;
+	port = port or 7621;
 	timeout = timeout or 2000;
     
-	local peer = luaos.socket("tcp");
+	local peer = socket("tcp");
 	if not peer then
 		return false;
 	end
 	
 	local ok, reason = peer:connect(host, port, timeout);
 	if ok then
-		peer:select(luaos.read, bind(on_socket_receive, peer));
 		server.peer = peer;
+		peer:select(luaos.read, bind(on_socket_receive, peer));
+	    timer:scheme(30000, bind(update_proxy, 30000));
 	end
 	return ok, reason;
 end

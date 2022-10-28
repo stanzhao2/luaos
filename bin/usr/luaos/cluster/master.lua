@@ -20,6 +20,7 @@ local luaos  = require("luaos");
 local socket = luaos.socket;
 local bind   = luaos.bind;
 local pack   = luaos.conv.pack;
+local timer  = luaos.timingwheel();
 local insert = table.insert;
 local remove = table.remove;
 
@@ -261,26 +262,14 @@ local master = {};
 
 ----------------------------------------------------------------------------
 
-function master:update()
-	local now = os.clock();
-	
-	if master.keepalive == nil then
-		master.keepalive = now;
-		return
-	end
-	
-	if now - master.keepalive < 1 then
-		return
-	end
-	
+local function update_master(interval)
 	if onlines ~= last_onlines or performance ~= last_performance then
 		last_onlines = onlines;
 		last_performance = performance;
 		print(string.format("Number of sessions: %d, Forwarding quantity: %d", onlines, performance));
-	end
-	
+	end	
 	performance = 0;
-	master.keepalive = now;
+	timer:scheme(interval, bind(update_master, interval));
 end
 
 function master.stop()
@@ -289,6 +278,7 @@ function master.stop()
 		master.acceptor = nil;
 	end
 	
+	timer:close();
 	for k, v in pairs(sessions) do
 		v.peer:close();
 		v.peer = nil;
@@ -302,9 +292,9 @@ function master.start(host, port)
 	end
 	
 	host = host or "0.0.0.0";
-	port = port or 8899;
+	port = port or 7621;
     
-	local acceptor = luaos.socket("tcp");
+	local acceptor = socket("tcp");
 	if not acceptor then
 		return false;
 	end
@@ -314,6 +304,7 @@ function master.start(host, port)
 	);
 	if ok then
 		master.acceptor = acceptor;
+	    timer:scheme(10000, bind(update_master, 10000));
 	end
 	return ok, reason;
 end
