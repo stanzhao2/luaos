@@ -231,11 +231,14 @@ LUALIB_API int lua_os_error(lua_State* L)
 
 LUALIB_API int lua_os_trace(lua_State* L)
 {
-#ifndef OS_WINDOWS
-  return 0;
-#else
+  lua_getglobal(L, "_DEBUG");
+  int debug_type = lua_type(L, -1);
+  lua_pop(L, 1);
+
+  if (debug_type == LUA_TNIL) {
+    return 0;
+  }
   return lua_printf(L, color_type::yellow);
-#endif
 }
 
 void my_printf(color_type type_color, bool prefix, const char* fmt, ...)

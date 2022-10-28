@@ -52,6 +52,15 @@ static int lua_loader(lua_State* L)
     return 0;
   }
 
+  lua_getglobal(L, "_DEBUG");
+  int debug_type = lua_type(L, -1);
+  lua_pop(L, 1);
+
+  if (debug_type != LUA_TNIL) {
+    lua_pushnil(L);
+    lua_setglobal(L, "_DEBUG");
+  }
+
   lua_pushlstring(L, luafile.c_str(), luafile.size());
   return 1;
 }
@@ -174,11 +183,8 @@ lua_State* new_lua_state()
   if (L)
   {
     luaL_openlibs(L);
-
-#ifdef OS_WINDOWS
     lua_pushboolean(L, 1);
     lua_setglobal(L, "_DEBUG");
-#endif
 
 #if defined LUA_VERSION_NUM && LUA_VERSION_NUM >= 504 
     lua_gc(L, LUA_GCGEN, 0, 0);
