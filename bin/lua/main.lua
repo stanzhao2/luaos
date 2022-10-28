@@ -3,15 +3,19 @@
 local luaos = require("luaos")
 
 function main()
-	local nginx = require("luaos.nginx")
-	local ok, reason = nginx.start("0.0.0.0", 8899, "wwwroot")
-	if ok then
-		nginx.upgrade();
-		while not luaos.stopped() do
-			luaos.wait()
-		end
-		nginx.stop()
-	else
+	local nginx = luaos.nginx;
+	local server, reason = nginx.start("0.0.0.0", 8899, "wwwroot")
+	
+	if not server then
 		error(reason);
+		return;
 	end
+	
+	server:upgrade(); --websocket enabled
+	
+	while not luaos.stopped() do
+		luaos.wait()
+	end
+	
+	server:stop()
 end

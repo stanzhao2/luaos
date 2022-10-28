@@ -222,6 +222,35 @@ luaos.ssl = {
 	end
 };
 
+luaos.nginx = {
+	start = function(host, port, wwwroot, ctx)
+		local ok, server = pcall(
+			require, "luaos.nginx"
+		);
+		
+		if not ok then
+			return nil, "not found";
+		end
+		
+		local ok, reason = server.start(host, port, wwwroot, ctx);
+		if not ok then
+			return nil, reason;
+		end
+		
+		local result = {};
+		
+		function result:stop()
+			server.stop();
+		end
+		
+		function result:upgrade()
+			server.upgrade();
+		end
+		
+		return result;
+	end
+};
+
 ----------------------------------------------------------------------------
 
 luaos.cluster = {
