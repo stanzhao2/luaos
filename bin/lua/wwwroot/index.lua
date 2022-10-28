@@ -39,9 +39,49 @@ local html = [[
 </html>
 ]]
 
-local function homepage(request, response, params)
-	local data = format(html, luaos.typename())
-	response:write(data)
+----------------------------------------------------------------------------
+
+local function on_http_request(request, response, params)
+	local data = format(html, luaos.typename());
+	response:write(data);
 end
 
-return homepage
+----------------------------------------------------------------------------
+
+local function on_ws_accept(peer)
+	
+end
+
+----------------------------------------------------------------------------
+
+local function on_ws_request(peer, ec, data, opcode, deflate)
+	if ec > 0 then
+		trace("websocket error, errno: ", ec);
+		return;
+	end
+	peer:send(data, opcode, deflate);
+end
+
+----------------------------------------------------------------------------
+--以下代码为标准接口, 不要修改
+
+local nginx_http = {};
+
+---HTTP 请求
+function nginx_http.on_request(request, response, params)
+	on_http_request(request, response, params);
+end
+
+---Websocket 连接
+function nginx_http.on_accept(peer)
+	on_ws_accept(peer);
+end
+
+---Websocket 请求
+function nginx_http.on_receive(peer, ec, data, opcode, deflate)
+	on_ws_request(peer, ec, data, opcode, deflate);
+end
+
+return nginx_http;
+
+----------------------------------------------------------------------------

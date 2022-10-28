@@ -327,6 +327,36 @@ local function parse_url_params(params)
     return result
 end
 
+local function url_to_filename(url)
+	local uri    = string_split(url, '?');
+    local params = parse_url_params(uri[2]);
+    local path   = string_split(uri[1], '/');
+    
+	local depth = #path;
+    if depth == 0 then
+        depth = 1;
+        table_insert(path, "index");
+    else
+        local cnt = 0;
+        for i = 1, depth do
+            if path[i] ~= ".." then
+                cnt = cnt + 1;
+            else
+                cnt = cnt - 1;
+            end
+            if cnt < 0 then
+                throw("Path depth attack");
+            end
+        end
+    end
+	
+    local filename = ""
+    for i = 1, depth do
+        filename = filename .. "." .. path[i];
+    end
+	return filename, path;
+end
+
 local function on_http_request(peer, request)
     local headers = default_headers()
     local rheader = request:headers()
@@ -345,35 +375,10 @@ local function on_http_request(peer, request)
         end
     end
     
-    local url    = conv.url.unescape(request:url())
-    local uri    = string_split(url, '?')   
-    local params = parse_url_params(uri[2])
-    local path   = string_split(uri[1], '/')
-    local depth  = #path
+    local url = conv.url.unescape(request:url())
+	local filename, path = url_to_filename(url)
     
-    if depth == 0 then
-        depth = 1
-        table_insert(path, "index")
-    else
-        local cnt = 0
-        for i = 1, depth do
-            if path[i] ~= ".." then
-                cnt = cnt + 1
-            else
-                cnt = cnt - 1
-            end
-            if cnt < 0 then
-                throw("Path depth attack")
-            end
-        end
-    end
-	
-    local filename = ""
-    for i = 1, depth do
-        filename = filename .. "." .. path[i]
-    end
-    
-    local others = path[depth]
+    local others = path[#path]
     others = string_split(others, '.')
     
     ---读取静态文件
@@ -388,8 +393,16 @@ local function on_http_request(peer, request)
         return on_http_error(peer, headers, _STATE_ERROR)
     end
     
+	if type(script) ~= "table" then
+        return on_http_error(peer, headers, _STATE_ERROR)
+	end
+	
+	if type(script.on_request) ~= "function" then
+        return on_http_error(peer, headers, _STATE_ERROR)
+	end
+	
     ---运行脚本文件
-    local ok, result = luaos.pcall(script, request, headers, params)
+    local ok, result = luaos.pcall(script.on_request, request, headers, params)
     if not ok then
         return on_http_error(peer, headers, _STATE_ERROR)
     end
@@ -435,8 +448,6 @@ local op_code = {
 }
 
 local _WS_MAX_PACKET <const> = 64 * 1024 * 1024
-local _ws_recv_handler   = nil;
-local _ws_accept_handler = nil;
 
 local function ws_encode(data, op, deflate)
 	if op == nil then
@@ -526,10 +537,11 @@ local function on_ws_request(session, fin, data, op, deflate)
         session.pktlen = nil
         session.packet = nil
     end
-    
-	if _ws_recv_handler then
+	
+	local handler = session.ws_handler
+	if handler then
 		local ws_peer = session.ws_peer;
-		_ws_recv_handler(ws_peer, 0, data, op, deflate);
+		handler.on_receive(ws_peer, 0, data, op, deflate);
 	end
 end
 
@@ -627,6 +639,36 @@ local function on_ws_accept(session, request)
         return
     end
     
+    local url = conv.url.unescape(request:url())
+	local filename, path = url_to_filename(url)
+    
+    local others = path[#path]
+    others = string_split(others, '.')
+    
+    if #others > 1 then
+        on_http_error(peer, _STATE_ERROR)
+        return
+    end
+	
+    ---加载脚本文件
+    local ok, script = luaos.pcall(require, _WWWROOT .. filename)
+    if not ok then
+        on_http_error(peer, _STATE_ERROR)
+		return
+    end
+	
+	if type(script) ~= "table" then
+        on_http_error(peer, _STATE_ERROR)
+		return
+	end
+	
+	if type(script.on_receive) ~= "function" then
+        on_http_error(peer, _STATE_ERROR)
+		return
+	end
+	
+	session.ws_handler = script
+	
     local origin = rheader["Origin"]
     if origin then
         headers["Access-Control-Allow-Credentials"] = "true"
@@ -655,14 +697,17 @@ local function on_ws_accept(session, request)
     on_http_success(peer, headers, 101)
 	
 	session.ws_peer = wrap_ws_socket(peer);
-	if _ws_accept_handler then
-		_ws_accept_handler(peer);
+	local handler = session.ws_handler
+	if handler and type(handler.on_accept) == "function" then
+		handler.on_accept(session.ws_peer);
 	end
 end
 
 ----------------------------------------------------------------------------
 
 local sessions = {}
+
+local _ws_upgrade = false;
 
 local function on_http_callback(session, request)
 	local peer = session.peer;
@@ -674,7 +719,7 @@ local function on_http_callback(session, request)
     
     local upgrade = request:is_upgrade()
     if upgrade then
-		if not _ws_recv_handler then
+		if not _ws_upgrade then
 			peer:close();
 		else
 			session.upgrade = true;
@@ -702,8 +747,9 @@ local function on_socket_error(peer, ec)
 	if fd > 0 then
 		local session = sessions[fd];
 		if session and session.upgrade then
-			if _ws_recv_handler then
-				luaos.pcall(_ws_recv_handler, peer, ec);
+			if session.ws_handler then
+				local handler = session.ws_handler
+				luaos.pcall(handler.on_receive, peer, ec);
 			end
 		end
 		sessions[fd] = nil;
@@ -722,11 +768,7 @@ local function on_socket_receive(peer, data)
     end
     
     if session.upgrade then
-		if not _ws_recv_handler then
-			peer:close();
-		else
-			on_ws_receive(session, data);
-		end
+		on_ws_receive(session, data);
         return;
     end
 	
@@ -786,9 +828,8 @@ end
 
 local nginx = {}
 
-function nginx.upgrade(receive_callback, handshake_callback)
-	_ws_recv_handler = receive_callback;
-	_ws_accept_handler = handshake_callback;
+function nginx.upgrade()
+	_ws_upgrade = true;
 end
 
 function nginx.stop()
