@@ -18,9 +18,9 @@
 
 ----------------------------------------------------------------------------
 
-local success, bigint;
-success, bigint = pcall(require, "bigint");
-if not success then
+local ok, bigint;
+ok, bigint = pcall(require, "bigint");
+if not ok then
 	trace("bigint module is not installed");
 else
 	---创建一个大整数
@@ -36,7 +36,7 @@ end
 ---@param str string
 ---@retrun string
 string.trim = function(str)
-	return (string.gsub(str, "^%s*(.-)%s*$", "%1")) 
+	return (string.gsub(str, "^%s*(.-)%s*$", "%1")) ;
 end
 
 ---将指定的字符串以指定的分隔符拆分
@@ -45,12 +45,15 @@ end
 ---@retrun table
 string.split = function(str, seq)
     if str == nil  or type(str) ~= "string" then
-        return nil
+        return nil;
     end
-    local r, insert = {}, table.insert
+	
+    local r, insert = {}, table.insert;
+	
     for word in string.gmatch(str,"[^{"..seq.."}*]+") do
-        insert(r, word)
+        insert(r, word);
     end
+	
     return r
 end
 
@@ -63,9 +66,11 @@ local private = {
 		erase   = storage.erase,
 		clear   = storage.clear,
 	},
+	
 	ssl = {
 		context = ssl.context,
 	},
+	
 	socket      = io.socket,
 	deadline    = os.deadline,
 	files       = os.files,
@@ -111,15 +116,6 @@ local luaos = {
     socket = function(family)
 		return private.socket(family);
 	end,
-	
-	ssl = {
-		context = function(cert, key, pwd)
-			if not private.ssl then
-				return nil;
-			end
-			return private.ssl.context(cert, key, pwd);
-		end
-	},
 	
 	---遍历目录下所有文件
 	---@param handler fun(filename:string, ext:string):void
@@ -210,67 +206,82 @@ local luaos = {
 	end,
 };
 
-local random;
-success, random = pcall(require, "luaos.random");
-if not success then
-	trace("random module is not installed");
-else
-    local random32 = random.random32_create();
-	---创建一个 32 位随机数
-	---@retrun integer
-    luaos.random32 = function(...)
-        random32:random(...);
-    end
-    
-	---创建一个 64 位随机数
-	---@retrun integer
-    local random64 = random.random64_create();
-    luaos.random64 = function(...)
-        random64:random(...);
-    end
-end
+----------------------------------------------------------------------------
 
-local function on_error(err)
-	error(debug.traceback(err))
-end
+luaos.ssl = {
+	---创建一个 SSL context
+	---@param cert string
+	---@param key string
+	---@param pwd string
+	---@return userdata
+	context = function(cert, key, pwd)
+		if not private.ssl then
+			return nil;
+		end
+		return private.ssl.context(cert, key, pwd);
+	end
+};
 
----以保护模式运行函数
----@param func function
----@param ... any
----@return boolean,string
-function luaos.pcall(func, ...)
-	return xpcall(func, on_error, ...)
-end
+----------------------------------------------------------------------------
 
-success, luaos.bind  = pcall(require, "luaos.bind");
-if not success then
-	trace("bind module is not installed");
-end
-
-success, luaos.conv  = pcall(require, "luaos.conv");
-if not success then
-	trace("conv module is not installed");
-end
-
-success, luaos.curl  = pcall(require, "luaos.curl");
-if not success then
-	trace("curl module is not installed");
-end
-
-success, luaos.heap  = pcall(require, "luaos.heap");
-if not success then
-	trace("heap module is not installed");
-end
-
-success, luaos.try   = pcall(require, "luaos.try");
-if not success then
-	trace("try module is not installed");
-end
-
-success, luaos.class = pcall(require, "luaos.classy");
-if not success then
-	trace("classy module is not installed");
-end
+luaos.cluster = {
+	---创建一个集群监听
+	---@param host string
+	---@param port integer
+	---@return table
+	listen = function(host, port)
+		local ok, master = pcall(
+			require, "luaos.cluster.master"
+		);
+		
+		if not ok then
+			return nil;
+		end
+		
+		if not master.start(host, port) then
+			return nil;
+		end
+		
+		local result = {};
+		
+		function result:close()
+			master.stop();
+		end
+		
+		return result;
+	end,
+	
+	---建立一个集群连接
+	---@param host string
+	---@param port integer
+	---@param timeout integer
+	---@return table
+	connect = function(host, port, timeout)
+		local ok, proxy = pcall(
+			require, "luaos.cluster.proxy"
+		);
+		
+		if not ok then
+			return nil;
+		end
+		
+		if not proxy.start(host, port, timeout) then
+			return nil;
+		end
+		
+		local result = {};
+		
+		function result:close()
+			proxy.stop();
+		end
+		
+		function result:watch(topic)
+			proxy.watch(topic);
+		end
+		
+		return result;
+	end
+};
 
 ----------------------------------------------------------------------------
 
@@ -309,6 +320,7 @@ luaos.storage = {
 			luaold = old;
 			return pack.encode(value(old))
 		end);
+		
 		return luaold;
 	end,
 	
@@ -316,12 +328,13 @@ luaos.storage = {
 	---@param key string
 	---@return any
     get = function(key)
-		key = tostring(key);
+		key = tostring(key);		
 		local value = storage.get(key);
 		
 		if pack and value then
 			value = pack.decode(value)
 		end
+		
 		return value;
 	end,
 	
@@ -334,15 +347,82 @@ luaos.storage = {
 	---@param key string
 	---@return any
     erase = function(key)
-		key = tostring(key);
+		key = tostring(key);		
 		local value = storage.erase();
 		
 		if pack and value then
 			value = pack.decode(value)
 		end
+		
 		return value;
 	end,
 };
+
+----------------------------------------------------------------------------
+
+local random;
+ok, random = pcall(require, "luaos.random");
+if ok then
+	---创建一个 32 位随机数
+	---@retrun integer
+    local random32 = random.random32_create();
+    luaos.random32 = function(...)
+        random32:random(...);
+    end
+    
+	---创建一个 64 位随机数
+	---@retrun integer
+    local random64 = random.random64_create();
+    luaos.random64 = function(...)
+        random64:random(...);
+    end
+end
+
+----------------------------------------------------------------------------
+
+local function on_error(err)
+	error(debug.traceback(err));
+end
+
+---以保护模式运行函数
+---@param func function
+---@param ... any
+---@return boolean,string
+function luaos.pcall(func, ...)
+	return xpcall(func, on_error, ...);
+end
+
+----------------------------------------------------------------------------
+
+ok, luaos.bind  = pcall(require, "luaos.bind");
+if not ok then
+	trace("bind module is not installed");
+end
+
+ok, luaos.conv  = pcall(require, "luaos.conv");
+if not ok then
+	trace("conv module is not installed");
+end
+
+ok, luaos.curl  = pcall(require, "luaos.curl");
+if not ok then
+	trace("curl module is not installed");
+end
+
+ok, luaos.heap  = pcall(require, "luaos.heap");
+if not ok then
+	trace("heap module is not installed");
+end
+
+ok, luaos.try   = pcall(require, "luaos.try");
+if not ok then
+	trace("try module is not installed");
+end
+
+ok, luaos.class = pcall(require, "luaos.classy");
+if not ok then
+	trace("classy module is not installed");
+end
 
 ----------------------------------------------------------------------------
 
