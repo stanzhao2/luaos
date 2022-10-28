@@ -223,6 +223,12 @@ luaos.ssl = {
 };
 
 luaos.nginx = {
+	---启动一个 http 服务模块
+	---@param host string
+	---@param port integer
+	---@param wwwroot string
+	---@param ctx userdata
+	---@return table
 	start = function(host, port, wwwroot, ctx)
 		local ok, server = pcall(
 			require, "luaos.nginx"
