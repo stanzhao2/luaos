@@ -133,15 +133,22 @@ local function on_socket_receive(peer, ec, data)
 		return;
 	end
 	
-	local size = peer:decode(data, function(data, opcode)
+	local size, reason = peer:decode(data, function(data, opcode)
 		if not luaos.pcall(on_socket_dispatch, peer, data) then
 			peer:close();
 		end
 	end);
 	
-	if not size or size > _MAX_PACKET then
+	if not size then
 		peer:close();
-	end	
+		error("packet decode error: ", reason);
+		return;
+	end
+	
+	if size > _MAX_PACKET then
+		peer:close();
+		error("packet size too big: ", size);
+	end
 end
 
 ----------------------------------------------------------------------------

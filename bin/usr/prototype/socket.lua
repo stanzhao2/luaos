@@ -101,7 +101,7 @@ function i_socket:send_to(data, host, port, asynchronous) end;
 ---对收到的数据进行解码,成功则返回未解码的数据长度，否则返回 nil
 ---@param data string
 ---@param handler fun(data:string, opcode:integer):void
----@return integer|nil
+---@return integer|nil,reason
 function i_socket:decode(data, handler) end;
 
 ---用阻塞的方式接收数据,成功则返回接收到的数据，否则返回 nil
