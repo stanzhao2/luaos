@@ -354,7 +354,7 @@ local function url_to_filename(url)
     for i = 1, depth do
         filename = filename .. "." .. path[i];
     end
-	return filename, path;
+	return filename, path, params;
 end
 
 local function on_http_request(peer, request)
@@ -376,7 +376,7 @@ local function on_http_request(peer, request)
     end
     
     local url = conv.url.unescape(request:url())
-	local filename, path = url_to_filename(url)
+	local filename, path, params = url_to_filename(url)
     
     local others = path[#path]
     others = string_split(others, '.')
@@ -640,7 +640,7 @@ local function on_ws_accept(session, request)
     end
     
     local url = conv.url.unescape(request:url())
-	local filename, path = url_to_filename(url)
+	local filename, path, params = url_to_filename(url)
     
     local others = path[#path]
     others = string_split(others, '.')
@@ -699,7 +699,7 @@ local function on_ws_accept(session, request)
 	session.ws_peer = wrap_ws_socket(peer);
 	local handler = session.ws_handler
 	if handler and type(handler.on_accept) == "function" then
-		handler.on_accept(session.ws_peer);
+		handler.on_accept(session.ws_peer, params);
 	end
 end
 

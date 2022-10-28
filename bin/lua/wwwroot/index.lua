@@ -48,7 +48,7 @@ end
 
 ----------------------------------------------------------------------------
 
-local function on_ws_accept(peer)
+local function on_ws_accept(peer, params)
 	
 end
 
@@ -73,8 +73,8 @@ function nginx_http.on_request(request, response, params)
 end
 
 ---Websocket 连接
-function nginx_http.on_accept(peer)
-	on_ws_accept(peer);
+function nginx_http.on_accept(peer, params)
+	on_ws_accept(peer, params);
 end
 
 ---Websocket 请求
