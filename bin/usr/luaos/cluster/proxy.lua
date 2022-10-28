@@ -23,6 +23,11 @@ local pack   = luaos.conv.pack;
 local timer  = luaos.timingwheel();
 local unpack = table.unpack;
 
+local pcall = pcall;
+if _DEBUG then
+	pcall = luaos.pcall
+end
+
 ----------------------------------------------------------------------------
 
 local cmd_subscribe  = "subscribe"
@@ -123,7 +128,7 @@ end
 local function on_socket_dispatch(peer, data)
 	local message = pack.decode(data);
 	if type(message) == "table" then
-		luaos.pcall(switch[message.type], message);
+		pcall(switch[message.type], message);
 	end
 end
 
@@ -134,7 +139,7 @@ local function on_socket_receive(peer, ec, data)
 	end
 	
 	local size, reason = peer:decode(data, function(data, opcode)
-		if not luaos.pcall(on_socket_dispatch, peer, data) then
+		if not pcall(on_socket_dispatch, peer, data) then
 			peer:close();
 		end
 	end);

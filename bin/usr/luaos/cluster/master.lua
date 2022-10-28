@@ -24,6 +24,11 @@ local timer  = luaos.timingwheel();
 local insert = table.insert;
 local remove = table.remove;
 
+local pcall = pcall;
+if _DEBUG then
+	pcall = luaos.pcall
+end
+
 ----------------------------------------------------------------------------
 
 local cmd_subscribe  = "subscribe";
@@ -217,7 +222,7 @@ local function on_socket_receive(session, ec, data)
 	
 	local peer = session.peer;
 	local size, reason = peer:decode(data, function(data, opcode)
-		if not luaos.pcall(on_socket_dispatch, session, data) then
+		if not pcall(on_socket_dispatch, session, data) then
 			peer:close();
 		end
 	end);

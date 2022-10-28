@@ -20,6 +20,11 @@ local luaos  = require("luaos")
 local gzip   = require("gzip")
 local parser = require("luaos.parser")
 
+local pcall = pcall;
+if _DEBUG then
+	pcall = luaos.pcall
+end
+
 local bind   = luaos.bind;
 local try    = luaos.try;
 local conv   = luaos.conv;
@@ -284,7 +289,7 @@ local function on_http_download(peer, headers, filename, ext)
         return on_http_error(peer, headers, code)
     end
     
-    local ok, data = luaos.pcall(fs.read, fs, "a")
+    local ok, data = pcall(fs.read, fs, "a")
     fs:close()
     if not ok or not data or #data == 0 then
         return on_http_error(peer, headers, code)
@@ -388,7 +393,7 @@ local function on_http_request(peer, request)
     end
 	
     ---加载脚本文件
-    local ok, script = luaos.pcall(require, _WWWROOT .. filename)
+    local ok, script = pcall(require, _WWWROOT .. filename)
     if not ok then
         return on_http_error(peer, headers, _STATE_ERROR)
     end
@@ -402,7 +407,7 @@ local function on_http_request(peer, request)
 	end
 	
     ---运行脚本文件
-    local ok, result = luaos.pcall(script.on_request, request, headers, params)
+    local ok, result = pcall(script.on_request, request, headers, params)
     if not ok then
         return on_http_error(peer, headers, _STATE_ERROR)
     end
@@ -651,7 +656,7 @@ local function on_ws_accept(session, request)
     end
 	
     ---加载脚本文件
-    local ok, script = luaos.pcall(require, _WWWROOT .. filename)
+    local ok, script = pcall(require, _WWWROOT .. filename)
     if not ok then
         on_http_error(peer, _STATE_ERROR)
 		return
@@ -723,13 +728,13 @@ local function on_http_callback(session, request)
 			peer:close();
 		else
 			session.upgrade = true;
-			luaos.pcall(on_ws_accept, session, request);
+			pcall(on_ws_accept, session, request);
 		end
         return;
     end
     
 	local from = peer:endpoint()
-    local ok, result = luaos.pcall(on_http_request, peer, request)
+    local ok, result = pcall(on_http_request, peer, request)
 	if not ok then
 		peer:close();
 		return;
@@ -749,7 +754,7 @@ local function on_socket_error(peer, ec)
 		if session and session.upgrade then
 			if session.ws_handler then
 				local handler = session.ws_handler
-				luaos.pcall(handler.on_receive, peer, ec);
+				pcall(handler.on_receive, peer, ec);
 			end
 		end
 		sessions[fd] = nil;
@@ -793,7 +798,7 @@ local function on_receive_handler(peer, ec, data)
 		on_socket_error(peer, ec);
 		return;
 	end
-	if not luaos.pcall(on_socket_receive, peer, data) then
+	if not pcall(on_socket_receive, peer, data) then
 		peer:close()
 	end
 end
