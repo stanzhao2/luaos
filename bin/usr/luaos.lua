@@ -27,26 +27,31 @@ local local_error = error;
 ----------------------------------------------------------------------------
 
 if _DEBUG then
-    local thread = 2;
+    local debug_getinfo = debug.getinfo;
+    local table_insert  = table.insert;
+    local table_concat  = table.concat;
+    local string_format = string.format;
+    
+    local function format_params(...)
+        local info = debug_getinfo(3, "Sl");
+        local file = info.short_src;
+        local line = info.currentline;
+        
+        local params = {...};
+        table_insert(params, 1, string_format("%s:%u - ", file, line));
+        return table_concat(params);
+    end
+    
     print = function(...)
-        local info = debug.getinfo(thread, "Sl");
-        local file = info.short_src;
-        local line = info.currentline;
-        local_print(string.format("%s:%u ", file, line), ...);
+        local_print(format_params(...));
     end
 
-    trace = function(...)
-        local info = debug.getinfo(thread, "Sl");
-        local file = info.short_src;
-        local line = info.currentline;
-        local_trace(string.format("%s:%u ", file, line), ...);
+    trace = function(...)        
+        local_trace(format_params(...));
     end
 
-    error = function(...)
-        local info = debug.getinfo(thread, "Sl");
-        local file = info.short_src;
-        local line = info.currentline;
-        local_error(string.format("%s:%u ", file, line), ...);
+    error = function(...)        
+        local_error(format_params(...));
     end
 end
 
