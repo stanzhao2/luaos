@@ -107,12 +107,10 @@ static int ll_loadbuffer(lua_State* L, const char* buff, size_t size, const char
 #endif
 
   int topindex = lua_gettop(L);
-  if (ll_loader(L, buff, size, filename) != LUA_OK) {
-    lua_error(L);
-  }
-
+  ll_loader(L, buff, size, filename);
   lua_pushfstring(L, "%s", filename);
-  return lua_gettop(L) - topindex;
+  int topnow = lua_gettop(L);
+  return topnow - topindex;
 }
 
 /* private / internal */
@@ -137,7 +135,7 @@ static int ll_loadfile(lua_State* L, const char* filename)
     }
     //check result type
     if (lua_type(L, -1) != LUA_TSTRING) {
-      lua_settop(L, 1);
+      lua_pop(L, 1);
       return 0;
     }
     //get result
@@ -193,9 +191,7 @@ static int ll_require(lua_State* L)
       filename[i] = LUA_DIRSEP[0];
     }
   }
-  name = filename.c_str();  
-
-  lua_settop(L, 1);
+  name = filename.c_str();
   if (is_fullname(name)) {
     return ll_loadfile(L, name);
   }
@@ -241,7 +237,7 @@ static int ll_dofile(lua_State* L)
     return luaL_error(L, "module %s not found", luaL_checkstring(L, -1));
   }
 
-  lua_rotate(L, -3, 1);
+  lua_rotate(L, -2, 1);
   lua_pcall(L, 0, LUA_MULTRET, error_fn_index);
   lua_pop(L, lua_gettop(L));
   return LUA_OK;

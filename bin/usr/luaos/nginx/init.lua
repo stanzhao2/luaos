@@ -450,7 +450,15 @@ local op_code = {
     [ 0x08   ] = "close",
     [ 0x09   ] = "ping",
     [ 0x0A   ] = "pong",
-}
+};
+
+local ws_reason = {
+    [1000] = "Normal Closure",
+    [1001] = "Server actively disconnects",
+    [1002] = "Websocket protocol error",
+    [1008] = "The frame not include mask",
+    [1009] = "The length of packet is too large",
+};
 
 local _WS_MAX_PACKET <const> = 64 * 1024 * 1024
 
@@ -484,46 +492,77 @@ local function ws_encode(data, op, deflate)
     return table_concat(cache);
 end
 
+local function ws_close(peer, code)
+    local len = 0;
+    local reason = ws_reason[code];
+    if reason then
+        len = #reason;
+    end
+    
+    local message = {};
+    table_insert(message, string_pack("B", op_code.close | 0x80));
+    table_insert(message, string_pack("B", len + 2));
+    table_insert(message, string_pack(">I2", code));
+    
+    if reason then
+        table_insert(message, string_pack("c" .. len, reason));
+    end
+    
+    if code ~= 1000 and reason then
+        error(reason);
+    end
+    
+    send_message(peer, table_concat(message));
+    peer:close();
+end
+
 local function wrap_ws_socket(peer, deflate)
     local _ws_socket = {
         peer = peer, deflate = deflate
     };
 
     function _ws_socket:endpoint()
-        return self.peer:endpoint();
+        if self.peer then
+            return self.peer:endpoint();
+        end
     end
 
     function _ws_socket:id()
-        return self.peer:id();
-    end
-
-    function _ws_socket:send(data, opcode)
-        local deflate = self.deflate;
-        data = ws_encode(data, opcode, deflate);
-        send_message(self.peer, data);
+        if self.peer then
+            return self.peer:id();
+        end
     end
 
     function _ws_socket:close()
-        local s = string_pack("B", op_code.close | 0x80);
-        s = s .. string_pack("B", 0);
-        send_message(self.peer, s);
-        self.peer:close();
+        if self.peer then
+            ws_close(self.peer, 1001);
+            self.peer = nil;
+        end
     end
     
+    function _ws_socket:send(data, opcode)
+        if self.peer then
+            local deflate = self.deflate;
+            data = ws_encode(data, opcode, deflate);
+            send_message(self.peer, data);
+        end
+    end
+
     return _ws_socket;
 end
 
 local function on_ws_request(session, fin, data, opcode)
     local peer = session.peer
     if opcode == op_code.close then
-        peer:close();
+        ws_close(peer, 1000);
         return;
     end
     
     if opcode == op_code.ping then
-        local s = string_pack("B", op_code.pong | 0x80);
-        s = s .. string_pack("B", 0);
-        send_message(peer, s);
+        local r = {};
+        table_insert(r, string_pack("B", op_code.pong | 0x80));
+        table_insert(r, string_pack("B", 0));
+        send_message(peer, table_concat(r));
         return;
     end
     
@@ -537,8 +576,7 @@ local function on_ws_request(session, fin, data, opcode)
         session.pktlen = session.pktlen + #data;
         
         if session.pktlen > _WS_MAX_PACKET then
-            peer:close();
-            error("the length of the data sent by the client is too large");
+            ws_close(peer, 1009);
         end
         return
     end
@@ -577,8 +615,7 @@ local function on_ws_receive(session, data)
         
         local mask = (v2 & 0x80) ~= 0;
         if not mask then
-            session.peer:close();
-            error("the data sent by the client must include mask");
+            ws_close(session.peer, 1002);
             return;
         end
         
@@ -600,8 +637,7 @@ local function on_ws_receive(session, data)
         end
         
         if payload_len > _WS_MAX_PACKET then
-            session.peer:close();
-            error("the length of the data sent by the client is too large");
+            ws_close(session.peer, 1009);
             return;
         end
         
@@ -851,39 +887,41 @@ end
 function nginx.stop()
     if nginx.acceptor then
         nginx.acceptor:close();
-        nginx.acceptor = nil
+        nginx.acceptor = nil;
     end
     for k, v in pairs(sessions) do
-        v.peer:close()
-        v.peer = nil
-        v.parser = nil
+        v.peer:close();
+        v.peer = nil;
+        v.parser = nil;
     end
-    sessions = {}
+    sessions = {};
 end
 
 function nginx.start(host, port, wwwroot, ctx)
     if nginx.acceptor then
         return false
     end
+    
     if wwwroot then
         _WWWROOT = wwwroot
         _WWWROOT = string_gsub(_WWWROOT, '/', '.')
         _WWWROOT = string_gsub(_WWWROOT, '\\', '.')
     end
-    host = host or "0.0.0.0"
-    port = port or 8899
+    
+    host = host or "0.0.0.0";
+    port = port or 8899;
     
     nginx.acceptor = luaos.socket("tcp");
     if not nginx.acceptor then
-        return false
+        return false;
     end
     
     if ctx == nil then
-        ctx = false
+        ctx = false;
     end
     return nginx.acceptor:listen(host, port, bind(on_socket_accept, ctx));
 end
 
-return nginx
+return nginx;
 
 ----------------------------------------------------------------------------
