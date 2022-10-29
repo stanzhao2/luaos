@@ -609,11 +609,14 @@ end
 
 local function on_ws_request(session, fin, data, opcode)
     local peer = session.peer
+    
+    --客户端主动关闭连接
     if opcode == op_code.close then
         ws_close(peer, 1000);
         return;
     end
     
+    --客户端发送来的心跳消息
     if opcode == op_code.ping then
         local r = {};
         table_insert(r, string_pack("B", op_code.pong | 0x80));
@@ -622,6 +625,7 @@ local function on_ws_request(session, fin, data, opcode)
         return;
     end
     
+    --如果所有数据帧未收全
     if not fin then
         if not session.packet then
             session.pktlen = 0;
@@ -631,6 +635,7 @@ local function on_ws_request(session, fin, data, opcode)
         table_insert(session.packet, data);
         session.pktlen = session.pktlen + #data;
         
+        --如果收到的数据长度大于限制则关闭连接
         if session.pktlen > _WS_MAX_PACKET then
             ws_close(peer, 1009);
         end
@@ -643,9 +648,9 @@ local function on_ws_request(session, fin, data, opcode)
         session.packet = nil;
     end
     
-    if session.rsv1 then --deflate
+    if session.deflate then --deflate
         data = gzip.inflate(data);
-        session.rsv1 = false;
+        session.deflate = false;
     end
     
     local handler = session.ws_handler;
@@ -671,19 +676,33 @@ local function on_ws_receive(session, data)
         local fin = (v1 & 0x80) ~= 0;
         local deflate = (v1 & 0x40) ~= 0;
         
+        --如果设置压缩标记,则只能在第一帧设置
         if deflate then
-            if session.rsv1 then
+            if session.deflate then
                 ws_close(peer, 1002);
                 return;
             end
-            session.rsv1 = deflate;
+            --标记当前帧数据需要解压缩
+            session.deflate = deflate;
         end
         
-        -- unused flag
-        local rsv2   = (v1 & 0x20) ~= 0;
-        local rsv3   = (v1 & 0x10) ~= 0;        
+        --rsv2 unused, must be zero
+        local rsv2 = (v1 & 0x20) ~= 0;
+        if rsv2 then
+            ws_close(peer, 1002);
+            return;
+        end
+        
+        --rsv2 unused, must be zero
+        local rsv3 = (v1 & 0x10) ~= 0;
+        if rsv3 then
+            ws_close(peer, 1002);
+            return;
+        end
+        
         local opcode = (v1 & 0x0f);
         
+        --客户端发来的数据包必须设置 mask 位
         local mask = (v2 & 0x80) ~= 0;
         if not mask then
             ws_close(peer, 1002);
@@ -707,6 +726,7 @@ local function on_ws_receive(session, data)
             pos = pos + 8;
         end
         
+        --如果数据帧长度大于限制则关闭连接
         if payload_len > _WS_MAX_PACKET then
             ws_close(peer, 1009);
             return;
@@ -788,6 +808,7 @@ local function on_ws_accept(session, request)
     
     session.ws_handler = script;
     
+    --如果请求者需要跨域连接
     local origin = rheader["Origin"];
     if origin then
         headers["Access-Control-Allow-Credentials"] = "true";
@@ -796,11 +817,12 @@ local function on_ws_accept(session, request)
     
     local deflate = false;
     local externs = rheader[_HEADER_WEBSOCKET_EXTENSIONS];
+    
+    --如果开启了数据压缩功能
     if externs then
         local x = string_match(externs, "permessage%-deflate");
         if x then
             deflate = true;
-            session.deflate = true;
             headers[_HEADER_WEBSOCKET_EXTENSIONS] = "permessage-deflate; client_no_context_takeover; server_max_window_bits=15";
         end
     end
