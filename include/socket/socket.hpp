@@ -785,6 +785,7 @@ namespace eth
           parent::shutdown(shutdown_receive, ec);
           return;
         }
+        parent::shutdown(shutdown_type::shutdown_send, ec);
         parent::close(ec);
       }
 
