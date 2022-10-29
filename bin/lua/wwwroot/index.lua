@@ -54,12 +54,12 @@ end
 
 ----------------------------------------------------------------------------
 
-local function on_ws_request(peer, ec, data, opcode, deflate)
+local function on_ws_request(peer, ec, data, opcode)
 	if ec > 0 then
 		trace("websocket error, errno: ", ec);
 		return;
 	end
-	peer:send(data, opcode, deflate);
+	peer:send(data, opcode);
 end
 
 ----------------------------------------------------------------------------
@@ -78,8 +78,8 @@ function nginx_http.on_accept(peer, params)
 end
 
 ---Websocket 请求
-function nginx_http.on_receive(peer, ec, data, opcode, deflate)
-	on_ws_request(peer, ec, data, opcode, deflate);
+function nginx_http.on_receive(peer, ec, data, opcode)
+	on_ws_request(peer, ec, data, opcode);
 end
 
 return nginx_http;

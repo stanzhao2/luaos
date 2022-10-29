@@ -484,8 +484,10 @@ local function ws_encode(data, op, deflate)
     return table_concat(cache);
 end
 
-local function wrap_ws_socket(peer)
-    local _ws_socket = {peer = peer};
+local function wrap_ws_socket(peer, deflate)
+    local _ws_socket = {
+        peer = peer, deflate = deflate
+    };
 
     function _ws_socket:endpoint()
         return self.peer:endpoint();
@@ -495,7 +497,8 @@ local function wrap_ws_socket(peer)
         return self.peer:id();
     end
 
-    function _ws_socket:send(data, opcode, deflate)
+    function _ws_socket:send(data, opcode)
+        local deflate = self.deflate;
         data = ws_encode(data, opcode, deflate);
         send_message(self.peer, data);
     end
@@ -506,17 +509,18 @@ local function wrap_ws_socket(peer)
         send_message(self.peer, s);
         self.peer:close();
     end
+    
     return _ws_socket;
 end
 
-local function on_ws_request(session, fin, data, op, deflate)
+local function on_ws_request(session, fin, data, opcode)
     local peer = session.peer
-    if op == op_code.close then
+    if opcode == op_code.close then
         peer:close();
         return;
     end
     
-    if op == op_code.ping then
+    if opcode == op_code.ping then
         local s = string_pack("B", op_code.pong | 0x80);
         s = s .. string_pack("B", 0);
         send_message(peer, s);
@@ -548,7 +552,7 @@ local function on_ws_request(session, fin, data, op, deflate)
     local handler = session.ws_handler;
     if handler then
         local ws_peer = session.ws_peer;
-        handler.on_receive(ws_peer, 0, data, op, deflate);
+        handler.on_receive(ws_peer, 0, data, opcode);
     end
 end
 
@@ -570,7 +574,7 @@ local function on_ws_receive(session, data)
         local rsv2 = (v1 & 0x20) ~= 0;
         local rsv3 = (v1 & 0x10) ~= 0;
         
-        local op   =  v1 & 0x0f;
+        local opcode =  v1 & 0x0f;
         local mask = (v2 & 0x80) ~= 0;
         
         local payload_len = (v2 & 0x7f)   ;     
@@ -619,7 +623,7 @@ local function on_ws_receive(session, data)
             packet = gzip.inflate(packet);
         end
         
-        on_ws_request(session, fin, packet, op, deflate);
+        on_ws_request(session, fin, packet, opcode);
         
         pos = pos + payload_len;
         cache_size = cache_size - frame_size;
@@ -688,6 +692,7 @@ local function on_ws_accept(session, request)
         local x = string_match(externs, "permessage%-deflate");
         if x then
             deflate = true;
+            session.deflate = true;
             headers[_HEADER_WEBSOCKET_EXTENSIONS] = "permessage-deflate; client_no_context_takeover; server_max_window_bits=15";
         end
     end
@@ -703,7 +708,7 @@ local function on_ws_accept(session, request)
     headers[_HEADER_WEBSOCKET_ACCEPT] = key;
     on_http_success(peer, headers, 101);
     
-    session.ws_peer = wrap_ws_socket(peer);
+    session.ws_peer = wrap_ws_socket(peer, deflate);
     local handler = session.ws_handler;
     if handler and type(handler.on_accept) == "function" then
         handler.on_accept(session.ws_peer, params);
