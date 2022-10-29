@@ -538,7 +538,7 @@ local function on_ws_request(session, fin, data, opcode)
         
         if session.pktlen > _WS_MAX_PACKET then
             peer:close();
-            error("payload len too big");
+            error("the length of the data sent by the client is too large");
         end
         return
     end
@@ -571,13 +571,18 @@ local function on_ws_receive(session, data)
         local fin = (v1 & 0x80) ~= 0;
         local deflate = (v1 & 0x40) ~= 0;
         -- unused flag
-        local rsv2 = (v1 & 0x20) ~= 0;
-        local rsv3 = (v1 & 0x10) ~= 0;
+        local rsv2   = (v1 & 0x20) ~= 0;
+        local rsv3   = (v1 & 0x10) ~= 0;        
+        local opcode = (v1 & 0x0f);
         
-        local opcode =  v1 & 0x0f;
         local mask = (v2 & 0x80) ~= 0;
+        if not mask then
+            session.peer:close();
+            error("the data sent by the client must include mask");
+            return;
+        end
         
-        local payload_len = (v2 & 0x7f)   ;     
+        local payload_len = (v2 & 0x7f);     
         pos = pos + 2;
         
         if payload_len == 126 then
@@ -596,7 +601,7 @@ local function on_ws_receive(session, data)
         
         if payload_len > _WS_MAX_PACKET then
             session.peer:close();
-            error("payload len too big");
+            error("the length of the data sent by the client is too large");
             return;
         end
         
