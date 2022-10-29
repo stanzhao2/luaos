@@ -18,18 +18,40 @@
 
 ----------------------------------------------------------------------------
 
-local ok, bigint;
-ok, bigint = pcall(require, "bigint");
-if not ok then
-    trace("bigint module is not installed");
-else
-    ---创建一个大整数
-    ---@param v integer
-    math.bigint = function(v)
-        return bigint.new(v);
+local local_print = print;
+local local_trace = trace;
+local local_error = error;
+
+----------------------------------------------------------------------------
+---只在调试/开发环境下有效
+----------------------------------------------------------------------------
+
+if _DEBUG then
+    local thread = 2;
+    print = function(...)
+        local info = debug.getinfo(thread, "Sl");
+        local file = info.short_src;
+        local line = info.currentline;
+        local_print(string.format("%s:%u ", file, line), ...);
+    end
+
+    trace = function(...)
+        local info = debug.getinfo(thread, "Sl");
+        local file = info.short_src;
+        local line = info.currentline;
+        local_trace(string.format("%s:%u ", file, line), ...);
+    end
+
+    error = function(...)
+        local info = debug.getinfo(thread, "Sl");
+        local file = info.short_src;
+        local line = info.currentline;
+        local_error(string.format("%s:%u ", file, line), ...);
     end
 end
 
+----------------------------------------------------------------------------
+---为 string 添加功能
 ----------------------------------------------------------------------------
 
 ---去掉字符串前后空格
@@ -58,6 +80,23 @@ string.split = function(str, seq)
 end
 
 ----------------------------------------------------------------------------
+---封装 bigint 模块
+----------------------------------------------------------------------------
+
+local ok, bigint = pcall(require, "bigint");
+if not ok then
+    local_trace("bigint module is not installed");
+else
+    ---创建一个大整数
+    ---@param v integer
+    math.bigint = function(v)
+        return bigint.new(v);
+    end
+end
+
+----------------------------------------------------------------------------
+---封装系统内置模块
+----------------------------------------------------------------------------
 
 local private = {
     storage = {
@@ -85,7 +124,7 @@ local private = {
     watch       = os.watch,
     cancel      = os.cancel,
     subscribe   = os.subscribe,
-}
+};
 
 storage         = nil; --disused
 ssl             = nil; --disused
@@ -104,6 +143,8 @@ os.cancel       = nil; --disused
 os.watch        = nil; --disused
 os.subscribe    = nil; --disused
 
+----------------------------------------------------------------------------
+---封装 luaos 主模块
 ----------------------------------------------------------------------------
 
 ---@class luaos
@@ -207,6 +248,8 @@ local luaos = {
 };
 
 ----------------------------------------------------------------------------
+---封装 SSL/TLS 模块
+----------------------------------------------------------------------------
 
 luaos.ssl = {
     ---创建一个 SSL context
@@ -221,6 +264,10 @@ luaos.ssl = {
         return private.ssl.context(cert, key, pwd);
     end
 };
+
+----------------------------------------------------------------------------
+---封装 nginx/http 模块
+----------------------------------------------------------------------------
 
 luaos.nginx = {
     ---启动一个 http 服务模块
@@ -257,6 +304,8 @@ luaos.nginx = {
     end
 };
 
+----------------------------------------------------------------------------
+---封装集群模块
 ----------------------------------------------------------------------------
 
 luaos.cluster = {
@@ -320,6 +369,8 @@ luaos.cluster = {
     end
 };
 
+----------------------------------------------------------------------------
+---封装全局存储模块
 ----------------------------------------------------------------------------
 
 local pack, storage = luaos.conv, private.storage;
@@ -396,6 +447,8 @@ luaos.storage = {
 };
 
 ----------------------------------------------------------------------------
+---封装随机数模块
+----------------------------------------------------------------------------
 
 local random;
 ok, random = pcall(require, "luaos.random");
@@ -416,9 +469,11 @@ if ok then
 end
 
 ----------------------------------------------------------------------------
+---封装 pcall 功能
+----------------------------------------------------------------------------
 
 local function on_error(err)
-    error(debug.traceback(err));
+    local_error(debug.traceback(err));
 end
 
 ---以保护模式运行函数
@@ -430,37 +485,41 @@ function luaos.pcall(func, ...)
 end
 
 ----------------------------------------------------------------------------
+---加载其他内置扩展模块
+----------------------------------------------------------------------------
 
 ok, luaos.bind  = pcall(require, "luaos.bind");
 if not ok then
-    trace("bind module is not installed");
+    local_trace("bind module is not installed");
 end
 
 ok, luaos.conv  = pcall(require, "luaos.conv");
 if not ok then
-    trace("conv module is not installed");
+    local_trace("conv module is not installed");
 end
 
 ok, luaos.curl  = pcall(require, "luaos.curl");
 if not ok then
-    trace("curl module is not installed");
+    local_trace("curl module is not installed");
 end
 
 ok, luaos.heap  = pcall(require, "luaos.heap");
 if not ok then
-    trace("heap module is not installed");
+    local_trace("heap module is not installed");
 end
 
 ok, luaos.try   = pcall(require, "luaos.try");
 if not ok then
-    trace("try module is not installed");
+    local_trace("try module is not installed");
 end
 
 ok, luaos.class = pcall(require, "luaos.classy");
 if not ok then
-    trace("classy module is not installed");
+    local_trace("classy module is not installed");
 end
 
+----------------------------------------------------------------------------
+---设置元表，禁止添加新元素
 ----------------------------------------------------------------------------
 
 local sandbox = {__newindex = function(...)

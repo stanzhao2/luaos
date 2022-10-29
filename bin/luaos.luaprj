@@ -1,14 +1,14 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 
 <Project Name="luaos.luaprj" Cmd="" Arg="" Dir="" Toggle="false" >
-    <Filter RelativePath=".\lua" Toggle="false" >
+    <Filter RelativePath=".\lua" Toggle="true" >
         <LuaFile RelativePath=".\main.lua" />
         <Filter RelativePath=".\wwwroot" Toggle="false" >
             <LuaFile RelativePath=".\index.lua" />
             <Filter RelativePath=".\images" Toggle="true" />
         </Filter>
     </Filter>
-    <Filter RelativePath=".\usr" Toggle="false" >
+    <Filter RelativePath=".\usr" Toggle="true" >
         <LuaFile RelativePath=".\luaos.lua" />
         <Filter RelativePath=".\luaos" Toggle="false" >
             <LuaFile RelativePath=".\bind.lua" />
