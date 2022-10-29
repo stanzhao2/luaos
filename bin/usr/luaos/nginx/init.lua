@@ -22,7 +22,7 @@ local parser = require("luaos.parser")
 
 local pcall = pcall;
 if _DEBUG then
-	pcall = luaos.pcall
+    pcall = luaos.pcall
 end
 
 local bind   = luaos.bind;
@@ -186,7 +186,7 @@ local function http_encode_data(headers, data)
 end
 
 local function send_message(peer, data)
-	peer:send(data, true);
+    peer:send(data, true);
 end
 
 local function on_http_error(peer, headers, code)
@@ -213,12 +213,12 @@ local function on_http_error(peer, headers, code)
     end
     
     table_insert(cache, "\r\n");
-	send_message(peer, table_concat(cache))
-	send_message(peer, text)
-	if "close" == headers[_HEADER_CONNECTION] then
-		peer:close()
-	end
-	return _STATE_FAILED_TEXT
+    send_message(peer, table_concat(cache))
+    send_message(peer, text)
+    if "close" == headers[_HEADER_CONNECTION] then
+        peer:close()
+    end
+    return _STATE_FAILED_TEXT
 end
 
 local function on_http_success(peer, headers, code)
@@ -226,7 +226,7 @@ local function on_http_success(peer, headers, code)
     if not code then
         code = _STATE_OK
     end
-	
+    
     local text = http_status_text[code]
     local location = headers[_HEADER_LOCATION]
     if location then
@@ -262,14 +262,14 @@ local function on_http_success(peer, headers, code)
     end
     
     table_insert(cache, "\r\n");
-	send_message(peer, table_concat(cache))
+    send_message(peer, table_concat(cache))
     if has_body then
         send_message(peer, data)
     end
-	if "close" == headers[_HEADER_CONNECTION] then
-		peer:close()
-	end
-	return _STATE_OK_TEXT
+    if "close" == headers[_HEADER_CONNECTION] then
+        peer:close()
+    end
+    return _STATE_OK_TEXT
 end
 
 local function on_http_download(peer, headers, filename, ext)
@@ -278,7 +278,7 @@ local function on_http_download(peer, headers, filename, ext)
     filename = string_sub(filename, 1, #filename - #ext - 1)
     filename = "./lua/" .. filename .. '.' .. ext
     
-	local code = _STATE_NOT_FOUND
+    local code = _STATE_NOT_FOUND
     local mime = http_mime_type[ext]
     if not mime then
         return on_http_error(peer, headers, code)
@@ -333,11 +333,11 @@ local function parse_url_params(params)
 end
 
 local function url_to_filename(url)
-	local uri    = string_split(url, '?');
+    local uri    = string_split(url, '?');
     local params = parse_url_params(uri[2]);
     local path   = string_split(uri[1], '/');
     
-	local depth = #path;
+    local depth = #path;
     if depth == 0 then
         depth = 1;
         table_insert(path, "index");
@@ -354,18 +354,18 @@ local function url_to_filename(url)
             end
         end
     end
-	
+    
     local filename = ""
     for i = 1, depth do
         filename = filename .. "." .. path[i];
     end
-	return filename, path, params;
+    return filename, path, params;
 end
 
 local function on_http_request(peer, request)
     local headers = default_headers()
     local rheader = request:headers()
-	
+    
     local connection = rheader[_HEADER_CONNECTION]
     if connection then
         headers[_HEADER_CONNECTION] = rheader[_HEADER_CONNECTION]
@@ -381,31 +381,31 @@ local function on_http_request(peer, request)
     end
     
     local url = conv.url.unescape(request:url())
-	local filename, path, params = url_to_filename(url)
+    local filename, path, params = url_to_filename(url)
     
     local others = path[#path]
     others = string_split(others, '.')
     
     ---读取静态文件
     if #others > 1 then
-		local ext = others[#others]
+        local ext = others[#others]
         return on_http_download(peer, headers, filename, ext)
     end
-	
+    
     ---加载脚本文件
     local ok, script = pcall(require, _WWWROOT .. filename)
     if not ok then
         return on_http_error(peer, headers, _STATE_ERROR)
     end
     
-	if type(script) ~= "table" then
+    if type(script) ~= "table" then
         return on_http_error(peer, headers, _STATE_ERROR)
-	end
-	
-	if type(script.on_request) ~= "function" then
+    end
+    
+    if type(script.on_request) ~= "function" then
         return on_http_error(peer, headers, _STATE_ERROR)
-	end
-	
+    end
+    
     ---运行脚本文件
     local ok, result = pcall(script.on_request, request, headers, params)
     if not ok then
@@ -455,99 +455,101 @@ local op_code = {
 local _WS_MAX_PACKET <const> = 64 * 1024 * 1024
 
 local function ws_encode(data, op, deflate)
-	if op == nil then
-		op = op_code["text"];
-	end
-	
-	local flag = 0x80
-	if deflate then
-		flag = 0xC0
-		data = gzip.deflate(data, false)
-	end
-	
-	local size = #data
-	local cache = {}
-	table_insert(cache, string_pack("B", op | flag))
-	
-	if size < 126 then
-		table_insert(cache, string_pack("B", size))
-	elseif size <= 0xffff then
-		table_insert(cache, string_pack("B", 126))
-		table_insert(cache, string_pack(">I2", size))
-	else
-		table_insert(cache, string_pack("B", 127))
-		table_insert(cache, string_pack(">I8", size))
-	end
-	
-	table_insert(cache, string_pack("c" .. size, data))
-	return table_concat(cache)
+    if op == nil then
+        op = op_code["text"];
+    end
+    op = op & 0x0f;
+    
+    local flag = 0x80;
+    if deflate then
+        flag = 0xC0;
+        data = gzip.deflate(data, false);
+    end
+    
+    local size = #data;
+    local cache = {};
+    table_insert(cache, string_pack("B", op | flag))
+    
+    if size < 126 then
+        table_insert(cache, string_pack("B", size));
+    elseif size <= 0xffff then
+        table_insert(cache, string_pack("B", 126));
+        table_insert(cache, string_pack(">I2", size));
+    else
+        table_insert(cache, string_pack("B", 127));
+        table_insert(cache, string_pack(">I8", size));
+    end
+    
+    table_insert(cache, string_pack("c" .. size, data));
+    return table_concat(cache);
 end
 
 local function wrap_ws_socket(peer)
-	local _ws_socket = {peer = peer};
+    local _ws_socket = {peer = peer};
 
-	function _ws_socket:endpoint()
-		return self.peer:endpoint();
-	end
+    function _ws_socket:endpoint()
+        return self.peer:endpoint();
+    end
 
-	function _ws_socket:id()
-		return self.peer:id();
-	end
+    function _ws_socket:id()
+        return self.peer:id();
+    end
 
-	function _ws_socket:send(data, opcode, deflate)
-		data = ws_encode(data, opcode, deflate);
-		send_message(self.peer, data);
-	end
+    function _ws_socket:send(data, opcode, deflate)
+        data = ws_encode(data, opcode, deflate);
+        send_message(self.peer, data);
+    end
 
-	function _ws_socket:close()
-		local s = string_pack("B", op_code.close | 0x80);
-		s = s .. string_pack("B", 0);
-		send_message(self.peer, s);
-		self.peer:close();
-	end
-	return _ws_socket;
+    function _ws_socket:close()
+        local s = string_pack("B", op_code.close | 0x80);
+        s = s .. string_pack("B", 0);
+        send_message(self.peer, s);
+        self.peer:close();
+    end
+    return _ws_socket;
 end
 
 local function on_ws_request(session, fin, data, op, deflate)
-	local peer = session.peer
+    local peer = session.peer
     if op == op_code.close then
-		peer:close();
-        return
+        peer:close();
+        return;
     end
     
     if op == op_code.ping then
-        local s = string_pack("B", op_code.pong | 0x80)
-        s = s .. string_pack("B", 0)
-		send_message(peer, s);
-        return
+        local s = string_pack("B", op_code.pong | 0x80);
+        s = s .. string_pack("B", 0);
+        send_message(peer, s);
+        return;
     end
     
     if not fin then
         if not session.packet then
-            session.pktlen = 0
-            session.packet = {}
+            session.pktlen = 0;
+            session.packet = {};
         end
-		
-        table_insert(session.packet, data)
-        session.pktlen = session.pktlen + #data
-		
+        
+        table_insert(session.packet, data);
+        session.pktlen = session.pktlen + #data;
+        
         if session.pktlen > _WS_MAX_PACKET then
-            error("payload len too big")
+            peer:close();
+            error("payload len too big");
         end
         return
     end
     
     if session.packet then
-        data = table_concat(session.packet) .. data
-        session.pktlen = nil
-        session.packet = nil
+        data = table_concat(session.packet) .. data;
+        session.pktlen = nil;
+        session.packet = nil;
     end
-	
-	local handler = session.ws_handler
-	if handler then
-		local ws_peer = session.ws_peer;
-		handler.on_receive(ws_peer, 0, data, op, deflate);
-	end
+    
+    local handler = session.ws_handler;
+    if handler then
+        local ws_peer = session.ws_peer;
+        handler.on_receive(ws_peer, 0, data, op, deflate);
+    end
 end
 
 local function on_ws_receive(session, data)
@@ -556,156 +558,156 @@ local function on_ws_receive(session, data)
         session.cache = nil;
     end
     
-    local offset = 1
-    local cache_size = #data
+    local offset = 1;
+    local cache_size = #data;
     while cache_size > 1 do
-        local pos = offset
-        local v1, v2 = string_unpack("I1I1", data, pos)
-		
-        local fin = (v1 & 0x80) ~= 0
-        local deflate = (v1 & 0x40) ~= 0
-        -- unused flag
-        local rsv2 = (v1 & 0x20) ~= 0
-        local rsv3 = (v1 & 0x10) ~= 0
-		
-        local op   =  v1 & 0x0f
-        local mask = (v2 & 0x80) ~= 0
-		
-        local payload_len = (v2 & 0x7f)
-        local masking_key = nil
+        local pos = offset;
+        local v1, v2 = string_unpack("I1I1", data, pos);
         
-        pos = pos + 2
+        local fin = (v1 & 0x80) ~= 0;
+        local deflate = (v1 & 0x40) ~= 0;
+        -- unused flag
+        local rsv2 = (v1 & 0x20) ~= 0;
+        local rsv3 = (v1 & 0x10) ~= 0;
+        
+        local op   =  v1 & 0x0f;
+        local mask = (v2 & 0x80) ~= 0;
+        
+        local payload_len = (v2 & 0x7f)   ;     
+        pos = pos + 2;
+        
         if payload_len == 126 then
             if cache_size < pos + 1 then
-                break
+                break;
             end
-            payload_len = string_unpack(">I2", data, pos)
-            pos = pos + 2
+            payload_len = string_unpack(">I2", data, pos);
+            pos = pos + 2;
         elseif payload_len == 127 then
             if cache_size < pos + 7 then
-                break
+                break;
             end
-            payload_len = string_unpack(">I8", data, pos)
-            pos = pos + 8
+            payload_len = string_unpack(">I8", data, pos);
+            pos = pos + 8;
         end
         
         if payload_len > _WS_MAX_PACKET then
+            session.peer:close();
             error("payload len too big");
-			return;
+            return;
         end
         
+        local masking_key = nil;
         if mask then
             if cache_size < pos + 3 then
-                break
+                break;
             end
-            masking_key = mask and string_unpack("c4", data, pos) or false
-            pos = pos + 4
+            masking_key = string_unpack("c4", data, pos);
+            pos = pos + 4;
         end
         
-        local frame_size = payload_len + pos - 1
+        local frame_size = payload_len + pos - 1;
         if frame_size > cache_size then
-            break
+            break;
         end
         
-        local packet = string_unpack("c" .. payload_len, data, pos)
-        if mask then
-            packet = conv.xor.convert(packet, masking_key)
+        local packet = string_unpack("c" .. payload_len, data, pos);
+        if masking_key then
+            packet = conv.xor.convert(packet, masking_key);
         end
         
         if deflate then --deflate
-            packet = gzip.inflate(packet)
+            packet = gzip.inflate(packet);
         end
         
-		local peer = session.peer;
-		on_ws_request(session, fin, packet, op, deflate)
+        on_ws_request(session, fin, packet, op, deflate);
         
-        pos = pos + payload_len
-        cache_size = cache_size - frame_size
-        offset = offset + frame_size
+        pos = pos + payload_len;
+        cache_size = cache_size - frame_size;
+        offset = offset + frame_size;
     end
     
     if cache_size > 0 then
         if not session.cache then
-            session.cache = {}
+            session.cache = {};
         end
-        data = string_unpack("c" .. cache_size, data, offset)
-        table_insert(session.cache, data)
+        data = string_unpack("c" .. cache_size, data, offset);
+        table_insert(session.cache, data);
     end
 end
 
 local function on_ws_accept(session, request)
-	local peer = session.peer;
+    local peer = session.peer;
     local headers = default_headers();
     local rheader = request:headers();
-	
+    
     local key = rheader[_HEADER_WEBSOCKET_KEY]
     if not key then
-        on_http_error(peer, _STATE_ERROR)
-        return
+        on_http_error(peer, _STATE_ERROR);
+        return;
     end
     
-    local url = conv.url.unescape(request:url())
-	local filename, path, params = url_to_filename(url)
+    local url = conv.url.unescape(request:url());
+    local filename, path, params = url_to_filename(url);
     
-    local others = path[#path]
-    others = string_split(others, '.')
+    local others = path[#path];
+    others = string_split(others, '.');
     
     if #others > 1 then
-        on_http_error(peer, _STATE_ERROR)
-        return
-    end
-	
-    ---加载脚本文件
-    local ok, script = pcall(require, _WWWROOT .. filename)
-    if not ok then
-        on_http_error(peer, _STATE_ERROR)
-		return
-    end
-	
-	if type(script) ~= "table" then
-        on_http_error(peer, _STATE_ERROR)
-		return
-	end
-	
-	if type(script.on_receive) ~= "function" then
-        on_http_error(peer, _STATE_ERROR)
-		return
-	end
-	
-	session.ws_handler = script
-	
-    local origin = rheader["Origin"]
-    if origin then
-        headers["Access-Control-Allow-Credentials"] = "true"
-        headers["Access-Control-Allow-Origin"] = origin
+        on_http_error(peer, _STATE_ERROR);
+        return;
     end
     
-    local deflate = false
-    local externs = rheader[_HEADER_WEBSOCKET_EXTENSIONS]
+    ---加载脚本文件
+    local ok, script = pcall(require, _WWWROOT .. filename);
+    if not ok then
+        on_http_error(peer, _STATE_ERROR);
+        return;
+    end
+    
+    if type(script) ~= "table" then
+        on_http_error(peer, _STATE_ERROR);
+        return;
+    end
+    
+    if type(script.on_receive) ~= "function" then
+        on_http_error(peer, _STATE_ERROR);
+        return;
+    end
+    
+    session.ws_handler = script;
+    
+    local origin = rheader["Origin"];
+    if origin then
+        headers["Access-Control-Allow-Credentials"] = "true";
+        headers["Access-Control-Allow-Origin"] = origin;
+    end
+    
+    local deflate = false;
+    local externs = rheader[_HEADER_WEBSOCKET_EXTENSIONS];
     if externs then
-        local x = string_match(externs, "permessage%-deflate")
+        local x = string_match(externs, "permessage%-deflate");
         if x then
-            deflate = true
-            headers[_HEADER_WEBSOCKET_EXTENSIONS] = "permessage-deflate; client_no_context_takeover; server_max_window_bits=15"
+            deflate = true;
+            headers[_HEADER_WEBSOCKET_EXTENSIONS] = "permessage-deflate; client_no_context_takeover; server_max_window_bits=15";
         end
     end
     
-    key = key .. "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-    local hash = conv.hash.sha1(key, true)
-    key = conv.base64.encode(hash)
+    key = key .. "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+    local hash = conv.hash.sha1(key, true);
+    key = conv.base64.encode(hash);
     
-    headers[_HEADER_CONNECTION]    = "Upgrade"
-    headers[_HEADER_UPGRADE]       = "websocket"
-    headers[_HEADER_PRAGMA]        = "no-cache"
-    headers[_HEADER_CACHE_CONTROL] = "max-age=0"
-    headers[_HEADER_WEBSOCKET_ACCEPT] = key
-    on_http_success(peer, headers, 101)
-	
-	session.ws_peer = wrap_ws_socket(peer);
-	local handler = session.ws_handler
-	if handler and type(handler.on_accept) == "function" then
-		handler.on_accept(session.ws_peer, params);
-	end
+    headers[_HEADER_CONNECTION]    = "Upgrade";
+    headers[_HEADER_UPGRADE]       = "websocket";
+    headers[_HEADER_PRAGMA]        = "no-cache";
+    headers[_HEADER_CACHE_CONTROL] = "max-age=0";
+    headers[_HEADER_WEBSOCKET_ACCEPT] = key;
+    on_http_success(peer, headers, 101);
+    
+    session.ws_peer = wrap_ws_socket(peer);
+    local handler = session.ws_handler;
+    if handler and type(handler.on_accept) == "function" then
+        handler.on_accept(session.ws_peer, params);
+    end
 end
 
 ----------------------------------------------------------------------------
@@ -715,118 +717,117 @@ local sessions = {}
 local _ws_upgrade = false;
 
 local function on_http_callback(session, request)
-	local peer = session.peer;
-    local method = request:method()
+    local peer = session.peer;
+    local method = request:method();
     if method ~= "GET" and method ~= "POST" then
-		peer:close();
-        return false
+        peer:close();
+        return false;
     end
     
     local upgrade = request:is_upgrade()
     if upgrade then
-		if not _ws_upgrade then
-			peer:close();
-		else
-			session.upgrade = true;
-			pcall(on_ws_accept, session, request);
-		end
+        if not _ws_upgrade then
+            peer:close();
+        else
+            session.upgrade = true;
+            pcall(on_ws_accept, session, request);
+        end
         return;
     end
     
-	local from = peer:endpoint()
-    local ok, result = pcall(on_http_request, peer, request)
-	if not ok then
-		peer:close();
-		return;
-	end
-	local url = request:url()
-	if url then
-		local method = request:method()
-		print(method .. " " .. url .. " " .. result .. " from: " .. from)
-	end
+    local from = peer:endpoint();
+    local ok, result = pcall(on_http_request, peer, request);
+    if not ok then
+        peer:close();
+        return;
+    end
+    local url = request:url();
+    if url then
+        local method = request:method();
+        print(method .. " " .. url .. " " .. result .. " from: " .. from);
+    end
 end
 
 local function on_socket_error(peer, ec)
-	local fd = peer:id();
-	
-	if fd > 0 then
-		local session = sessions[fd];
-		if session and session.upgrade then
-			if session.ws_handler then
-				local handler = session.ws_handler
-				pcall(handler.on_receive, peer, ec);
-			end
-		end
-		sessions[fd] = nil;
-	end
-	
-	if peer:is_open() then
-		peer:close();
-	end
+    local fd = peer:id();
+    
+    if fd > 0 then
+        local session = sessions[fd];
+        if session and session.upgrade then
+            if session.ws_handler then
+                local handler = session.ws_handler;
+                pcall(handler.on_receive, peer, ec);
+            end
+        end
+        sessions[fd] = nil;
+    end
+    
+    if peer:is_open() then
+        peer:close();
+    end
 end
 
 local function on_socket_receive(peer, data)
-	
     local session = sessions[peer:id()]    
     if not session then
         return;
     end
     
     if session.upgrade then
-		on_ws_receive(session, data);
+        on_ws_receive(session, data);
         return;
     end
-	
-	local rsize = #data
+    
+    local rsize = #data
     local request = session.parser
-	while rsize > 0 do
-		local errno, size = request:parse(data, bind(on_http_callback, session))
-		if errno > 0 then
-			peer:close()
-			break
-		end
-		if rsize >= size then
-			rsize = rsize - size
-		else
-			break
-		end
-	end
+    while rsize > 0 do
+        local errno, size = request:parse(data, bind(on_http_callback, session))
+        if errno > 0 then
+            peer:close()
+            break
+        end
+        if rsize >= size then
+            rsize = rsize - size
+        else
+            break
+        end
+    end
 end
 
 local function on_receive_handler(peer, ec, data)
-	if ec > 0 then
-		on_socket_error(peer, ec);
-		return;
-	end
-	if not pcall(on_socket_receive, peer, data) then
-		peer:close()
-	end
+    if ec > 0 then
+        on_socket_error(peer, ec);
+        return;
+    end
+    if not pcall(on_socket_receive, peer, data) then
+        peer:close()
+    end
 end
 
 local function on_ssl_handshake(peer, ec)
-	if ec > 0 then
-		peer:close();
-		return;
-	end
-	
+    if ec > 0 then
+        peer:close();
+        return;
+    end
+    
     local fd      = peer:id()
     local from    = peer:endpoint()
     local session = sessions[fd]
     
     if not session then
         session = {}
-		session.peer   = peer
+        session.peer   = peer
         session.parser = parser(false)
         sessions[fd]   = session
-		peer:select(luaos.read, bind(on_receive_handler, peer))
+        peer:select(luaos.read, bind(on_receive_handler, peer))
     end
 end
 
 local function on_socket_accept(ctx, peer)
-	if ctx then
-		peer:sslv23(ctx);
-	end
-	peer:handshake(bind(on_ssl_handshake, peer));
+    if ctx then
+        peer:sslv23(ctx);
+    end
+    peer:handshake(bind(on_ssl_handshake, peer));
 end
 
 ----------------------------------------------------------------------------
@@ -834,43 +835,43 @@ end
 local nginx = {}
 
 function nginx.upgrade()
-	_ws_upgrade = true;
+    _ws_upgrade = true;
 end
 
 function nginx.stop()
-	if nginx.acceptor then
-		nginx.acceptor:close();
-		nginx.acceptor = nil
-	end
-	for k, v in pairs(sessions) do
-		v.peer:close()
-		v.peer = nil
-		v.parser = nil
-	end
-	sessions = {}
+    if nginx.acceptor then
+        nginx.acceptor:close();
+        nginx.acceptor = nil
+    end
+    for k, v in pairs(sessions) do
+        v.peer:close()
+        v.peer = nil
+        v.parser = nil
+    end
+    sessions = {}
 end
 
 function nginx.start(host, port, wwwroot, ctx)
-	if nginx.acceptor then
-		return false
-	end
+    if nginx.acceptor then
+        return false
+    end
     if wwwroot then
         _WWWROOT = wwwroot
         _WWWROOT = string_gsub(_WWWROOT, '/', '.')
         _WWWROOT = string_gsub(_WWWROOT, '\\', '.')
     end
-	host = host or "0.0.0.0"
-	port = port or 8899
+    host = host or "0.0.0.0"
+    port = port or 8899
     
-	nginx.acceptor = luaos.socket("tcp");
-	if not nginx.acceptor then
-		return false
-	end
-	
-	if ctx == nil then
-		ctx = false
-	end
-	return nginx.acceptor:listen(host, port, bind(on_socket_accept, ctx));
+    nginx.acceptor = luaos.socket("tcp");
+    if not nginx.acceptor then
+        return false
+    end
+    
+    if ctx == nil then
+        ctx = false
+    end
+    return nginx.acceptor:listen(host, port, bind(on_socket_accept, ctx));
 end
 
 return nginx

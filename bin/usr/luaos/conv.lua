@@ -405,22 +405,22 @@ function x_rsa.decrypt(data, key) end
 
 ---@class conv
 local x = {
-	---@type url
-	url = curl,
-	---@type json
-	json = json,
-	---@type pack
-	pack = pack,
-	---@type xor
-	xor = conv.xor,
-	---@type hash
-	hash = conv.hash,
-	---@type base64
-	base64 = conv.base64,
-	---@type aes
-	aes = conv.aes,
-	---@type rsa
-	rsa = conv.rsa,
+    ---@type url
+    url = curl,
+    ---@type json
+    json = json,
+    ---@type pack
+    pack = pack,
+    ---@type xor
+    xor = conv.xor,
+    ---@type hash
+    hash = conv.hash,
+    ---@type base64
+    base64 = conv.base64,
+    ---@type aes
+    aes = conv.aes,
+    ---@type rsa
+    rsa = conv.rsa,
 }
 
 ----------------------------------------------------------------------------
@@ -432,7 +432,7 @@ local x = {
 ---@param str string
 ---@return any
 function x.stov(str)
-	return json.decode(str)
+    return json.decode(str)
 end
 
 ----------------------------------------------------------------------------
@@ -447,7 +447,7 @@ end
 ---@param v any
 ---@return string
 function x.vtos(v)
-	return json.encode(v)
+    return json.encode(v)
 end
 
 ----------------------------------------------------------------------------
@@ -459,7 +459,7 @@ end
 ---@param str string
 ---@return string
 function x.trim(str)
-	return (string.gsub(str, "^%s*(.-)%s*$", "%1"))
+    return (string.gsub(str, "^%s*(.-)%s*$", "%1"))
 end
 
 

@@ -20,31 +20,31 @@
 
 local function bind(callback, ...)
 ---[=[#if DEBUG]
-	assert(type(callback) == "function")
+    assert(type(callback) == "function")
 --]=]
-	local params = {...}
-	local n = #params
-	if n == 0 then
-		return function(...)
-			return callback(...)
-		end
-	elseif n == 1 then
-		return function(...)
-			return callback(params[1], ...)
-		end
-	elseif n == 2 then
-		return function(...)
-			return callback(params[1], params[2], ...)
-		end
-	elseif n == 3 then
-		return function(...)
-			return callback(params[1], params[2], params[3], ...)
-		end
-	end
-	return function(...)
-		table.insert(params, ... or nil)
-		return callback(table.unpack(params))
-	end
+    local params = {...}
+    local n = #params
+    if n == 0 then
+        return function(...)
+            return callback(...)
+        end
+    elseif n == 1 then
+        return function(...)
+            return callback(params[1], ...)
+        end
+    elseif n == 2 then
+        return function(...)
+            return callback(params[1], params[2], ...)
+        end
+    elseif n == 3 then
+        return function(...)
+            return callback(params[1], params[2], params[3], ...)
+        end
+    end
+    return function(...)
+        table.insert(params, ... or nil)
+        return callback(table.unpack(params))
+    end
 end
 
 return bind

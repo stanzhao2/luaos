@@ -25,33 +25,33 @@ local class = require("luaos.classy")
 local random = class("random")
 
 function random:__init(gen)
-	self.gen = gen
+    self.gen = gen
 end
 
 function random:__gc(gen)
-	if self.gen then
-		self.gen:close()
-		self.gen = nil
-	end
+    if self.gen then
+        self.gen:close()
+        self.gen = nil
+    end
 end
 
 function random:close()
-	if self.gen then
-		self.gen:close();
-	end
+    if self.gen then
+        self.gen:close();
+    end
 end
 
 function random:srand(seed)
-	if self.gen then
-		self.gen:srand(seed)
-	end
+    if self.gen then
+        self.gen:srand(seed)
+    end
 end
 
 function random:random(...)
-	if not self.gen then
-		return nil
-	end
-	return self.gen:generate(...)
+    if not self.gen then
+        return nil
+    end
+    return self.gen:generate(...)
 end
 
 ----------------------------------------------------------------------------
@@ -59,12 +59,12 @@ local x = {};
 
 ---@return random 返回一个32随机数发生器
 function x.random32_create()
-	return random(genrand.random32());
+    return random(genrand.random32());
 end
 
 ---@return random 返回一个64随机数发生器
 function x.random64_create()
-	return random(genrand.random64());
+    return random(genrand.random64());
 end
 
 ----------------------------------------------------------------------------
