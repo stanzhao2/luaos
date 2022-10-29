@@ -460,18 +460,33 @@ local ws_reason = {
     [1009] = "The length of packet is too large",
 };
 
+local _WS_FRAME_SIZE = 0xffff;
 local _WS_MAX_PACKET <const> = 64 * 1024 * 1024
 
-local function ws_encode(data, op, deflate)
+local function ws_insert(cache, size, length)
+    table_insert(cache, string_pack("B", size));
+    if not length then
+        return;
+    end
+    if size == 126 then
+        table_insert(cache, string_pack(">I2", length));
+        return;
+    end
+    if size == 127 then
+        table_insert(cache, string_pack(">I8", length));
+        return;
+    end
+end
+
+local function ws_frame(data, fin, op, deflate, first)
     if op == nil then
         op = op_code["text"];
     end
     op = op & 0x0f;
     
-    local flag = 0x80;
-    if deflate then
-        flag = 0xC0;
-        data = gzip.deflate(data, false);
+    local flag = fin;
+    if first and deflate then
+        flag = flag | 0x40;
     end
     
     local size = #data;
@@ -479,17 +494,58 @@ local function ws_encode(data, op, deflate)
     table_insert(cache, string_pack("B", op | flag))
     
     if size < 126 then
-        table_insert(cache, string_pack("B", size));
+        ws_insert(cache, size, nil);
     elseif size <= 0xffff then
-        table_insert(cache, string_pack("B", 126));
-        table_insert(cache, string_pack(">I2", size));
+        ws_insert(cache, 126, size);
     else
-        table_insert(cache, string_pack("B", 127));
-        table_insert(cache, string_pack(">I8", size));
+        ws_insert(cache, 127, size);
     end
     
     table_insert(cache, string_pack("c" .. size, data));
     return table_concat(cache);
+end
+
+local function ws_encode(data, op, deflate)
+    local fsize = _WS_FRAME_SIZE;
+    if deflate then
+        data = gzip.deflate(data, false);
+    end
+
+    local packet = {};
+    local length = #data;
+    local pos    = 1;
+    local first  = true;
+    local splite = false;
+    
+    while length > 0 do
+        local size = length;
+        if size > fsize then
+            size = fsize;
+        end
+        
+        if size < length then
+            splite = true;
+        end
+        
+        local fin = 0;
+        length = length - size;
+        if length == 0 then
+            fin = 0x80;
+        end
+        
+        local frame = data;
+        if splite then
+            frame = string_unpack("c" .. size, data, pos);
+        end
+        
+        frame = ws_frame(frame, fin, op, deflate, first);
+        table_insert(packet, frame);
+        
+        pos = pos + size;
+        first = false;
+    end
+    
+    return table_concat(packet);
 end
 
 local function ws_close(peer, code)
@@ -587,6 +643,11 @@ local function on_ws_request(session, fin, data, opcode)
         session.packet = nil;
     end
     
+    if session.rsv1 then --deflate
+        data = gzip.inflate(data);
+        session.rsv1 = false;
+    end
+    
     local handler = session.ws_handler;
     if handler then
         local ws_peer = session.ws_peer;
@@ -608,6 +669,11 @@ local function on_ws_receive(session, data)
         
         local fin = (v1 & 0x80) ~= 0;
         local deflate = (v1 & 0x40) ~= 0;
+        
+        if deflate then
+            session.rsv1 = deflate;
+        end
+        
         -- unused flag
         local rsv2   = (v1 & 0x20) ~= 0;
         local rsv3   = (v1 & 0x10) ~= 0;        
@@ -658,10 +724,6 @@ local function on_ws_receive(session, data)
         local packet = string_unpack("c" .. payload_len, data, pos);
         if masking_key then
             packet = conv.xor.convert(packet, masking_key);
-        end
-        
-        if deflate then --deflate
-            packet = gzip.inflate(packet);
         end
         
         on_ws_request(session, fin, packet, opcode);
