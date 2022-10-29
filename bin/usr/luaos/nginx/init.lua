@@ -656,6 +656,7 @@ local function on_ws_request(session, fin, data, opcode)
 end
 
 local function on_ws_receive(session, data)
+    local peer = session.peer;
     if session.cache and #session.cache > 0 then
         data = table_concat(session.cache) .. data;
         session.cache = nil;
@@ -671,6 +672,10 @@ local function on_ws_receive(session, data)
         local deflate = (v1 & 0x40) ~= 0;
         
         if deflate then
+            if session.rsv1 then
+                ws_close(peer, 1002);
+                return;
+            end
             session.rsv1 = deflate;
         end
         
@@ -681,7 +686,7 @@ local function on_ws_receive(session, data)
         
         local mask = (v2 & 0x80) ~= 0;
         if not mask then
-            ws_close(session.peer, 1002);
+            ws_close(peer, 1002);
             return;
         end
         
@@ -703,7 +708,7 @@ local function on_ws_receive(session, data)
         end
         
         if payload_len > _WS_MAX_PACKET then
-            ws_close(session.peer, 1009);
+            ws_close(peer, 1009);
             return;
         end
         
