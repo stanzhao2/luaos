@@ -97,6 +97,8 @@ void post_alive(lua_State* L);
 
 void post_alive_exit(lua_State* L);
 
+bool is_debug_mode(lua_State* L);
+
 bool check_bom_header();
 
 bool lua_compile(const char* romname);

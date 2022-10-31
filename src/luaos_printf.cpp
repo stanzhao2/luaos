@@ -187,12 +187,8 @@ static void os_printf(color_type type_color, bool prefix,  const char* data)
 
 static int lua_printf(lua_State* L, color_type color)
 {
-  lua_getglobal(L, "_DEBUG");
-  int debug_type = lua_type(L, -1);
-  lua_pop(L, 1);
-
   char filename[1024] = { 0 };
-  if (debug_type)
+  if (is_debug_mode(L))
   {
     for (int i = 1; i < 100; i++)
     {
@@ -210,8 +206,7 @@ static int lua_printf(lua_State* L, color_type color)
       }
     }
   }
-  else if (color == color_type::yellow)
-  {
+  else if (color == color_type::yellow) {
     return 0;
   }
 

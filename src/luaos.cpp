@@ -330,6 +330,17 @@ bool check_bom_header()
   return ok;
 }
 
+bool is_debug_mode(lua_State* L)
+{
+  bool result = false;
+  lua_getglobal(L, "_DEBUG");
+  if (lua_type(L, -1) == LUA_TBOOLEAN) {
+    result = lua_toboolean(L, -1) ? true : false;
+  }
+  lua_pop(L, 1);
+  return result;
+}
+
 LUALIB_API int lua_pcall_error(lua_State* L)
 {
   const char* err = luaL_checkstring(L, -1);
