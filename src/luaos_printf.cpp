@@ -187,7 +187,39 @@ static void os_printf(color_type type_color, bool prefix,  const char* data)
 
 static int lua_printf(lua_State* L, color_type color)
 {
+  lua_getglobal(L, "_DEBUG");
+  int debug_type = lua_type(L, -1);
+  lua_pop(L, 1);
+
+  char filename[1024] = { 0 };
+  if (debug_type)
+  {
+    for (int i = 1; i < 100; i++)
+    {
+      lua_Debug ar;
+      int result = lua_getstack(L, i, &ar);
+      if (result == 0) {
+        break;
+      }
+      if (lua_getinfo(L, "Sl", &ar))
+      {
+        if (ar.currentline > 0){
+          sprintf(filename, "<%s:%d> ", ar.short_src, ar.currentline);
+          break;
+        }
+      }
+    }
+  }
+  else if (color == color_type::yellow)
+  {
+    return 0;
+  }
+
   std::string data;
+  if (filename[0]) {
+    data.append(filename);
+  }
+
   int count = lua_gettop(L);
   lua_getglobal(L, "tostring");
 
@@ -206,7 +238,7 @@ static int lua_printf(lua_State* L, color_type color)
 
     data.append(str);
     if (i < count) {
-      data.append("\t");
+      data.append(", ");
     }
     lua_pop(L, 1);
   }
@@ -231,13 +263,6 @@ LUALIB_API int lua_os_error(lua_State* L)
 
 LUALIB_API int lua_os_trace(lua_State* L)
 {
-  lua_getglobal(L, "_DEBUG");
-  int debug_type = lua_type(L, -1);
-  lua_pop(L, 1);
-
-  if (debug_type == LUA_TNIL) {
-    return 0;
-  }
   return lua_printf(L, color_type::yellow);
 }
 

@@ -17,45 +17,6 @@
 ]]--
 
 ----------------------------------------------------------------------------
-
-local local_print = print;
-local local_trace = trace;
-local local_error = error;
-
-----------------------------------------------------------------------------
----只在调试/开发环境下有效
-----------------------------------------------------------------------------
-
-if _DEBUG then
-    local debug_getinfo = debug.getinfo;
-    local table_insert  = table.insert;
-    local table_concat  = table.concat;
-    local string_format = string.format;
-    
-    local function format_params(...)
-        local info = debug_getinfo(3, "Sl");
-        local file = info.short_src;
-        local line = info.currentline;
-        
-        local params = {...};
-        table_insert(params, 1, string_format("%s:%u - ", file, line));
-        return table_concat(params);
-    end
-    
-    print = function(...)
-        local_print(format_params(...));
-    end
-
-    trace = function(...)        
-        local_trace(format_params(...));
-    end
-
-    error = function(...)        
-        local_error(format_params(...));
-    end
-end
-
-----------------------------------------------------------------------------
 ---为 string 添加功能
 ----------------------------------------------------------------------------
 
@@ -90,7 +51,7 @@ end
 
 local ok, bigint = pcall(require, "bigint");
 if not ok then
-    local_trace("bigint module is not installed");
+    trace("bigint module is not installed");
 else
     ---创建一个大整数
     ---@param v integer
@@ -478,7 +439,7 @@ end
 ----------------------------------------------------------------------------
 
 local function on_error(err)
-    local_error(debug.traceback(err));
+    error(debug.traceback(err));
 end
 
 ---以保护模式运行函数
@@ -495,32 +456,32 @@ end
 
 ok, luaos.bind  = pcall(require, "luaos.bind");
 if not ok then
-    local_trace("bind module is not installed");
+    trace("bind module is not installed");
 end
 
 ok, luaos.conv  = pcall(require, "luaos.conv");
 if not ok then
-    local_trace("conv module is not installed");
+    trace("conv module is not installed");
 end
 
 ok, luaos.curl  = pcall(require, "luaos.curl");
 if not ok then
-    local_trace("curl module is not installed");
+    trace("curl module is not installed");
 end
 
 ok, luaos.heap  = pcall(require, "luaos.heap");
 if not ok then
-    local_trace("heap module is not installed");
+    trace("heap module is not installed");
 end
 
 ok, luaos.try   = pcall(require, "luaos.try");
 if not ok then
-    local_trace("try module is not installed");
+    trace("try module is not installed");
 end
 
 ok, luaos.class = pcall(require, "luaos.classy");
 if not ok then
-    local_trace("classy module is not installed");
+    trace("classy module is not installed");
 end
 
 ----------------------------------------------------------------------------
