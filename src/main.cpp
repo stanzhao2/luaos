@@ -16,6 +16,7 @@
 #include <signal.h>
 #include <thread>
 #include <memory>
+#include <conv.h>
 
 #include "luaos.h"
 #include "luaos_loader.h"
@@ -132,6 +133,18 @@ static void init_lua_state(lua_State* L)
   lua_pushcfunction(L, lua_os_deadline);
   lua_setfield(L, -2, "deadline");
   lua_pop(L, 1); //pop os from stack
+
+  lua_getglobal(L, "utf8");
+  if (lua_type(L, -1) == LUA_TNIL)
+  {
+    lua_pop(L, 1);
+    lua_newtable(L);
+    lua_pushvalue(L, -1);
+    lua_setglobal(L, "utf8");
+  }
+  lua_pushcfunction(L, lua_is_utf8);
+  lua_setfield(L, -2, "check");
+  lua_pop(L, 1); //pop utf8 from stack
 }
 
 static void init_preload(lua_State* L)

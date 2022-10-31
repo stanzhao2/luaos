@@ -444,6 +444,14 @@ LUALIB_API int lua_os_typename(lua_State* L)
   return 1;
 }
 
+LUALIB_API int lua_is_utf8(lua_State* L)
+{
+  size_t size = 0;
+  const char* data = luaL_checklstring(L, 1, &size);
+  lua_pushboolean(L, is_utf8(data, size) ? 1 : 0);
+  return 1;
+}
+
 void print_copyright()
 {
   std::string logo = R"(

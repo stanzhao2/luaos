@@ -480,7 +480,7 @@ end
 
 local function ws_frame(data, fin, op, deflate, first)
     if op == nil then
-        op = op_code["text"];
+        op = op_code.binary;
     end
     op = op & 0x0f;
     
@@ -511,11 +511,11 @@ local function ws_encode(data, op, deflate)
         data = gzip.deflate(data, false);
     end
 
-    local packet = {};
-    local length = #data;
-    local pos    = 1;
-    local first  = true;
-    local splite = false;
+    local packet    = {};
+    local length    = #data;
+    local pos       = 1;
+    local first     = true;
+    local splite    = false;
     
     while length > 0 do
         local size = length;
@@ -651,6 +651,13 @@ local function on_ws_request(session, fin, data, opcode)
     if session.deflate then --deflate
         data = gzip.inflate(data);
         session.deflate = false;
+    end
+    
+    if opcode == op_code.text then
+        if not utf8.check(data) then
+            ws_close(peer, 1002);
+            return;
+        end
     end
     
     local handler = session.ws_handler;
