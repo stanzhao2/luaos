@@ -462,6 +462,8 @@ local ws_reason = {
 
 local _WS_FRAME_SIZE = 0xffff;
 local _WS_MAX_PACKET <const> = 64 * 1024 * 1024
+local _WS_TRUST_TIMEOUT = 300000;
+local _WS_UNTRUST_TIMEOUT = 5000;
 
 local function ws_insert(cache, size, length)
     table_insert(cache, string_pack("B", size));
@@ -836,6 +838,7 @@ local function on_ws_accept(session, request)
         end
     end
     
+    peer:timeout(_WS_TRUST_TIMEOUT);
     session.ws_handler = script;
     
     ---如果请求者需要跨域连接
@@ -899,6 +902,7 @@ local function on_http_callback(session, request)
         return;
     end
     
+    peer:timeout(_WS_TRUST_TIMEOUT);
     local from = peer:endpoint();
     local ok, result = pcall(on_http_request, peer, request);
     if not ok then
@@ -991,6 +995,7 @@ local function on_socket_accept(ctx, peer)
     if ctx then
         peer:sslv23(ctx);
     end
+    peer:timeout(_WS_UNTRUST_TIMEOUT);
     peer:handshake(bind(on_ssl_handshake, peer));
 end
 
