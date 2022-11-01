@@ -581,6 +581,13 @@ local function ws_close(peer, code)
     peer:close();
 end
 
+local function ws_pong(peer)
+    local r = {};
+    table_insert(r, string_pack("B", op_code.pong | 0x80));
+    table_insert(r, string_pack("B", 0));
+    send_message(peer, table_concat(r));
+end
+
 local function wrap_ws_socket(peer, deflate)
     local _ws_socket = {
         peer = peer, deflate = deflate
@@ -627,10 +634,7 @@ local function on_ws_request(session, fin, data, opcode)
     
     --客户端发送来的心跳消息
     if opcode == op_code.ping then
-        local r = {};
-        table_insert(r, string_pack("B", op_code.pong | 0x80));
-        table_insert(r, string_pack("B", 0));
-        send_message(peer, table_concat(r));
+        ws_pong(peer);
         return;
     end
     
