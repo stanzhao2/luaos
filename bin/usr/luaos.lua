@@ -113,9 +113,21 @@ os.subscribe    = nil; --disused
 ---封装 luaos 主模块
 ----------------------------------------------------------------------------
 
+local function on_error(err)
+    error(debug.traceback(err));
+end
+
 ---@class luaos
 local luaos = {
     read = 1, write = 2,
+    
+    ---以保护模式运行函数
+    ---@param func function
+    ---@param ... any
+    ---@return boolean,string
+    pcall = function(func, ...)
+        return xpcall(func, on_error, ...);
+    end,
     
     ---创建一个 socket
     ---@param family string
@@ -181,7 +193,7 @@ local luaos = {
         return private.stopped();
     end,
     
-    ---发布一个系统消息
+    ---发布一个系统消息(跨模块)
     ---@param topic integer
     ---@param mask integer
     ---@param receiver integer
@@ -190,13 +202,13 @@ local luaos = {
         return private.publish(topic, mask, receiver, ...);
     end,
     
-    ---取消一个消息订阅
+    ---取消一个消息订阅(跨模块)
     ---@param topic integer
     cancel = function(topic)
         return private.cancel(topic);
     end,
     
-    ---监视一个消息订阅
+    ---监视一个消息订阅(跨模块)
     ---@param topic integer
     ---@param handler fun(subscriber:integer, type:string):void
     ---@return boolean
@@ -204,12 +216,80 @@ local luaos = {
         return private.watch(topic, handler);
     end,
     
-    ---订阅一个系统消息
+    ---订阅一个系统消息(跨模块)
     ---@param topic integer
     ---@param handler fun(publisher:integer, mask:integer, ...):void
     ---@return boolean
     subscribe = function(topic, handler)
         return private.subscribe(topic, handler);
+    end,
+    
+    ---注册一个消息回调(仅当前模块)
+    ---@param name integer|string
+    ---@param handler fun(...):void
+    ---@return function
+    register = function(name, handler)
+        assert(type(handler) == "function");
+        local event = events[name];
+        
+        if event == nil then
+            event = {};
+            table.insert(event, handler);
+            events[name] = event;
+            return handler;
+        end
+        
+        for _, v in ipairs(event) do
+            if (v == handler) then
+                return nil;
+            end
+        end
+        
+        table.insert(event, handler);
+        return handler;
+    end,
+    
+    ---取消一个消息回调(仅当前模块)
+    ---@param name integer|string
+    ---@param handler fun(...):void
+    unregister = function(name, handler)
+        local event = events[name];
+        if not event then
+            return;
+        end
+        
+        local count = #event;
+        for i = 1, count do
+            if event[i] == handler then
+                table.remove(event, i);
+                if count == 1 then
+                    events[name] = nil;
+                end
+                break;
+            end
+        end
+    end,
+    
+    ---派发一个回调消息(仅当前模块)
+    ---@param name integer|string
+    ---@return integer
+    dispatch = function(name, ...)
+        local event = events[name];
+        if not event then
+            return 0;
+        end
+        
+        local handlers = {};
+        for _, handler in ipairs(event) do
+            table.insert(handlers, handler);
+        end
+        
+        local count = 0;
+        for _, handler in ipairs(handlers) do
+            handler(...);
+            count = count + 1;
+        end
+        return count;
     end,
 };
 
@@ -418,6 +498,10 @@ luaos.storage = {
 
 local random;
 ok, random = pcall(require, "luaos.random");
+if not ok then
+    trace("random module is not installed");
+end
+
 if ok then
     ---创建一个 32 位随机数
     ---@retrun integer
@@ -435,19 +519,44 @@ if ok then
 end
 
 ----------------------------------------------------------------------------
----封装 pcall 功能
+---封装消息反应堆模块
 ----------------------------------------------------------------------------
 
-local function on_error(err)
-    error(debug.traceback(err));
+local class_pump;
+ok, class_pump = pcall(require, "luaos.pump");
+if not ok then
+    trace("pump-message module is not installed");
 end
 
----以保护模式运行函数
----@param func function
----@param ... any
----@return boolean,string
-function luaos.pcall(func, ...)
-    return xpcall(func, on_error, ...);
+if ok then
+    local pump_message = class_pump();
+    
+    ---创建一个消息反应堆
+    luaos.pump_message = function()
+        return class_pump();
+    end
+    
+    ---注册一个消息回调(仅当前模块)
+    ---@param name integer|string
+    ---@param handler fun(...):void
+    ---@return function
+    luaos.register = function(name, handler)
+        return pump_message:register(name, handler);
+    end
+    
+    ---取消一个消息回调(仅当前模块)
+    ---@param name integer|string
+    ---@param handler fun(...):void
+    luaos.unregister = function(name, handler)
+        return pump_message:unregister(name, handler);
+    end
+    
+    ---派发一个回调消息(仅当前模块)
+    ---@param name integer|string
+    ---@return integer
+    luaos.dispatch = function(name, ...)
+        return pump_message:dispatch(name, ...);
+    end
 end
 
 ----------------------------------------------------------------------------
