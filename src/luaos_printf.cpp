@@ -233,7 +233,7 @@ static int lua_printf(lua_State* L, color_type color)
 
     data.append(str);
     if (i < count) {
-      data.append(", ");
+      data.append("\t");
     }
     lua_pop(L, 1);
   }
