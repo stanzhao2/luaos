@@ -478,12 +478,7 @@ local function ws_insert(cache, size, length)
     end
 end
 
-local function ws_frame(data, fin, op, deflate, first)
-    if op == nil then
-        op = op_code.binary;
-    end
-    op = op & 0x0f;
-    
+local function ws_frame(data, fin, op, deflate, first)    
     local flag = fin;
     if first and deflate then
         flag = flag | 0x40;
@@ -505,7 +500,21 @@ local function ws_frame(data, fin, op, deflate, first)
     return table_concat(cache);
 end
 
+local function ws_opcode(data)
+    local opcode = op_code.binary;
+    if utf8.check(data) then
+        opcode = op_code.text;
+    end
+    return opcode;
+end
+
 local function ws_encode(data, op, deflate)
+    if op == nil then
+        op = ws_opcode(data);
+    end
+    
+    assert(op == op_code.text or op == op_code.binary);
+    
     local fsize = _WS_FRAME_SIZE;
     if deflate then
         data = gzip.deflate(data, false);
@@ -848,7 +857,7 @@ local function on_ws_accept(session, request)
     session.ws_peer = wrap_ws_socket(peer, deflate);
     local handler = session.ws_handler;
     if handler and type(handler.on_accept) == "function" then
-        handler.on_accept(session.ws_peer, params);
+        handler.on_accept(session.ws_peer, request, params);
     end
 end
 

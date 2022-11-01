@@ -39,6 +39,8 @@ local html = [[
 </html>
 ]]
 
+local format = string.format;
+
 ----------------------------------------------------------------------------
 
 local function on_http_request(request, response, params)
@@ -48,18 +50,19 @@ end
 
 ----------------------------------------------------------------------------
 
-local function on_ws_accept(peer, params)
-	
+local function on_ws_accept(ws_peer, request, params)
+    local ip, port = ws_peer:endpoint();
+    trace(format("websocket accept from %s", ip));
 end
 
 ----------------------------------------------------------------------------
 
-local function on_ws_request(peer, ec, data, opcode)
+local function on_ws_request(ws_peer, ec, data, opcode)
 	if ec > 0 then
-		trace("websocket error, errno: ", ec);
+		trace(format("websocket error, errno: %d", ec));
 		return;
 	end
-	peer:send(data, opcode);
+	ws_peer:send(data, opcode);
 end
 
 ----------------------------------------------------------------------------
@@ -67,19 +70,19 @@ end
 
 local nginx_http = {};
 
----HTTP 请求
+---HTTP GET/POST 请求
 function nginx_http.on_request(request, response, params)
 	on_http_request(request, response, params);
 end
 
 ---Websocket 连接
-function nginx_http.on_accept(peer, params)
-	on_ws_accept(peer, params);
+function nginx_http.on_accept(ws_peer, request, params)
+	on_ws_accept(ws_peer, request, params);
 end
 
 ---Websocket 请求
-function nginx_http.on_receive(peer, ec, data, opcode)
-	on_ws_request(peer, ec, data, opcode);
+function nginx_http.on_receive(ws_peer, ec, data, opcode)
+	on_ws_request(ws_peer, ec, data, opcode);
 end
 
 return nginx_http;
