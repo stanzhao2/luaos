@@ -75,12 +75,17 @@ function nginx_http.on_request(request, response, params)
 	on_http_request(request, response, params);
 end
 
----Websocket 连接
+---Websocket 握手请求
+function nginx_http.on_handshake(ws_peer, request, params)
+    return true;
+end
+
+---Websocket 连接成功
 function nginx_http.on_accept(ws_peer, request, params)
 	on_ws_accept(ws_peer, request, params);
 end
 
----Websocket 请求
+---Websocket 数据请求
 function nginx_http.on_receive(ws_peer, ec, data, opcode)
 	on_ws_request(ws_peer, ec, data, opcode);
 end

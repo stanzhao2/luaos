@@ -822,9 +822,19 @@ local function on_ws_accept(session, request)
         return;
     end
     
+    session.ws_peer = wrap_ws_socket(peer, deflate);
+    
+    if type(script.on_handshake) == "function" then
+        local ok, result = pcall(script.on_handshake, ws_peer, request, params);
+        if not ok or not result then
+            on_http_error(peer, _STATE_ERROR);
+            return;
+        end
+    end
+    
     session.ws_handler = script;
     
-    --如果请求者需要跨域连接
+    ---如果请求者需要跨域连接
     local origin = rheader["Origin"];
     if origin then
         headers["Access-Control-Allow-Credentials"] = "true";
@@ -834,7 +844,7 @@ local function on_ws_accept(session, request)
     local deflate = false;
     local externs = rheader[_HEADER_WEBSOCKET_EXTENSIONS];
     
-    --如果开启了数据压缩功能
+    ---如果开启了数据压缩功能
     if externs then
         local x = string_match(externs, "permessage%-deflate");
         if x then
@@ -854,7 +864,6 @@ local function on_ws_accept(session, request)
     headers[_HEADER_WEBSOCKET_ACCEPT] = key;
     on_http_success(peer, headers, 101);
     
-    session.ws_peer = wrap_ws_socket(peer, deflate);
     local handler = session.ws_handler;
     if handler and type(handler.on_accept) == "function" then
         handler.on_accept(session.ws_peer, request, params);
