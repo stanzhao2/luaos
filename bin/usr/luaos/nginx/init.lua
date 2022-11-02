@@ -124,6 +124,7 @@ local gzip_encoding = {
 local _WWWROOT = "nginx"
 local _STATE_OK                 = 200
 local _STATE_LOCATION           = 301
+local _STATE_BAD_REQUEST        = 400
 local _STATE_NOT_FOUND          = 404
 local _STATE_ERROR              = 502
 
@@ -140,6 +141,7 @@ local _HEADER_LOCATION          = "Location"
 local _HEADER_CACHE_CONTROL     = "Cache-Control"
 local _HEADER_CONTENT_TYPE      = "Content-Type"
 local _HEADER_CONTENT_LENGTH    = "Content-Length"
+local _HEADER_WEBSOCKET_VERSION    = "Sec-WebSocket-Version"
 local _HEADER_WEBSOCKET_KEY        = "Sec-WebSocket-Key"
 local _HEADER_WEBSOCKET_ACCEPT     = "Sec-WebSocket-Accept"
 local _HEADER_WEBSOCKET_EXTENSIONS = "Sec-WebSocket-Extensions"
@@ -794,9 +796,27 @@ local function on_ws_accept(session, request)
     local headers = default_headers();
     local rheader = request:headers();
     
+    local conn = rheader[_HEADER_CONNECTION];
+    if not conn then
+        on_http_error(peer, _STATE_BAD_REQUEST);
+        return;
+    end
+    
+    local upgrade = string_lower(rheader[conn]);
+    if upgrade ~= "websocket" then
+        on_http_error(peer, _STATE_BAD_REQUEST);
+        return;
+    end
+    
+    local version = rheader[_HEADER_WEBSOCKET_VERSION];
+    if not version or version ~= "13" then
+        on_http_error(peer, _STATE_BAD_REQUEST);
+        return;
+    end
+    
     local key = rheader[_HEADER_WEBSOCKET_KEY]
     if not key then
-        on_http_error(peer, _STATE_ERROR);
+        on_http_error(peer, _STATE_BAD_REQUEST);
         return;
     end
     
@@ -807,14 +827,14 @@ local function on_ws_accept(session, request)
     others = string_split(others, '.');
     
     if #others > 1 then
-        on_http_error(peer, _STATE_ERROR);
+        on_http_error(peer, _STATE_BAD_REQUEST);
         return;
     end
     
     ---加载脚本文件
     local ok, script = pcall(require, _WWWROOT .. filename);
     if not ok then
-        on_http_error(peer, _STATE_ERROR);
+        on_http_error(peer, _STATE_NOT_FOUND);
         return;
     end
     
@@ -839,6 +859,7 @@ local function on_ws_accept(session, request)
     end
     
     peer:timeout(_WS_TRUST_TIMEOUT);
+    session.upgrade = true;
     session.ws_handler = script;
     
     ---如果请求者需要跨域连接
@@ -896,7 +917,6 @@ local function on_http_callback(session, request)
         if not _ws_upgrade then
             peer:close();
         else
-            session.upgrade = true;
             pcall(on_ws_accept, session, request);
         end
         return;
