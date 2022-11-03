@@ -732,69 +732,73 @@ static int stmt_bind(lua_State* L) {
 		return 1;
 	}
 
-	if(stmt->used_bind_index >= stmt->need_bind_count)
-		return luasql_failmsg(L, "error stmt bind param more need. MySQL", "");
-
-	MYSQL_BIND* my_bind = &stmt->my_bind[stmt->used_bind_index];
-	stmt_param_data* my_param_data = &stmt->bind_param[stmt->used_bind_index];
-
-	int luatype = lua_type(L, 2);
-	my_bind->is_null = &my_param_data->is_null;
-	switch (luatype)
+	int count = lua_gettop(L);
+	for (int i = 2; i <= count; i++)
 	{
-	case LUA_TNIL:
-		my_param_data->is_null = 1;
+		if(stmt->used_bind_index >= stmt->need_bind_count)
+			return luasql_failmsg(L, "error stmt bind param more need. MySQL", "");
+
+		MYSQL_BIND* my_bind = &stmt->my_bind[stmt->used_bind_index];
+		stmt_param_data* my_param_data = &stmt->bind_param[stmt->used_bind_index];
+
+		int luatype = lua_type(L, i);
 		my_bind->is_null = &my_param_data->is_null;
-		my_bind->buffer_type = MYSQL_TYPE_NULL;
-		break;
-	case LUA_TBOOLEAN:
-		my_bind->buffer_type = MYSQL_TYPE_TINY;
-		my_bind->buffer_length = sizeof(my_param_data->willnumber.l);
-		my_param_data->willnumber.l = lua_tointeger(L, 2);
-		my_bind->buffer = &my_param_data->willnumber.l;
-		break;
-	case LUA_TNUMBER:
-	{
-		lua_Integer i = lua_tointeger(L, 2);
-		lua_Number n = lua_tonumber(L, 2);
-
-		if (n == i)
+		switch (luatype)
 		{
-			my_bind->buffer_type = MYSQL_TYPE_LONG;
-			my_param_data->willnumber.l = lua_tointeger(L, 2);
+		case LUA_TNIL:
+			my_param_data->is_null = 1;
+			my_bind->is_null = &my_param_data->is_null;
+			my_bind->buffer_type = MYSQL_TYPE_NULL;
+			break;
+		case LUA_TBOOLEAN:
+			my_bind->buffer_type = MYSQL_TYPE_TINY;
+			my_bind->buffer_length = sizeof(my_param_data->willnumber.l);
+			my_param_data->willnumber.l = lua_tointeger(L, i);
 			my_bind->buffer = &my_param_data->willnumber.l;
-		}
-		else
+			break;
+		case LUA_TNUMBER:
 		{
-			my_bind->buffer_type = MYSQL_TYPE_DOUBLE;
-			my_param_data->willnumber.d = lua_tonumber(L, 2);
-			my_bind->buffer = &my_param_data->willnumber.l;
-		}
-		break;
-	}
-	case LUA_TSTRING:
-	{
-		my_bind->buffer_type = MYSQL_TYPE_STRING;
-		size_t sizelen = 0;
-		const char* buffer = lua_tolstring(L, 2, &sizelen);
+			lua_Integer x = lua_tointeger(L, i);
+			lua_Number n = lua_tonumber(L, i);
 
-		my_param_data->willbuffer = malloc(sizelen);
-		memcpy(my_param_data->willbuffer, buffer, sizelen);
-		my_bind->buffer = my_param_data->willbuffer;
-		my_bind->buffer_length = (unsigned long)sizelen;
-		break;
+			if (n == x)
+			{
+				my_bind->buffer_type = MYSQL_TYPE_LONG;
+				my_param_data->willnumber.l = lua_tointeger(L, i);
+				my_bind->buffer = &my_param_data->willnumber.l;
+			}
+			else
+			{
+				my_bind->buffer_type = MYSQL_TYPE_DOUBLE;
+				my_param_data->willnumber.d = lua_tonumber(L, i);
+				my_bind->buffer = &my_param_data->willnumber.l;
+			}
+			break;
+		}
+		case LUA_TSTRING:
+		{
+			my_bind->buffer_type = MYSQL_TYPE_STRING;
+			size_t sizelen = 0;
+			const char* buffer = lua_tolstring(L, i, &sizelen);
+
+			my_param_data->willbuffer = malloc(sizelen);
+			memcpy(my_param_data->willbuffer, buffer, sizelen);
+			my_bind->buffer = my_param_data->willbuffer;
+			my_bind->buffer_length = (unsigned long)sizelen;
+			break;
+		}
+		default:
+			return luasql_failmsg(L, "error stmt bind. unkonw type", "");
+		}
+		stmt->used_bind_index++;
 	}
-	default:
-		return luasql_failmsg(L, "error stmt bind. unkonw type", "");
-	}
-	stmt->used_bind_index++;
+	
 	lua_pushboolean(L, 1);
 	return 1;
 }
 
 
 #ifdef WIN32
-
 
 inline struct tm* gmtime_r(
 	time_t const* const _Time,
@@ -807,6 +811,7 @@ inline struct tm* gmtime_r(
 
 	return NULL;
 }
+
 #endif
 /*
 ** Close the cursor on top of the stack.

@@ -1,7 +1,7 @@
 # Installation directories
 
 # Default prefix
-PREFIX ?= ../lua-5.4.4
+PREFIX ?= ../../../3rd/lua
 
 # Lua version and dirs
 LUA_SYS_VER ?= 5.1

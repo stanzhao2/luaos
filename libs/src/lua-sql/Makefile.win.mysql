@@ -1,7 +1,7 @@
-LUA_INC=..\lua-5.4.4\src
-LUA_DIR=..\lua-5.4.4\src
-LUA_LIBDIR=..\lua-5.4.4
-LUA_LIB=..\lua-5.4.4\src\lua54.lib
+LUA_INC=..\..\..\3rd\lua\src
+LUA_DIR=..\..\..\3rd\lua\src
+LUA_LIBDIR=..\..\..\3rd\lua\src
+LUA_LIB=..\..\..\3rd\lua\src\lua54.lib
 
 T=mysql
 
