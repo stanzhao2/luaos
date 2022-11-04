@@ -19,10 +19,15 @@
 ----------------------------------------------------------------------------
 
 local class = require("luaos.classy")
+local heap  = require("luaos.heap")
 
 ----------------------------------------------------------------------------
 
 local pump_message = class("pump_message");
+
+local function on_error(err)
+    error(debug.traceback(err));
+end
 
 ----------------------------------------------------------------------------
 
@@ -34,46 +39,23 @@ end
 ---@param name integer|string
 ---@param handler fun(...):void
 ---@return function
-function pump_message:register(name, handler)
+function pump_message:register(name, handler, priority)
     assert(type(handler) == "function");
     local event = self.handlers[name];
+    if not priority then
+        priority = 0;
+    end
     
     if event == nil then
-        event = {};
-        table.insert(event, handler);
+        event = heap.maxUnique();
+        event:insert(handler, priority);
         self.handlers[name] = event;
         return handler;
     end
     
-    for _, v in ipairs(event) do
-        if (v == handler) then
-            return nil;
-        end
-    end
-    
-    table.insert(event, handler);
+    event:remove(handler);
+    event:insert(handler, priority);
     return handler;
-end
-
----取消一个消息回调(仅当前模块)
----@param name integer|string
----@param handler fun(...):void
-function pump_message:unregister(name, handler)
-    local event = self.handlers[name];
-    if not event then
-        return;
-    end
-    
-    local count = #event;
-    for i = 1, count do
-        if event[i] == handler then
-            table.remove(event, i);
-            if count == 1 then
-                self.handlers[name] = nil;
-            end
-            break;
-        end
-    end
 end
 
 ---派发一个回调消息(仅当前模块)
@@ -85,17 +67,41 @@ function pump_message:dispatch(name, ...)
         return 0;
     end
     
-    local handlers = {};
-    for _, handler in ipairs(event) do
-        table.insert(handlers, handler);
+    local next = heap.maxUnique();
+    while event:size() > 0 do
+        local handler, priority = event:pop();
+        self.callback = handler;
+        
+        xpcall(handler, on_error, ...);
+        
+        self.callback = nil;
+        if self.removed == handler then
+            self.removed = nil;
+        else
+            next:insert(handler, priority);
+        end
     end
     
-    local count = 0;
-    for _, handler in ipairs(handlers) do
-        handler(...);
-        count = count + 1;
+    self.handlers[name] = next;
+    return next:size();
+end
+
+---取消一个消息回调(仅当前模块)
+---@param name integer|string
+---@param handler fun(...):void
+function pump_message:unregister(name, handler)
+    assert(type(handler) == "function");
+    local event = self.handlers[name];
+    if event then
+        if self.callback == handler then
+            self.removed = handler;
+        end
+        
+        local priority = event:remove(handler);
+        if priority ~= nil and event:size() == 0 then
+            self.handlers[name] = nil;
+        end
     end
-    return count;
 end
 
 ----------------------------------------------------------------------------

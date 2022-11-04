@@ -540,8 +540,8 @@ if ok then
     ---@param name integer|string
     ---@param handler fun(...):void
     ---@return function
-    luaos.register = function(name, handler)
-        return pump_message:register(name, handler);
+    luaos.register = function(name, handler, priority)
+        return pump_message:register(name, handler, priority);
     end
     
     ---取消一个消息回调(仅当前模块)
