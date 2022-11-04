@@ -55,6 +55,10 @@ local function send_to_master(message)
 end
 
 local function on_publish_request(topic, publisher, mask, ...)
+    if luaos.id() == publisher then
+        return;
+	end
+
     local message     = {}
     message.type      = cmd_publish
     message.topic     = topic
