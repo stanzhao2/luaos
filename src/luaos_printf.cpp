@@ -188,7 +188,7 @@ static void os_printf(color_type type_color, bool prefix,  const char* data)
 static int lua_printf(lua_State* L, color_type color)
 {
   char filename[1024] = { 0 };
-  if (is_debug_mode(L))
+  if (is_debug_mode(L) || color == color_type::red)
   {
     for (int i = 1; i < 100; i++)
     {
