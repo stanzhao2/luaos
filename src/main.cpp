@@ -300,6 +300,45 @@ const char* get_params(const std::string& key)
   return iter == params.end() ? 0 : iter->second.c_str();
 }
 
+static int pmain(lua_State* L)
+{
+  main_ios = this_thread().lua_reactor();
+  _printf(color_type::yellow, true, "loading main module...\n");
+
+  int result = lua_dofile(L, LUAOS_MAIN);
+  if (result != LUA_OK) {
+    luaos_pop_error(L, LUAOS_MAIN);
+  }
+  else
+  {
+    lua_pushcfunction(L, lua_pcall_error);
+    int error_fn_index = lua_gettop(L);
+    lua_getglobal(L, LUAOS_MAIN);
+
+    if (lua_isfunction(L, -1))
+    {
+      int argc = (int)lua_tointeger(L, 1);
+      char **argv = (char **)lua_touserdata(L, 2);
+
+      for (size_t i = 1; i < argc; i++) {
+        lua_pushstring(L, argv[i]);
+      }
+      _printf(color_type::yellow, true, "running main function in protected mode\n");
+      result = lua_pcall(L, argc - 1, 0, error_fn_index);
+    }
+  }
+
+  lua_pop(L, lua_gettop(L));
+
+  std::thread check_thd(check_thread);
+  if (check_thd.joinable()) {
+    check_ios()->stop(), check_thd.join(); //wait for thread exit
+  }
+  _printf(color_type::yellow, true, "goodbye...\n\n");
+  lua_pushboolean(L, result == LUA_OK ? 1 : 0);
+  return 1;
+}
+
 int main(int argc, char* argv[])
 {
 #ifndef OS_WINDOWS
@@ -315,7 +354,7 @@ int main(int argc, char* argv[])
 
   if ((argc - 1) & 1) {
     _printf(color_type::red, true, "invalid arguments\n");
-    return 0;
+    return EXIT_FAILURE;
   }
 
 #ifdef OS_WINDOWS
@@ -327,14 +366,15 @@ int main(int argc, char* argv[])
   //check bom header of lua files
   _printf(color_type::yellow, true, "checking file encoding...\n");
   if (!check_bom_header()) {
-    return 0;
+    return EXIT_FAILURE;
   }
 
   for (int i = 1; i < argc; i += 2)
   {
     if (argv[i][0] != '-') {
       _printf(color_type::red, true, "invalid argument: %s\n", argv[i]);
-      return 0;
+      _printf(color_type::red, true, "\n");
+      return EXIT_FAILURE;
     }
     params[argv[i]] = argv[i + 1];
   }
@@ -345,53 +385,36 @@ int main(int argc, char* argv[])
     _printf(color_type::yellow, true, "compiling lua files...\n");
     lua_compile(compile);
     _printf(color_type::yellow, true, "compilation completed\n");
-    return printf("\n"), 0;
+
+    _printf(color_type::red, true, "\n");
+    return EXIT_SUCCESS;
   }
 
   rom_fname = get_params("-r");
   if (rom_fname)
   {
-    if (access(rom_fname, 0) < 0) {
+    if (access(rom_fname, 0) < 0)
+    {
       _printf(color_type::red, true, "%s not found\n", rom_fname);
-      return printf("\n"), 0;
+      _printf(color_type::red, true, "\n");
+      return EXIT_FAILURE;
     }
   }
 
-  lua_State* L = new_lua_state();
-  if (!L) {
+  lua_State* L = new_lua_state();  /* create state */
+  if (L == NULL) {
     _printf(
       color_type::red, true, "lua_State initialization failed\n"
     );
-    return printf("\n"), 0;
+    return printf("\n"), EXIT_FAILURE;
   }
-
-  std::thread check_thd(check_thread);
-  main_ios = this_thread().lua_reactor();
-
-  _printf(color_type::yellow, true, "loading main module...\n");
-  if (lua_dofile(L, LUAOS_MAIN) != LUA_OK) {
-    luaos_pop_error(L, LUAOS_MAIN);
-  }
-  else
-  {
-    lua_pushcfunction(L, lua_pcall_error);
-    int error_fn_index = lua_gettop(L);
-    lua_getglobal(L, LUAOS_MAIN);
-
-    if (lua_isfunction(L, -1)) {
-      for (size_t i = 1; i < argc; i++) {
-        lua_pushstring(L, argv[i]);
-      }
-      _printf(color_type::yellow, true, "running main function in protected mode\n");
-      lua_pcall(L, argc - 1, 0, error_fn_index);
-    }
-  }
-  lua_pop(L, lua_gettop(L));
-  if (check_thd.joinable()) {
-    check_ios()->stop(), check_thd.join(); //wait for thread exit
-  }
-  _printf(color_type::yellow, true, "goodbye...\n\n");
-  return 0;
+  lua_pushcfunction(L, &pmain);  /* to call 'pmain' in protected mode */
+  lua_pushinteger(L, argc);  /* 1st argument */
+  lua_pushlightuserdata(L, argv); /* 2nd argument */
+  int status = lua_pcall(L, 2, 1, 0);  /* do the call */
+  result = lua_toboolean(L, -1);  /* get result */
+  lua_close(L);
+  return (result && status == LUA_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 /*******************************************************************************/
