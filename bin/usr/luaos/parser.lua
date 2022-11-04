@@ -109,6 +109,17 @@ function parser:state_code()
     return self._parser:status_code()
 end
 
+function parser:remote_address()
+    local headers = self:header();
+    local forword = headers["X-Forwarded-For"];
+    if not forword then
+        return nil;
+    end
+    
+    local proxy = string.split(forword, ",");
+    return proxy[1];
+end
+
 function parser:error()
     return self._parser:error()
 end
