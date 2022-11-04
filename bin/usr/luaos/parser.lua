@@ -110,7 +110,7 @@ function parser:state_code()
 end
 
 function parser:remote_address()
-    local headers = self:header();
+    local headers = self:headers();
     local forword = headers["X-Forwarded-For"];
     if not forword then
         return nil;
