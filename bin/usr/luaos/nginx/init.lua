@@ -409,11 +409,31 @@ local function on_http_request(peer, request)
     end
     
     ---运行脚本文件
+    request.peer = function()
+        return peer;
+    end;
+    
+    headers.finish = function(self, result)
+        if result then
+            on_http_success(peer, headers);
+            return true;
+        end
+        on_http_error(peer, headers, _STATE_ERROR);
+        return false;
+    end;
+    
     local ok, result = pcall(script.on_request, request, headers, params)
     if not ok then
         return on_http_error(peer, headers, _STATE_ERROR)
     end
     
+    ---如果返回值不为 nil 表示业务层自己回应请求
+    if result ~= nil then
+        if result then
+            return _STATE_OK_TEXT;
+        end
+        return _STATE_FAILED_TEXT;
+    end
     return on_http_success(peer, headers)
 end
 
