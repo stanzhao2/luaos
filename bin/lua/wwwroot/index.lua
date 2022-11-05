@@ -46,6 +46,7 @@ local format = string.format;
 local function on_http_request(request, response, params)
 	local data = format(html, luaos.typename());
 	response:write(data);
+	response:finish();
 end
 
 ----------------------------------------------------------------------------

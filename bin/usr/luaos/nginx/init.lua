@@ -29,6 +29,7 @@ local bind   = luaos.bind;
 local try    = luaos.try;
 local conv   = luaos.conv;
 local socket = luaos.socket;
+local format = string.format;
 
 local http_status_text = {
     [100] = "Continue",
@@ -126,7 +127,7 @@ local _STATE_OK                 = 200
 local _STATE_LOCATION           = 301
 local _STATE_BAD_REQUEST        = 400
 local _STATE_NOT_FOUND          = 404
-local _STATE_ERROR              = 502
+local _STATE_ERROR              = 500
 
 local _STATE_OK_TEXT            = "OK"
 local _STATE_FAILED_TEXT        = "Failed"
@@ -198,6 +199,8 @@ local function on_http_error(peer, headers, code)
     end
     
     local text = http_status_text[code]
+    assert(text);
+    
     head = string_format("HTTP/1.1 %d %s\r\n", code, text)
     table_insert(cache, head);
     
@@ -217,10 +220,10 @@ local function on_http_error(peer, headers, code)
     table_insert(cache, "\r\n");
     send_message(peer, table_concat(cache))
     send_message(peer, text)
-    if "close" == headers[_HEADER_CONNECTION] then
+    
+    if "keep-alive" ~= headers[_HEADER_CONNECTION] then
         peer:close()
     end
-    return _STATE_FAILED_TEXT
 end
 
 local function on_http_success(peer, headers, code)
@@ -230,6 +233,8 @@ local function on_http_success(peer, headers, code)
     end
     
     local text = http_status_text[code]
+    assert(text);
+    
     local location = headers[_HEADER_LOCATION]
     if location then
         code = _STATE_LOCATION
@@ -268,10 +273,10 @@ local function on_http_success(peer, headers, code)
     if has_body then
         send_message(peer, data)
     end
-    if "close" == headers[_HEADER_CONNECTION] then
+    
+    if "keep-alive" ~= headers[_HEADER_CONNECTION] then
         peer:close()
     end
-    return _STATE_OK_TEXT
 end
 
 local function on_http_download(peer, headers, filename, ext)
@@ -283,18 +288,21 @@ local function on_http_download(peer, headers, filename, ext)
     local code = _STATE_NOT_FOUND
     local mime = http_mime_type[ext]
     if not mime then
-        return on_http_error(peer, headers, code)
+        on_http_error(peer, headers, code)
+        return;
     end
     
     local fs = io.open(filename, "rb")
     if not fs then
-        return on_http_error(peer, headers, code)
+        on_http_error(peer, headers, code)
+        return;
     end
     
     local ok, data = pcall(fs.read, fs, "a")
     fs:close()
     if not ok or not data or #data == 0 then
-        return on_http_error(peer, headers, code)
+        on_http_error(peer, headers, code)
+        return;
     end
     
     if not gzip_encoding[ext] then
@@ -303,7 +311,7 @@ local function on_http_download(peer, headers, filename, ext)
     
     headers[_HEADER_CONTENT_TYPE] = mime
     table_insert(headers, data)
-    return on_http_success(peer, headers)
+    on_http_success(peer, headers)
 end
 
 ----------------------------------------------------------------------------
@@ -391,56 +399,58 @@ local function on_http_request(peer, request)
     ---读取静态文件
     if #others > 1 then
         local ext = others[#others]
-        return on_http_download(peer, headers, filename, ext)
+        on_http_download(peer, headers, filename, ext)
+        return;
     end
     
     ---加载脚本文件
     local ok, script = pcall(require, _WWWROOT .. filename)
     if not ok then
-        return on_http_error(peer, headers, _STATE_ERROR)
+        on_http_error(peer, headers, _STATE_ERROR)
+        return;
     end
     
     if type(script) ~= "table" then
-        return on_http_error(peer, headers, _STATE_ERROR)
+        on_http_error(peer, headers, _STATE_ERROR)
+        return;
     end
     
     if type(script.on_request) ~= "function" then
-        return on_http_error(peer, headers, _STATE_ERROR)
+        on_http_error(peer, headers, _STATE_ERROR)
+        return;
     end
     
     ---运行脚本文件
-    request.peer = function()
-        return peer;
-    end;
-    
-    local result = nil;
     local responsed = false;
-    
-    headers.finish = function(self, state)
-        responsed = true;
-        if state then
-            on_http_success(peer, headers);
-            result = true;
+    function headers:finish(state_code)
+        assert(responsed == false);
+        if not state_code then
+            state_code = _STATE_OK;
+        end
+        
+        assert(type(state_code) == "number");
+        if state_code < 400 then
+            on_http_success(peer, headers, state_code);
         else
-            on_http_error(peer, headers, _STATE_ERROR);
-            result = false;
+            on_http_error(peer, headers, state_code)
         end
-        return result;
-    end;
-    
-    local ok, processed = pcall(script.on_request, request, headers, params)
+        
+        responsed = true;
+        local url = request:url();
+        if url then
+            local method = request:method();
+            local from = peer:endpoint();
+            local text = http_status_text[state_code];
+            assert(text);
+            local info = format("%s %s %d %s from %s", method, url, state_code, text, from);
+            trace(info);
+        end
+    end
+
+    local ok = pcall(script.on_request, request, headers, params)
     if not ok then
-        return on_http_error(peer, headers, _STATE_ERROR)
+        on_http_error(peer, headers, _STATE_ERROR)
     end
-    
-    ---如果返回值不为 nil 表示业务层自己回应请求
-    if responsed or processed ~= nil then
-        if result or processed then
-            return _STATE_OK_TEXT;
-        end
-        return _STATE_FAILED_TEXT;
-    end
-    return on_http_success(peer, headers)
 end
 
 ----------------------------------------------------------------------------
@@ -705,8 +715,7 @@ local function on_ws_request(session, fin, data, opcode)
     
     local handler = session.ws_handler;
     if handler then
-        local ws_peer = session.ws_peer;
-        handler.on_receive(ws_peer, 0, data, opcode);
+        handler.on_receive(session.ws_peer, 0, data, opcode);
     end
 end
 
@@ -877,7 +886,7 @@ local function on_ws_accept(session, request)
     session.ws_peer = wrap_ws_socket(peer, deflate);
     
     if type(script.on_handshake) == "function" then
-        local ok, result = pcall(script.on_handshake, ws_peer, request, params);
+        local ok, result = pcall(script.on_handshake, session.ws_peer, request, params);
         if not ok or not result then
             on_http_error(peer, _STATE_ERROR);
             return;
@@ -937,7 +946,11 @@ local function on_http_callback(session, request)
         peer:close();
         return false;
     end
-    
+
+    function request:socket()
+        return peer;
+    end
+
     local upgrade = request:is_upgrade()
     if upgrade then
         if not _ws_upgrade then
@@ -949,16 +962,8 @@ local function on_http_callback(session, request)
     end
     
     peer:timeout(_WS_TRUST_TIMEOUT);
-    local from = peer:endpoint();
-    local ok, result = pcall(on_http_request, peer, request);
-    if not ok then
+    if not pcall(on_http_request, peer, request) then
         peer:close();
-        return;
-    end
-    local url = request:url();
-    if url then
-        local method = request:method();
-        print(method .. " " .. url .. " " .. result .. " from: " .. from);
     end
 end
 

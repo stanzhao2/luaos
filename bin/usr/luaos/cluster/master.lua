@@ -23,6 +23,7 @@ local pack   = luaos.conv.pack;
 local timer  = luaos.timingwheel();
 local insert = table.insert;
 local remove = table.remove;
+local format = string.format;
 
 local pcall = pcall;
 if _DEBUG then
@@ -68,8 +69,8 @@ end
 
 ---Determine whether the session has subscribed to a topic
 local function is_subscribed(session, topic)
-    for k, _ in pairs(session) do
-        if k == topic then
+    for k, v in pairs(session) do
+        if k == topic and v == true then
             return true;
         end
     end
@@ -109,47 +110,18 @@ end
 
 ---Unsubscribe from a topic
 local function on_cancel_request(session, tb)
-    local topic      = tb.topic;
-    local subscriber = tb.subscriber;
-
-    if session[topic] == nil then
-        return;
-    end
-    
-    send_to_others(session, tb);
-    
-    local count = #session[topic];
-    for i = 1, count do
-        if session[topic][i] == subscriber then
-            remove(session[topic], i);
-            break
-        end
-    end
-    
-    if #session[topic] == 0 then
+    local topic = tb.topic;
+    if session[topic] then
+        send_to_others(session, tb);
         session[topic] = nil;
     end
-    print("cancel topic: " .. topic);
 end
 
 ---Subscribe to messages on a topic
 local function on_subscribe_request(session, tb)
-    local topic      = tb.topic;
-    local subscriber = tb.subscriber;
-    
-    if session[topic] == nil then
-        session[topic] = {};
-    end
-    
-    for i = 1, #session[topic] do
-        if session[topic][i] == subscriber then
-            return;
-        end
-    end
-    
-    insert(session[topic], subscriber);
+    local topic = tb.topic;
+    session[topic] = true;
     send_to_others(session, tb);
-    print("subscribe topic: " .. topic);
 end
 
 ---Called when the session has an error
@@ -162,8 +134,16 @@ local function on_socket_error(session, ec)
         onlines = onlines - 1;
     end
     
+    for topic, v in pairs(session) do
+        if v == true then
+            local message = {};
+            message.type  = cmd_cancel;
+            message.topic = topic;
+            send_to_others(session, message);
+        end
+    end
+    
     peer:close();
-    trace("session error, errno " .. ec);
 end
 
 local function on_socket_dispatch(session, data)    
@@ -235,7 +215,7 @@ local function on_socket_receive(session, ec, data)
     
     if size > _MAX_PACKET then
         peer:close();
-        error("packet size too big: ", size);
+        error("packet length too large: ", size);
     end
 end
 
@@ -243,17 +223,14 @@ end
 local function on_socket_accept(acceptor, peer)
     local fd   = peer:id();
     local from = peer:endpoint();
-    local tb, subscribed = {}, {};
+    local tb   = {};
     
     tb.type = cmd_subscribe;
     for k, v in pairs(sessions) do
         for topic, x in pairs(v) do
-            if type(x) == "table" then
-                if subscribed[topic] == nil then
-                    tb.topic = topic;
-                    send_to_peer(peer, pack.encode(tb));
-                    subscribed[topic] = true;
-                end
+            if x == true then
+                tb.topic = topic;
+                send_to_peer(peer, pack.encode(tb));
             end
         end
     end
@@ -262,10 +239,8 @@ local function on_socket_accept(acceptor, peer)
     onlines = onlines + 1;
     
     tb.type = cmd_ready;    
-    send_to_peer(peer, pack.encode(tb));
-    
+    send_to_peer(peer, pack.encode(tb));    
     peer:select(luaos.read, bind(on_socket_receive, sessions[fd])); 
-    print("new session create from " .. from);
 end
 
 ----------------------------------------------------------------------------
@@ -278,7 +253,7 @@ local function update_master(interval)
     if onlines ~= last_onlines or performance ~= last_performance then
         last_onlines = onlines;
         last_performance = performance;
-        print(string.format("Number of sessions: %d, Forwarding quantity: %d", onlines, performance));
+        print(format("Number of sessions: %d, Forwarding quantity: %d", onlines, performance));
     end 
     performance = 0;
     timer:scheme(interval, bind(update_master, interval));

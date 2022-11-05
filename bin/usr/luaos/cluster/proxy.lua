@@ -22,6 +22,7 @@ local bind   = luaos.bind;
 local pack   = luaos.conv.pack;
 local timer  = luaos.timingwheel();
 local unpack = table.unpack;
+local format = string.format;
 
 local pcall = pcall;
 if _DEBUG then
@@ -30,16 +31,18 @@ end
 
 ----------------------------------------------------------------------------
 
-local cmd_subscribe  = "subscribe"
-local cmd_cancel     = "cancel"
-local cmd_ready      = "ready"
-local cmd_publish    = "publish"
-local cmd_heartbeat  = "heartbeat"
-
-local _MAX_PACKET    = 64 * 1024 * 1024
+local cmd_subscribe   = "subscribe"
+local cmd_cancel      = "cancel"
+local cmd_ready       = "ready"
+local cmd_publish     = "publish"
+local cmd_heartbeat   = "heartbeat"
+ 
+local _MAX_PACKET     = 64 * 1024 * 1024
 
 ----------------------------------------------------------------------------
 
+local local_topics    = {};
+local remote_topics   = {};
 local server = { peer = nil, ready = false };
 
 ----------------------------------------------------------------------------
@@ -54,11 +57,28 @@ local function send_to_master(message)
     end
 end
 
-local function on_publish_request(topic, publisher, mask, ...)
-    if luaos.id() == publisher then
-        return;
-	end
+local function luaos_publish(topic, mask, receiver, ...)
+    luaos.publish(topic, mask, receiver, ...);
+end
 
+local function luaos_cancel(topic, reason)
+    luaos.cancel(topic);
+    trace(format("topic %d is cancelled by %s proxy", topic, reason));
+end
+
+local function luaos_subscribe(topic, handler, reason)
+    luaos.subscribe(topic, handler);
+    trace(format("topic %d is subscribed by %s proxy", topic, reason));
+end
+
+----------------------------------------------------------------------------
+
+local function on_local_publish(topic, publisher, mask, ...)
+    --如果没有其他节点订阅该主题
+    if not remote_topics[topic] then
+        return;
+    end
+    
     local message     = {}
     message.type      = cmd_publish
     message.topic     = topic
@@ -69,29 +89,70 @@ local function on_publish_request(topic, publisher, mask, ...)
     send_to_master(message)
 end
 
-local function on_subscribe_request(topic, subscriber, option)
-    local message = {};
-    message.topic = topic;
-    message.subscriber = subscriber;
-    
-    if option == "cancel" then
-        message.type = cmd_cancel;
-    else
-        message.type = cmd_subscribe;
+local function on_local_cancel(topic, subscriber)  
+    if not local_topics[topic] then
+        return;
     end
     
+    local_topics[topic] = local_topics[topic] - 1;
+    if local_topics[topic] > 0 then
+        return;
+    end
+    
+    local_topics[topic] = nil;
+
+    local message = {};
+    message.type  = cmd_cancel;
+    message.topic = topic;
+    
     send_to_master(message);
-    luaos.subscribe(topic, bind(on_publish_request, topic));
+    
+    --如果没有其他节点订阅该主题
+    if not remote_topics[topic] then
+        luaos_cancel(topic, "local");
+    end
+end
+
+local function on_local_subscribe(topic, subscriber)    
+    if local_topics[topic] then
+        local_topics[topic] = local_topics[topic] + 1;
+        return;
+    end
+    
+    local_topics[topic] = 1;
+    
+    local message = {};
+    message.type  = cmd_subscribe;
+    message.topic = topic;
+    
+    send_to_master(message);
+    
+    --如果没有其他节点订阅该主题
+    if not remote_topics[topic] then
+        luaos_subscribe(topic, bind(on_local_publish, topic), "local");
+    end
+end
+
+local function on_local_watch(topic, subscriber, option)
+    if option == "cancel" then
+        on_local_cancel(topic, subscriber);
+        return;
+    end
+    
+    if option == "subscribe" then
+        on_local_subscribe(topic, subscriber);
+        return;
+    end
 end
 
 ----------------------------------------------------------------------------
 
-local function do_ready_request(message)
+local function on_remote_ready(message)
     server.ready = true;
     print("server is ready of cluster");
 end
 
-local function do_publish_request(message)
+local function on_remote_publish(message)
     local publisher = message.publisher;
     local receiver  = publisher >> 32; -- >>32bits
     
@@ -102,25 +163,50 @@ local function do_publish_request(message)
     end
     
     local params = message.argv;
-    luaos.publish(message.topic, message.mask, publisher, unpack(params));
+    luaos_publish(message.topic, message.mask, publisher, unpack(params));
 end
 
-local function do_cancel_request(message)
-    luaos.cancel(message.topic);
-end
-
-local function do_subscribe_request(message)
+local function on_remote_cancel(message)
     local topic = message.topic;
-    luaos.subscribe(topic, bind(on_publish_request, topic));
+    if not remote_topics[topic] then
+        return;
+    end
+    
+    remote_topics[topic] = remote_topics[topic] - 1;
+    if remote_topics[topic] > 0 then
+        return;
+    end
+    
+    remote_topics[topic] = nil;
+    
+    --如果没有本地节点订阅该主题
+    if not local_topics[topic] then
+        luaos_cancel(topic, "remote");
+    end    
+end
+
+local function on_remote_subscribe(message)
+    local topic = message.topic;
+    if remote_topics[topic] then
+        remote_topics[topic] = remote_topics[topic] + 1;
+        return;
+    end
+    
+    remote_topics[topic] = 1;
+    
+    --如果没有本地节点订阅该主题
+    if not local_topics[topic] then
+        luaos_subscribe(topic, bind(on_local_publish, topic), "remote");
+    end
 end
 
 ----------------------------------------------------------------------------
 
 local switch = {
-    [cmd_publish]   = do_publish_request,
-    [cmd_cancel]    = do_cancel_request,
-    [cmd_ready]     = do_ready_request,
-    [cmd_subscribe] = do_subscribe_request,
+    [cmd_publish]   = on_remote_publish,
+    [cmd_cancel]    = on_remote_cancel,
+    [cmd_ready]     = on_remote_ready,
+    [cmd_subscribe] = on_remote_subscribe,
 }
 
 local function on_socket_error(ec)
@@ -156,7 +242,7 @@ local function on_socket_receive(peer, ec, data)
     
     if size > _MAX_PACKET then
         peer:close();
-        error("packet size too big: ", size);
+        error("packet length too large: ", size);
     end
 end
 
@@ -173,7 +259,7 @@ local function update_proxy(interval)
 end
 
 function proxy.watch(topic)
-    luaos.watch(topic, bind(on_subscribe_request, topic));
+    luaos.watch(topic, bind(on_local_watch, topic));
 end
 
 function proxy.stop()
