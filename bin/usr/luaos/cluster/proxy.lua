@@ -149,7 +149,7 @@ end
 
 local function on_remote_ready(message)
     server.ready = true;
-    print("server is ready of cluster");
+    print("cluster is ready");
 end
 
 local function on_remote_publish(message)
