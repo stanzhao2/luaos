@@ -1,3 +1,4 @@
+SUBDIR0 = ./src/lua-skiplist
 SUBDIR1 = ./src/lua-bigint
 SUBDIR2 = ./src/lua-cjson
 SUBDIR3 = ./src/lua-conv
@@ -15,6 +16,7 @@ subsystem:
 	mkdir -p ../bin/sys
 	mkdir -p ../bin/sys/http
 	
+	cd $(SUBDIR0) && $(MAKE) clean && $(MAKE)
 	cd $(SUBDIR1) && $(MAKE) clean && $(MAKE)
 	cd $(SUBDIR2) && $(MAKE) clean && $(MAKE)
 	cd $(SUBDIR3) && $(MAKE) clean && $(MAKE)
