@@ -1083,7 +1083,7 @@ function nginx.start(host, port, wwwroot, ctx)
     end
     
     host = host or "0.0.0.0";
-    port = port or 8899;
+    port = port or 7621;
     
     nginx.acceptor = luaos.socket("tcp");
     if not nginx.acceptor then
