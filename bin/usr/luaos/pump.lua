@@ -44,6 +44,8 @@ function pump_message:register(name, handler, priority)
     local event = self.handlers[name];
     if not priority then
         priority = 0;
+    else
+        priority = -priority;
     end
     
     if not event then
