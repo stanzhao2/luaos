@@ -221,7 +221,7 @@ local function on_http_error(peer, headers, code)
     send_message(peer, table_concat(cache))
     send_message(peer, text)
     
-    if "keep-alive" ~= headers[_HEADER_CONNECTION] then
+    if "close" == headers[_HEADER_CONNECTION] then
         peer:close()
     end
 end
@@ -274,7 +274,7 @@ local function on_http_success(peer, headers, code)
         send_message(peer, data)
     end
     
-    if "keep-alive" ~= headers[_HEADER_CONNECTION] then
+    if "close" == headers[_HEADER_CONNECTION] then
         peer:close()
     end
 end
