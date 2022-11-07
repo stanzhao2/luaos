@@ -24,7 +24,6 @@ local skiplist = require("skiplist")
 
 ----------------------------------------------------------------------------
 
-
 local function on_error(err)
     error(debug.traceback(err));
 end
