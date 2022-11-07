@@ -19,11 +19,11 @@
 ----------------------------------------------------------------------------
 
 local class = require("luaos.classy")
-local heap  = require("luaos.heap")
+local pump_message = class("pump_message");
+local skiplist = require("skiplist")
 
 ----------------------------------------------------------------------------
 
-local pump_message = class("pump_message");
 
 local function on_error(err)
     error(debug.traceback(err));
@@ -46,14 +46,11 @@ function pump_message:register(name, handler, priority)
         priority = 0;
     end
     
-    if event == nil then
-        event = heap.maxUnique();
-        event:insert(handler, priority);
+    if not event then
+        event = skiplist.new();
         self.handlers[name] = event;
-        return handler;
     end
     
-    event:remove(handler);
     event:insert(handler, priority);
     return handler;
 end
@@ -67,23 +64,11 @@ function pump_message:dispatch(name, ...)
         return 0;
     end
     
-    local next = heap.maxUnique();
-    while event:size() > 0 do
-        local handler, priority = event:pop();
-        self.callback = handler;
-        
+    for i, handler in pairs(event:rank_range()) do
         xpcall(handler, on_error, ...);
-        
-        self.callback = nil;
-        if self.removed == handler then
-            self.removed = nil;
-        else
-            next:insert(handler, priority);
-        end
     end
     
-    self.handlers[name] = next;
-    return next:size();
+    return event:size();
 end
 
 ---取消一个消息回调(仅当前模块)
@@ -92,15 +77,12 @@ end
 function pump_message:unregister(name, handler)
     assert(type(handler) == "function");
     local event = self.handlers[name];
-    if event then
-        if self.callback == handler then
-            self.removed = handler;
-        end
-        
-        local priority = event:remove(handler);
-        if priority ~= nil and event:size() == 0 then
-            self.handlers[name] = nil;
-        end
+    if not event then
+        return;
+    end
+    
+    if event:delete(handler) and event:size() == 0 then
+        self.handlers[name] = nil;
     end
 end
 
