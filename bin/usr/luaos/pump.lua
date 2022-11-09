@@ -62,14 +62,18 @@ end
 function pump_message:dispatch(name, ...)
     local event = self.handlers[name];
     if not event then
-        return 0;
+        return true, 0;
     end
     
+    local result = true;
     for i, handler in pairs(event:rank_range()) do
-        xpcall(handler, on_error, ...);
+        local ok = xpcall(handler, on_error, ...);
+        if not ok then
+            result = false;
+        end
     end
     
-    return event:size();
+    return result, event:size();
 end
 
 ---取消一个消息回调(仅当前模块)
