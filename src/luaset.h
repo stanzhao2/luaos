@@ -46,7 +46,7 @@
 #endif
 
 #ifndef LUAOS_LIBS_PATH
-#define LUAOS_LIBS_PATH "." LUA_DIRSEP "ext" LUA_DIRSEP "?." OS_LIB ";." LUA_DIRSEP "sys" LUA_DIRSEP "?." OS_LIB
+#define LUAOS_LIBS_PATH "." LUA_DIRSEP "?." OS_LIB ";." LUA_DIRSEP "ext" LUA_DIRSEP "?." OS_LIB ";." LUA_DIRSEP "sys" LUA_DIRSEP "?." OS_LIB
 #endif
 
 /*******************************************************************************/
