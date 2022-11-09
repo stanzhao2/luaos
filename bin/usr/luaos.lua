@@ -578,11 +578,6 @@ if not ok then
     trace("curl module is not installed");
 end
 
-ok, luaos.heap  = pcall(require, "luaos.heap");
-if not ok then
-    trace("heap module is not installed");
-end
-
 ok, luaos.try   = pcall(require, "luaos.try");
 if not ok then
     trace("try module is not installed");
