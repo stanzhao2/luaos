@@ -372,8 +372,7 @@ int main(int argc, char* argv[])
   for (int i = 1; i < argc; i += 2)
   {
     if (argv[i][0] != '-') {
-      _printf(color_type::red, true, "invalid argument: %s\n", argv[i]);
-      _printf(color_type::red, true, "\n");
+      _printf(color_type::red, true, "invalid argument: %s\n\n", argv[i]);
       return EXIT_FAILURE;
     }
     params[argv[i]] = argv[i + 1];
@@ -384,9 +383,7 @@ int main(int argc, char* argv[])
   {
     _printf(color_type::yellow, true, "compiling lua files...\n");
     lua_compile(compile);
-    _printf(color_type::yellow, true, "compilation completed\n");
-
-    _printf(color_type::red, true, "\n");
+    _printf(color_type::yellow, true, "compilation completed\n\n");
     return EXIT_SUCCESS;
   }
 
@@ -395,8 +392,7 @@ int main(int argc, char* argv[])
   {
     if (access(rom_fname, 0) < 0)
     {
-      _printf(color_type::red, true, "%s not found\n", rom_fname);
-      _printf(color_type::red, true, "\n");
+      _printf(color_type::red, true, "%s not found\n\n", rom_fname);
       return EXIT_FAILURE;
     }
   }
@@ -404,9 +400,9 @@ int main(int argc, char* argv[])
   lua_State* L = new_lua_state();  /* create state */
   if (L == NULL) {
     _printf(
-      color_type::red, true, "lua_State initialization failed\n"
+      color_type::red, true, "lua_State initialization failed\n\n"
     );
-    return printf("\n"), EXIT_FAILURE;
+    return EXIT_FAILURE;
   }
   lua_pushcfunction(L, &pmain);  /* to call 'pmain' in protected mode */
   lua_pushinteger(L, argc);  /* 1st argument */
