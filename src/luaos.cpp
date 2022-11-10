@@ -204,6 +204,29 @@ static bool lua_encode(const char* romname)
   return result;
 }
 
+static std::string get_tm_compile() {
+  char szDateTime[128];
+  const int  MONTH_PER_YEAR = 12;
+  const char szEnglishMonth[MONTH_PER_YEAR][4] = { "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
+  char szTmpDate[64]={0};
+  char szTmpTime[32]={0};
+  char szMonth[32]={0};
+  int iYear,iMonth,iDay,iHour,iMin,iSec;
+  sprintf(szTmpDate,"%s", __DATE__);
+  sprintf(szTmpTime,"%s", __TIME__);
+
+  sscanf(szTmpDate, "%s %d %d", szMonth, &iDay, &iYear);
+  sscanf(szTmpTime, "%d:%d:%d", &iHour, &iMin, &iSec);
+  for(int i=0;MONTH_PER_YEAR;i++) {
+    if(strncmp(szMonth,szEnglishMonth[i], 3) == 0) {
+      iMonth = i + 1;
+      break;
+    }
+  }
+  snprintf(szDateTime, sizeof(szDateTime), "%04d-%02d-%02d.%02d:%02d:%02d", iYear, iMonth, iDay, iHour, iMin, iSec);
+  return szDateTime;
+}
+
 bool lua_compile(const char* romname)
 {
   return lua_encode(romname);
@@ -472,9 +495,12 @@ void print_copyright()
   logo += copyright;
 
   char version[128];
-  sprintf(version, "  The Lua version: %s\n\n", LUA_RELEASE);
+  sprintf(version, "  => Lua version: %s\n", LUA_RELEASE);
   logo += version;
+
   _printf(color_type::normal, false, logo.c_str());
+  _printf(color_type::normal, false, "  => LuaOS version: v%s\n", LUAOS_VERSION);
+  _printf(color_type::normal, false, "  => Build at: %s\n\n", get_tm_compile().c_str());
 }
 
 /*******************************************************************************/

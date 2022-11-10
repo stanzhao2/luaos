@@ -22,6 +22,8 @@
 #include "luaset.h"
 #include "luaos_printf.h"
 
+#define LUAOS_VERSION "1.0.1"
+
 /*******************************************************************************/
 
 inline static void luaos_pop_error(lua_State* L, const char* name) 
