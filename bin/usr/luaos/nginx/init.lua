@@ -726,9 +726,6 @@ local function on_ws_receive(session, data)
         session.cache = nil;
     end
     
-    data = data .. data;
-    data = data .. data;
-    
     local offset = 0;
     local cache_size = #data;
     while cache_size > 1 do
