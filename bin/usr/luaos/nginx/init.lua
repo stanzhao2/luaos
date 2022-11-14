@@ -726,11 +726,14 @@ local function on_ws_receive(session, data)
         session.cache = nil;
     end
     
-    local offset = 1;
+    data = data .. data;
+    data = data .. data;
+    
+    local offset = 0;
     local cache_size = #data;
     while cache_size > 1 do
-        local pos = offset;
-        local v1, v2 = string_unpack("I1I1", data, pos);
+        local pos = 1;
+        local v1, v2 = string_unpack("I1I1", data, pos + offset);
         
         local fin = (v1 & 0x80) ~= 0;
         local deflate = (v1 & 0x40) ~= 0;
@@ -775,13 +778,13 @@ local function on_ws_receive(session, data)
             if cache_size < pos + 1 then
                 break;
             end
-            payload_len = string_unpack(">I2", data, pos);
+            payload_len = string_unpack(">I2", data, pos + offset);
             pos = pos + 2;
         elseif payload_len == 127 then
             if cache_size < pos + 7 then
                 break;
             end
-            payload_len = string_unpack(">I8", data, pos);
+            payload_len = string_unpack(">I8", data, pos + offset);
             pos = pos + 8;
         end
         
@@ -796,7 +799,7 @@ local function on_ws_receive(session, data)
             if cache_size < pos + 3 then
                 break;
             end
-            masking_key = string_unpack("c4", data, pos);
+            masking_key = string_unpack("c4", data, pos + offset);
             pos = pos + 4;
         end
         
@@ -805,14 +808,13 @@ local function on_ws_receive(session, data)
             break;
         end
         
-        local packet = string_unpack("c" .. payload_len, data, pos);
+        local packet = string_unpack("c" .. payload_len, data, pos + offset);
         if masking_key then
             packet = conv.xor.convert(packet, masking_key);
         end
         
         on_ws_request(session, fin, packet, opcode);
         
-        pos = pos + payload_len;
         cache_size = cache_size - frame_size;
         offset = offset + frame_size;
     end
