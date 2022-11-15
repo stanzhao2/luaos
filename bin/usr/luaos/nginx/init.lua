@@ -25,11 +25,14 @@ if _DEBUG then
     pcall = luaos.pcall
 end
 
-local bind   = luaos.bind;
-local try    = luaos.try;
-local conv   = luaos.conv;
-local socket = luaos.socket;
-local format = string.format;
+local bind     = luaos.bind;
+local try      = luaos.try;
+local conv     = luaos.conv;
+local socket   = luaos.socket;
+local base64   = conv.base64.encode;
+local sha1     = conv.hash.sha1;
+local unescape = conv.url.unescape;
+local convert  = conv.xor.convert;
 
 local http_status_text = {
     [100] = "Continue",
@@ -390,7 +393,7 @@ local function on_http_request(peer, request)
         end
     end
     
-    local url = conv.url.unescape(request:url())
+    local url = unescape(request:url())
     local filename, path, params = url_to_filename(url)
     
     local others = path[#path]
@@ -807,7 +810,7 @@ local function on_ws_receive(session, data)
         
         local packet = string_unpack("c" .. payload_len, data, pos + offset);
         if masking_key then
-            packet = conv.xor.convert(packet, masking_key);
+            packet = convert(packet, masking_key);
         end
         
         on_ws_request(session, fin, packet, opcode);
@@ -854,7 +857,7 @@ local function on_ws_accept(session, request)
         return;
     end
     
-    local url = conv.url.unescape(request:url());
+    local url = unescape(request:url());
     local filename, path, params = url_to_filename(url);
     
     local others = path[#path];
@@ -916,8 +919,8 @@ local function on_ws_accept(session, request)
     end
     
     key = key .. "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-    local hash = conv.hash.sha1(key, true);
-    key = conv.base64.encode(hash);
+    local hash = sha1(key, true);
+    key = base64(hash);
     
     headers[_HEADER_CONNECTION]    = "Upgrade";
     headers[_HEADER_UPGRADE]       = "websocket";
