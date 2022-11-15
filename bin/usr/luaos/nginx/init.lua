@@ -445,7 +445,7 @@ local function on_http_request(peer, request)
             local from = peer:endpoint();
             local text = http_status_text[state_code];
             assert(text);
-            local info = format("%s %s %d %s from %s", method, url, state_code, text, from);
+            local info = string_format("%s %s %d %s from %s", method, url, state_code, text, from);
             trace(info);
         end
     end
