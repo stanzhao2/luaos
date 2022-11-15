@@ -495,12 +495,15 @@ void print_copyright()
   logo += copyright;
 
   char version[128];
-  sprintf(version, "  => Lua version: %s\n", LUA_RELEASE);
+  sprintf(version, "  > + Depends: %s\n", LUA_RELEASE);
   logo += version;
 
   _printf(color_type::normal, false, logo.c_str());
-  _printf(color_type::normal, false, "  => LuaOS version: v%s\n", LUAOS_VERSION);
-  _printf(color_type::normal, false, "  => Build at: %s\n\n", get_tm_compile().c_str());
+  _printf(color_type::normal, false, "  > + LuaOS version number: v%s\n", LUAOS_VERSION);
+#ifndef TLS_SSL_ENABLE
+  _printf(color_type::normal, false, "  > + OpenSSL is disabled\n");
+#endif
+  _printf(color_type::normal, false, "  > + Final build at: %s\n\n", get_tm_compile().c_str());
 }
 
 /*******************************************************************************/
