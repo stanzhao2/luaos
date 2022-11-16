@@ -168,7 +168,7 @@ void timewheel_update(twheel_t* ptw, size_t t)
 
 bool timewheel_add_time(twheel_t* ptw, twfunction func, void* arg, size_t t)
 {
-  if (t <= 0 || t > MAX_DELAY_TIME) {
+  if (t > MAX_DELAY_TIME) {
     return false;
   }
   size_t curr_time = ptw->curr_time;
