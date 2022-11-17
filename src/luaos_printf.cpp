@@ -188,12 +188,8 @@ static void os_printf(color_type type_color, bool prefix, std::string& data)
     write_error(data, ptm);
   }
 
-#if defined(OS_WINDOWS)
-  async_printf(type_color, data);
-#else
   reactor_type ios = check_ios();
   ios->post([type_color, data]() { async_printf(type_color, data); });
-#endif
 }
 
 static int lua_printf(lua_State* L, color_type color)
