@@ -25,6 +25,7 @@
 
 static thread_local int this_thread_id = 0;
 static const int _G_maxsize = 32 * 1024 * 1024;
+static thread_local char print_buffer[8192];
 
 static void write_error(const char* data, struct tm* ptm)
 {
@@ -113,7 +114,7 @@ static void write_file(const char* data, struct tm* ptm)
   }
 }
 
-static void os_printf(color_type type_color, bool prefix,  const char* data)
+static void os_printf(color_type type_color, bool prefix, const char* data, size_t size)
 {
   static std::mutex _mutex;
 
@@ -129,17 +130,24 @@ static void os_printf(color_type type_color, bool prefix,  const char* data)
     type = "error";
   }
 
-  std::unique_lock<std::mutex> lock(_mutex);
-
   time_t now = time(0);
   struct tm* ptm = localtime(&now);
   if (prefix)
   {
-    char buffer[8192];
+    char* buffer = print_buffer;
+    if (size > 8000) {
+      buffer = (char*)malloc(size + 128);
+    }
+    if (!buffer) {
+      return;
+    }
     auto ms = (int)(os::milliseconds() % 1000);
-    snprintf(buffer, sizeof(buffer), "[%02d:%02d:%02d,%03d #%02d] <%s> %s", ptm->tm_hour, ptm->tm_min, ptm->tm_sec, ms, this_thread_id, type, data);
+    snprintf(buffer, size + 128, "[%02d:%02d:%02d,%03d #%02d] <%s> %s", ptm->tm_hour, ptm->tm_min, ptm->tm_sec, ms, this_thread_id, type, data);
     data = buffer;
   }
+
+  std::unique_lock<std::mutex> lock(_mutex);
+
   write_file(data, ptm);
   if (type_color == color_type::red) {
     write_error(data, ptm);
@@ -183,6 +191,10 @@ static void os_printf(color_type type_color, bool prefix,  const char* data)
   }
 
 #endif
+
+  if (prefix && data != print_buffer) {
+    free((char*)data);
+  }
 }
 
 static int lua_printf(lua_State* L, color_type color)
@@ -239,7 +251,7 @@ static int lua_printf(lua_State* L, color_type color)
   }
 
   data.append("\n");
-  os_printf(color, true, data.c_str());
+  os_printf(color, true, data.c_str(), data.size());
   lua_pop(L, 1);
   return 0;
 }
@@ -281,7 +293,7 @@ void my_printf(color_type type_color, bool prefix, const char* fmt, ...)
     vsprintf(output, fmt, va_list_args);
     va_end(va_list_args);
 
-    os_printf(type_color, prefix, output);
+    os_printf(type_color, prefix, output, bytes);
     if (output != buffer) {
       free(output);
     }

@@ -46,6 +46,52 @@ string.split = function(str, seq)
 end
 
 ----------------------------------------------------------------------------
+---为 table 添加功能
+----------------------------------------------------------------------------
+
+local insert   = table.insert;
+local concat   = table.concat;
+local format   = string.format;
+local tostring = tostring;
+local indents  = "    ";
+
+local function format_table(data, level)
+    local indent = "";
+    for i = 1, level do
+        indent = indent .. indents;
+    end
+    
+    local result = {};
+    if level == 0 then
+        insert(result, "\n");
+    end
+    
+    insert(result, "{\n");    
+    for k, v in pairs(data) do
+        insert(result, indent);
+        
+        local key = k;
+        if type(k) == "number" then
+            key = format("[%d]", k);
+        end
+        
+        if type(v) == "table" then
+            insert(result, format("%s%s = %s,\n", indents, key, format_table(v, level + 1)));
+        else
+            insert(result, format("%s%s = %s,\n", indents, key, tostring(v)));
+        end
+    end
+    
+    insert(result, format("%s}", indent));
+    return concat(result);
+end
+
+table.format = function(data)
+    assert(type(data) == "table");
+    return format_table(data, 0);
+end
+
+----------------------------------------------------------------------------
 ---封装 bigint 模块
 ----------------------------------------------------------------------------
 
