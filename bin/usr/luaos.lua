@@ -86,9 +86,101 @@ local function format_table(data, level)
     return concat(result);
 end
 
+---格式化 talbe
+---@param data table
+---@retrun string
 table.format = function(data)
     assert(type(data) == "table");
     return format_table(data, 0);
+end
+
+----------------------------------------------------------------------------
+
+local mt = {};
+
+mt[mt] = setmetatable({}, {__mode = "k"});
+mt.__mode = "kv";
+mt.__index = function(t, k)
+    local v = rawget(mt[mt][t], k);
+    if type(v) == "table" then
+        v = table.clone(v);
+    end
+    
+    rawset(t, k, v);
+    return v;
+end
+
+---克隆 table
+---@param object table
+---@param deep boolean
+---@retrun table
+table.clone = function(object, deep)
+	if not deep then
+		local ret = {};
+		mt[mt][ret] = object;
+		return setmetatable(ret, mt);
+	end
+    
+	local lookup_table = {}
+	local function _copy(object)
+		if type(object) ~= "table" then
+			return object;
+		elseif lookup_table[object] then
+			return lookup_table[object];
+		end
+        
+		local new_table = {};
+		lookup_table[object] = new_table;
+        
+		for key, value in pairs(object) do
+			new_table[_copy(key)] = _copy(value);
+		end
+		return setmetatable(new_table, getmetatable(object));
+	end
+	return _copy(object);
+end
+
+----------------------------------------------------------------------------
+
+local travelled = {};
+
+---创建只读 table
+---@param it table
+---@retrun table
+table.read_only = function(it)
+    if not _DEBUG then
+        return it;
+    end
+	local function __read_only(tbl) 
+		if not travelled[tbl] then
+			local tbl_mt = getmetatable(tbl) 
+			if not tbl_mt then 
+				tbl_mt = {} 
+				setmetatable(tbl, tbl_mt) 
+			end
+			local proxy = tbl_mt.__read_only_proxy 
+			if not proxy then 
+				proxy = {} 
+				tbl_mt.__read_only_proxy = proxy 
+				local proxy_mt = {
+					__index = tbl, 
+					__newindex 	= function (t, k, v) error("error write to a read-only table with key = " .. tostring(k)) end, 
+					__pairs 	= function (t) return pairs(tbl) end, 
+					__len 		= function (t) return #tbl end, 
+					__read_only_proxy = proxy 
+				} 
+				setmetatable(proxy, proxy_mt) 
+			end 
+			travelled[tbl] = proxy 
+			for k, v in pairs(tbl) do 
+				if type(v) == "table" then 
+					tbl[k] = __read_only(v) 
+				end 
+			end 
+		end
+		return travelled[tbl] 
+	end
+    return __read_only(it);
 end
 
 ----------------------------------------------------------------------------
