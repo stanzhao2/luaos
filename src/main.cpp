@@ -302,6 +302,7 @@ const char* get_params(const std::string& key)
 
 static int pmain(lua_State* L)
 {
+  std::thread check_thd(check_thread);
   main_ios = this_thread().lua_reactor();
   _printf(color_type::yellow, true, "loading main module...\n");
 
@@ -330,7 +331,6 @@ static int pmain(lua_State* L)
 
   lua_pop(L, lua_gettop(L));
 
-  std::thread check_thd(check_thread);
   if (check_thd.joinable()) {
     check_ios()->stop(), check_thd.join(); //wait for thread exit
   }

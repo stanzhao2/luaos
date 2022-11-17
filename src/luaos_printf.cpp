@@ -27,7 +27,7 @@ static thread_local int this_thread_id = 0;
 static const int _G_maxsize = 32 * 1024 * 1024;
 static thread_local char print_buffer[8192];
 
-static void write_error(const char* data, struct tm* ptm)
+static void write_error(const std::string& data, struct tm* ptm)
 {
   dir::make("./err");
   char filename[256];
@@ -35,12 +35,12 @@ static void write_error(const char* data, struct tm* ptm)
 
   FILE* fp = fopen(filename, "w");
   if (fp) {
-    fwrite(data, 1, strlen(data), fp);
+    fwrite(data.c_str(), 1, data.size(), fp);
     fclose(fp);
   }
 }
 
-static void write_file(const char* data, struct tm* ptm)
+static void write_file(const std::string& data, struct tm* ptm)
 {
   static int tmday = 0;
   static FILE* fp = nullptr;
@@ -97,7 +97,7 @@ static void write_file(const char* data, struct tm* ptm)
     fwrite("\n", 1, 1, fp);
   }
 
-  fwrite(data, 1, strlen(data), fp);
+  fwrite(data.c_str(), 1, data.size(), fp);
   fflush(fp);
 
   if (ptm->tm_mday != tmday)
@@ -114,7 +114,49 @@ static void write_file(const char* data, struct tm* ptm)
   }
 }
 
-static void os_printf(color_type type_color, bool prefix, const char* data, size_t size)
+static void async_printf(color_type type_color, const std::string& data)
+{
+#if defined(OS_WINDOWS)
+
+  static HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
+  CONSOLE_SCREEN_BUFFER_INFO defaultScreenInfo;
+  GetConsoleScreenBufferInfo(out, &defaultScreenInfo);
+
+  WORD color = FOREGROUND_GREEN | FOREGROUND_BLUE;
+  if (type_color == color_type::yellow) {
+    color = FOREGROUND_RED | FOREGROUND_GREEN;
+  }
+  else if (type_color == color_type::red) {
+    color = FOREGROUND_RED;
+  }
+
+  color |= FOREGROUND_INTENSITY;
+  SetConsoleTextAttribute(out, color);
+
+  std::string temp(data);
+  if (is_utf8(data.c_str(), data.size())) {
+    temp = utf8_to_mbs(data);
+  }
+
+  printf(temp.c_str());
+  SetConsoleTextAttribute(out, defaultScreenInfo.wAttributes);
+
+#else
+
+  if (type_color == color_type::yellow) { //警告色(黄色)
+    printf("\033[1;33m%s\033[0m", data.c_str());
+  }
+  else if (type_color == color_type::red) { //错误色(红色)
+    printf("\033[1;31m%s\033[0m", data.c_str());
+  }
+  else {
+    printf("\033[1;36m%s\033[0m", data.c_str());  //缺省色(青色)
+  }
+
+#endif
+}
+
+static void os_printf(color_type type_color, bool prefix, std::string& data)
 {
   static std::mutex _mutex;
 
@@ -134,67 +176,24 @@ static void os_printf(color_type type_color, bool prefix, const char* data, size
   struct tm* ptm = localtime(&now);
   if (prefix)
   {
-    char* buffer = print_buffer;
-    if (size > 8000) {
-      buffer = (char*)malloc(size + 128);
-    }
-    if (!buffer) {
-      return;
-    }
+    char buffer[128];
     auto ms = (int)(os::milliseconds() % 1000);
-    snprintf(buffer, size + 128, "[%02d:%02d:%02d,%03d #%02d] <%s> %s", ptm->tm_hour, ptm->tm_min, ptm->tm_sec, ms, this_thread_id, type, data);
-    data = buffer;
+    snprintf(buffer, sizeof(buffer), "[%02d:%02d:%02d,%03d #%02d] <%s> ", ptm->tm_hour, ptm->tm_min, ptm->tm_sec, ms, this_thread_id, type);
+    data = buffer + data;
   }
 
   std::unique_lock<std::mutex> lock(_mutex);
-
   write_file(data, ptm);
   if (type_color == color_type::red) {
     write_error(data, ptm);
   }
 
 #if defined(OS_WINDOWS)
-
-  static HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
-  CONSOLE_SCREEN_BUFFER_INFO defaultScreenInfo;
-  GetConsoleScreenBufferInfo(out, &defaultScreenInfo);
-
-  WORD color = FOREGROUND_GREEN | FOREGROUND_BLUE;
-  if (type_color == color_type::yellow) {
-    color = FOREGROUND_RED | FOREGROUND_GREEN;
-  }
-  else if (type_color == color_type::red) {
-    color = FOREGROUND_RED;
-  }
-
-  color |= FOREGROUND_INTENSITY;
-  SetConsoleTextAttribute(out, color);
-
-  std::string mbs(data);
-  if (is_utf8(mbs.c_str(), mbs.size())) {
-    mbs = utf8_to_mbs(mbs);
-  }
-
-  printf("%s", mbs.c_str());
-  SetConsoleTextAttribute(out, defaultScreenInfo.wAttributes);
-
+  async_printf(type_color, data);
 #else
-
-  if (type_color == color_type::yellow) { //警告色(黄色)
-    printf("\033[1;33m%s\033[0m", data);
-  }
-  else if (type_color == color_type::red) { //错误色(红色)
-    printf("\033[1;31m%s\033[0m", data);
-  }
-  else {
-    printf("\033[1;36m%s\033[0m", data);  //缺省色(青色)
-  }
-
+  reactor_type ios = check_ios();
+  ios->post([type_color, data]() { async_printf(type_color, data); });
 #endif
-
-  if (prefix && data != print_buffer) {
-    free((char*)data);
-  }
 }
 
 static int lua_printf(lua_State* L, color_type color)
@@ -251,7 +250,7 @@ static int lua_printf(lua_State* L, color_type color)
   }
 
   data.append("\n");
-  os_printf(color, true, data.c_str(), data.size());
+  os_printf(color, true, data);
   lua_pop(L, 1);
   return 0;
 }
@@ -275,28 +274,23 @@ LUALIB_API int lua_os_trace(lua_State* L)
 
 void my_printf(color_type type_color, bool prefix, const char* fmt, ...)
 {
-  char buffer[8192];
-  char* output = buffer;
+  static thread_local std::string buffer;
 
   va_list va_list_args;
   va_start(va_list_args, fmt);
   size_t bytes = vsnprintf(0, 0, fmt, va_list_args);
 
-  bytes += 2;
-  if (bytes > sizeof(buffer)) {
-    output = (char*)malloc(bytes);
+  if (bytes > buffer.size()) {
+    buffer.resize(bytes);
   }
 
-  if (output)
-  {
-    va_start(va_list_args, fmt);
-    vsprintf(output, fmt, va_list_args);
-    va_end(va_list_args);
+  va_start(va_list_args, fmt);
+  vsprintf((char*)buffer.c_str(), fmt, va_list_args);
+  va_end(va_list_args);
 
-    os_printf(type_color, prefix, output, bytes);
-    if (output != buffer) {
-      free(output);
-    }
+  os_printf(type_color, prefix, buffer);
+  if (buffer.size() > 8192) {
+    buffer.resize(8192);
   }
 }
 
