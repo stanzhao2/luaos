@@ -285,9 +285,7 @@ void my_printf(color_type type_color, bool prefix, const char* fmt, ...)
   va_end(va_list_args);
 
   os_printf(type_color, prefix, buffer);
-  if (buffer.size() > 8192) {
-    buffer.resize(8192);
-  }
+  buffer.clear();
 }
 
 /*******************************************************************************/
