@@ -188,14 +188,14 @@ end
 ----------------------------------------------------------------------------
 
 local ok, bigint = pcall(require, "bigint");
-if not ok then
-    trace("bigint module is not installed");
-else
+if ok then
     ---创建一个大整数
     ---@param v integer
     math.bigint = function(v)
         return bigint.new(v);
     end
+else
+    trace("bigint module is not installed");
 end
 
 ----------------------------------------------------------------------------
@@ -608,10 +608,6 @@ luaos.storage = {
 
 local random;
 ok, random = pcall(require, "luaos.random");
-if not ok then
-    trace("random module is not installed");
-end
-
 if ok then
     ---创建一个 32 位随机数
     ---@retrun integer
@@ -626,6 +622,8 @@ if ok then
     luaos.random64 = function(...)
         random64:random(...);
     end
+else
+    trace("random module is not installed");
 end
 
 ----------------------------------------------------------------------------
@@ -634,10 +632,6 @@ end
 
 local class_pump;
 ok, class_pump = pcall(require, "luaos.pump");
-if not ok then
-    trace("pump-message module is not installed");
-end
-
 if ok then
     local pump_message = class_pump();
     
@@ -667,6 +661,8 @@ if ok then
     luaos.dispatch = function(name, ...)
         return pump_message:dispatch(name, ...);
     end
+else
+    trace("pump-message module is not installed");
 end
 
 ----------------------------------------------------------------------------
