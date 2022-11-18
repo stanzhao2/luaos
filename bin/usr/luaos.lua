@@ -702,10 +702,12 @@ end
 ---设置元表，禁止添加新元素
 ----------------------------------------------------------------------------
 
-local sandbox = {__newindex = function(...)
-    throw("for backward compatibility, please do not modify luaos");
-end};
+if not _DEBUG then
+    return luaos;
+end
 
-return setmetatable(luaos, sandbox);
+return setmetatable({}, {__index = luaos, __newindex = function(...)
+    throw("For backward compatibility, please do not modify luaos");
+end});
 
 ----------------------------------------------------------------------------
