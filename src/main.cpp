@@ -21,6 +21,7 @@
 #include "luaos.h"
 #include "luaos_loader.h"
 #include "luaos_thread_local.h"
+#include "luaos_rpc.h"
 #include "luaos_job.h"
 #include "luaos_socket.h"
 #include "luaos_twheel.h"
@@ -168,6 +169,8 @@ static void init_metatable(lua_State* L)
   lua_twheel::init_metatable(L);
   luaos_subscriber::init_metatable(L);
   storage::init_metatable(L);
+  rpc::init_metatable(L);
+
   lua_job::init_metatable(L);
   lua_socket::init_metatable(L);
   lua_socket::init_ssl_metatable(L);

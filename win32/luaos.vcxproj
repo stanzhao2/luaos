@@ -22,6 +22,7 @@
     <ClCompile Include="..\src\luaos.cpp" />
     <ClCompile Include="..\src\luaos_job.cpp" />
     <ClCompile Include="..\src\luaos_loader.cpp" />
+    <ClCompile Include="..\src\luaos_rpc.cpp" />
     <ClCompile Include="..\src\luaos_socket.cpp" />
     <ClCompile Include="..\src\luaos_storage.cpp" />
     <ClCompile Include="..\src\luaos_subscriber.cpp" />
@@ -35,6 +36,7 @@
     <ClInclude Include="..\src\luaos.h" />
     <ClInclude Include="..\src\luaos_job.h" />
     <ClInclude Include="..\src\luaos_loader.h" />
+    <ClInclude Include="..\src\luaos_rpc.h" />
     <ClInclude Include="..\src\luaos_socket.h" />
     <ClInclude Include="..\src\luaos_storage.h" />
     <ClInclude Include="..\src\luaos_subscriber.h" />

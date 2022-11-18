@@ -19,6 +19,7 @@ OUTPUT  := ../bin/$(TARGET_NAME)
 #source files
 SOURCE  := ../src/twheel/twheel.o \
            ../src/luaos.o \
+		   ../src/luaos_rpc.o \
 		   ../src/luaos_job.o \
 		   ../src/luaos_loader.o \
 		   ../src/luaos_printf.o \

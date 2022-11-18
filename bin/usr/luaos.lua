@@ -214,6 +214,13 @@ local private = {
         context = ssl.context,
     },
     
+    rpc = {
+        register = rpc.register,
+        cancel   = rpc.cancel,
+        call     = rpc.call,
+        invoke   = rpc.invoke,
+    },
+    
     socket      = io.socket,
     deadline    = os.deadline,
     files       = os.files,
@@ -232,6 +239,7 @@ local private = {
 
 storage         = nil; --disused
 ssl             = nil; --disused
+rpc             = nil; --disused
 io.socket       = nil; --disused
 os.deadline     = nil; --disused
 os.files        = nil; --disused
@@ -360,6 +368,42 @@ local luaos = {
     ---@return boolean
     subscribe = function(topic, handler)
         return private.subscribe(topic, handler);
+    end,
+};
+
+----------------------------------------------------------------------------
+---封装 RPC 模块
+----------------------------------------------------------------------------
+
+luaos.rpc = {
+    ---注册一个 RPC 函数(当前进程有效)
+    ---@param name string
+    ---@param func function
+    ---@return boolean
+    register = function(name, func)
+        return private.rpc.register(name, func);
+    end,
+    
+    ---取消一个 RPC 函数(当前进程有效)
+    ---@param name string
+    ---@return boolean
+    cancel = function(name)
+        return private.rpc.cancel(name);
+    end,
+    
+    ---同步执行一个 RPC 函数(当前进程有效)
+    ---@param name string
+    ---@return boolean,...
+    call = function(name, ...)
+        return private.rpc.call(name, ...);
+    end,
+    
+    ---异步执行一个 RPC 函数(当前进程有效)
+    ---@param name string
+    ---@param callback fun(result:boolean, ...):void
+    ---@return boolean,...
+    invoke = function(name, callback, ...)
+        return private.rpc.invoke(name, callback, ...);
     end,
 };
 
