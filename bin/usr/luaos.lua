@@ -32,7 +32,7 @@ end
 ---@param seq string
 ---@retrun table
 string.split = function(str, seq)
-    if str == nil  or type(str) ~= "string" then
+    if str == nil or type(str) ~= "string" then
         return nil;
     end
     
@@ -164,7 +164,7 @@ table.read_only = function(it)
 				tbl_mt.__read_only_proxy = proxy 
 				local proxy_mt = {
 					__index = tbl, 
-					__newindex 	= function (t, k, v) error("error write to a read-only table with key = " .. tostring(k)) end, 
+					__newindex 	= function (t, k, v) throw("error write to a read-only table with key = " .. tostring(k)) end, 
 					__pairs 	= function (t) return pairs(tbl) end, 
 					__len 		= function (t) return #tbl end, 
 					__read_only_proxy = proxy 
@@ -702,8 +702,11 @@ if not _DEBUG then
     return luaos;
 end
 
-return setmetatable({}, {__index = luaos, __newindex = function(...)
-    throw("For backward compatibility, please do not modify luaos");
-end});
+return setmetatable({name = "LuaOS"}, {
+    __index    = luaos,
+    __newindex = function (t, k, v) throw("error write to a read-only table with key = " .. tostring(k)) end, 
+    __pairs    = function (t) return pairs(luaos) end, 
+    __len      = function (t) return #luaos end, 
+});
 
 ----------------------------------------------------------------------------
