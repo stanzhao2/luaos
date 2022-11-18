@@ -29,10 +29,9 @@ namespace rpc
   {
     struct luaL_Reg rpc[] = {
       { "register",      lua_rpc_register  },
+      { "call",          lua_rpc_invoke    },
       { "cancel",        lua_rpc_cancel    },
-      { "call",          lua_rpc_call      },
-      { "invoke",        lua_rpc_invoke    },
-      { NULL,            NULL                 },
+      { NULL,            NULL              },
     };
     lua_newtable(L);
     luaL_setfuncs(L, rpc, 0);
@@ -209,10 +208,11 @@ LUALIB_API int lua_rpc_call(lua_State* L)
 LUALIB_API int lua_rpc_invoke(lua_State* L)
 {
   int argc = lua_gettop(L);
-  const char* name = luaL_checkstring(L, 1);
-  if (!lua_isfunction(L, 2)) {
-    luaL_argerror(L, 2, "must be a function");
+  if (argc == 1 || !lua_isfunction(L, 2)) {
+    return lua_rpc_call(L);
   }
+
+  const char* name = luaL_checkstring(L, 1);
 
   params_type params;
   for (int i = 3; i <= argc; i++) {

@@ -204,10 +204,10 @@ end
 
 local private = {
     storage = {
-        set     = storage.set,
-        get     = storage.get,
-        erase   = storage.erase,
-        clear   = storage.clear,
+        set      = storage.set,
+        get      = storage.get,
+        erase    = storage.erase,
+        clear    = storage.clear,
     },
     
     ssl = {
@@ -216,44 +216,43 @@ local private = {
     
     rpc = {
         register = rpc.register,
-        cancel   = rpc.cancel,
         call     = rpc.call,
-        invoke   = rpc.invoke,
+        cancel   = rpc.cancel,
     },
     
-    socket      = io.socket,
-    deadline    = os.deadline,
-    files       = os.files,
-    timingwheel = os.timingwheel,
-    typename    = os.typename,
-    id          = os.id,
-    execute     = os.execute,
-    exit        = os.exit,
-    wait        = os.wait,
-    stopped     = os.stopped,
-    publish     = os.publish,
-    watch       = os.watch,
-    cancel      = os.cancel,
-    subscribe   = os.subscribe,
+    socket       = io.socket,
+    deadline     = os.deadline,
+    files        = os.files,
+    timingwheel  = os.timingwheel,
+    typename     = os.typename,
+    id           = os.id,
+    execute      = os.execute,
+    exit         = os.exit,
+    wait         = os.wait,
+    stopped      = os.stopped,
+    publish      = os.publish,
+    watch        = os.watch,
+    cancel       = os.cancel,
+    subscribe    = os.subscribe,
 };
 
-storage         = nil; --disused
-ssl             = nil; --disused
-rpc             = nil; --disused
-io.socket       = nil; --disused
-os.deadline     = nil; --disused
-os.files        = nil; --disused
-os.timingwheel  = nil; --disused
-os.typename     = nil; --disused
-os.id           = nil; --disused
-os.execute      = nil; --disused
-os.exit         = nil; --disused
-os.wait         = nil; --disused
-os.stopped      = nil; --disused
-os.publish      = nil; --disused
-os.cancel       = nil; --disused
-os.watch        = nil; --disused
-os.subscribe    = nil; --disused
+storage          = nil; --disused
+ssl              = nil; --disused
+rpc              = nil; --disused
+io.socket        = nil; --disused
+os.deadline      = nil; --disused
+os.files         = nil; --disused
+os.timingwheel   = nil; --disused
+os.typename      = nil; --disused
+os.id            = nil; --disused
+os.execute       = nil; --disused
+os.exit          = nil; --disused
+os.wait          = nil; --disused
+os.stopped       = nil; --disused
+os.publish       = nil; --disused
+os.cancel        = nil; --disused
+os.watch         = nil; --disused
+os.subscribe     = nil; --disused
 
 ----------------------------------------------------------------------------
 ---封装 luaos 主模块
@@ -375,41 +374,38 @@ local luaos = {
 ---封装 RPC 模块
 ----------------------------------------------------------------------------
 
+local _rpc = private.rpc;
+
 luaos.rpc = {
     ---注册一个 RPC 函数(当前进程有效)
     ---@param name string
     ---@param func function
     ---@return boolean
     register = function(name, func)
-        return private.rpc.register(name, func);
+        return _rpc.register(name, func);
     end,
     
     ---取消一个 RPC 函数(当前进程有效)
     ---@param name string
     ---@return boolean
     cancel = function(name)
-        return private.rpc.cancel(name);
+        return _rpc.cancel(name);
     end,
     
     ---同步执行一个 RPC 函数(当前进程有效)
     ---@param name string
+    ---@param callback [function]
     ---@return boolean,...
-    call = function(name, ...)
-        return private.rpc.call(name, ...);
-    end,
-    
-    ---异步执行一个 RPC 函数(当前进程有效)
-    ---@param name string
-    ---@param callback fun(result:boolean, ...):void
-    ---@return boolean,...
-    invoke = function(name, callback, ...)
-        return private.rpc.invoke(name, callback, ...);
+    call = function(name, callback, ...)
+        return _rpc.call(name, callback, ...);
     end,
 };
 
 ----------------------------------------------------------------------------
 ---封装 SSL/TLS 模块
 ----------------------------------------------------------------------------
+
+local _ssl = private.ssl;
 
 luaos.ssl = {
     ---创建一个 SSL context
@@ -418,10 +414,10 @@ luaos.ssl = {
     ---@param pwd string
     ---@return userdata
     context = function(cert, key, pwd)
-        if not private.ssl then
+        if not _ssl then
             return nil;
         end
-        return private.ssl.context(cert, key, pwd);
+        return _ssl.context(cert, key, pwd);
     end
 };
 
