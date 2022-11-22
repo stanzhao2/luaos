@@ -689,6 +689,11 @@ if not ok then
     trace("module try is not installed");
 end
 
+ok, luaos.astar = pcall(require, "luaos.astar");
+if not ok then
+    trace("module astar is not installed");
+end
+
 ok, luaos.class = pcall(require, "luaos.classy");
 if not ok then
     trace("module classy is not installed");
