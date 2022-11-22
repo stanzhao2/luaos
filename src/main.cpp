@@ -31,6 +31,9 @@
 #ifndef OS_WINDOWS
 #include <gperftools/malloc_extension.h>
 #include <gperftools/tcmalloc.h>
+#else
+#include "dumper/ifdumper.h"
+static CMiniDumper _G_dumper(false);
 #endif
 
 /*******************************************************************************/

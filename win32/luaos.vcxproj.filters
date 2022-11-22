@@ -16,6 +16,9 @@
     <Filter Include="源文件\timewheel">
       <UniqueIdentifier>{a525ba4d-2c9a-40e9-ac22-42d9c9bfe2b9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="源文件\dumper">
+      <UniqueIdentifier>{dff1ebf5-a712-4e5b-a647-b90325934649}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\luaos.cpp">
@@ -54,6 +57,9 @@
     <ClCompile Include="..\src\luaos_rpc.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\dumper\ifdumper.cpp">
+      <Filter>源文件\dumper</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\luaset.h">
@@ -91,6 +97,9 @@
     </ClInclude>
     <ClInclude Include="..\src\luaos_rpc.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\dumper\ifdumper.h">
+      <Filter>源文件\dumper</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

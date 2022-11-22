@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\dumper\ifdumper.cpp" />
     <ClCompile Include="..\src\luaos.cpp" />
     <ClCompile Include="..\src\luaos_job.cpp" />
     <ClCompile Include="..\src\luaos_loader.cpp" />
@@ -33,6 +34,7 @@
     <ClCompile Include="..\src\twheel\twheel.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\dumper\ifdumper.h" />
     <ClInclude Include="..\src\luaos.h" />
     <ClInclude Include="..\src\luaos_job.h" />
     <ClInclude Include="..\src\luaos_loader.h" />
