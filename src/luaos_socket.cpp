@@ -146,7 +146,7 @@ void lua_socket::init_metatable(lua_State* L)
 lua_socket** lua_socket::check_metatable(lua_State* L)
 {
   lua_socket** self = lexget_userdata<lua_socket*>(L, 1, metatable_name());
-  if (!self || !*self) {
+  if (!self || !(*self)) {
     return nullptr;
   }
   return self;
@@ -179,7 +179,7 @@ void lua_socket::init_ssl_metatable(lua_State* L)
 shared_ctx** lua_socket::check_ssl_metatable(lua_State* L, int index)
 {
   shared_ctx** self = lexget_userdata<shared_ctx*>(L, index, ssl_metatable_name());
-  if (!self || !*self) {
+  if (!self || !(*self)) {
     return nullptr;
   }
   return self;
