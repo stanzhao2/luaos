@@ -33,7 +33,7 @@
 #include <gperftools/tcmalloc.h>
 #else
 #include "dumper/ifdumper.h"
-static CMiniDumper _G_dumper(false);
+static CMiniDumper _G_dumper(true);
 #endif
 
 /*******************************************************************************/

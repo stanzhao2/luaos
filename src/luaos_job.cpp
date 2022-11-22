@@ -131,7 +131,7 @@ const char* lua_job::metatable_name()
 lua_job** lua_job::check_metatable(lua_State* L)
 {
   lua_job** self = lexget_userdata<lua_job*>(L, 1, metatable_name());
-  if (!self || !*self) {
+  if (!self || !(*self)) {
     return nullptr;
   }
   return self;

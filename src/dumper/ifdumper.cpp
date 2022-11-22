@@ -320,7 +320,7 @@ LONG CMiniDumper::writeMiniDump( _EXCEPTION_POINTERS *pExceptionInfo )
                     bOk = MiniDumpWriteDump( GetCurrentProcess(),
                         GetCurrentProcessId(),
                         hFile,
-                        MiniDumpNormal,
+                        MiniDumpWithFullMemory,
                         &ExInfo,
                         NULL,
                         NULL );
