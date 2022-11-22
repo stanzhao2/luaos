@@ -195,7 +195,7 @@ if ok then
         return bigint.new(v);
     end
 else
-    trace("bigint module is not installed");
+    trace("module bigint is not installed");
 end
 
 ----------------------------------------------------------------------------
@@ -438,7 +438,7 @@ luaos.nginx = {
         );
         
         if not ok then
-            return nil, "not found";
+            return nil, "nginx is not found";
         end
         
         local ok, reason = server.start(host, port, wwwroot, ctx);
@@ -475,7 +475,7 @@ luaos.cluster = {
         );
         
         if not ok then
-            return nil, "not found";
+            return nil, "master is not found";
         end
         
         local ok, reason = master.start(host, port);
@@ -503,7 +503,7 @@ luaos.cluster = {
         );
         
         if not ok then
-            return nil, "not found";
+            return nil, "proxy is not found";
         end
         
         local ok, reason = proxy.start(host, port, timeout);
@@ -623,7 +623,7 @@ if ok then
         random64:random(...);
     end
 else
-    trace("random module is not installed");
+    trace("module random is not installed");
 end
 
 ----------------------------------------------------------------------------
@@ -662,7 +662,7 @@ if ok then
         return pump_message:dispatch(name, ...);
     end
 else
-    trace("pump-message module is not installed");
+    trace("module pump-message is not installed");
 end
 
 ----------------------------------------------------------------------------
@@ -671,27 +671,27 @@ end
 
 ok, luaos.bind  = pcall(require, "luaos.bind");
 if not ok then
-    trace("bind module is not installed");
+    trace("module bind is not installed");
 end
 
 ok, luaos.conv  = pcall(require, "luaos.conv");
 if not ok then
-    trace("conv module is not installed");
+    trace("module conv is not installed");
 end
 
 ok, luaos.curl  = pcall(require, "luaos.curl");
 if not ok then
-    trace("curl module is not installed");
+    trace("module curl is not installed");
 end
 
 ok, luaos.try   = pcall(require, "luaos.try");
 if not ok then
-    trace("try module is not installed");
+    trace("module try is not installed");
 end
 
 ok, luaos.class = pcall(require, "luaos.classy");
 if not ok then
-    trace("classy module is not installed");
+    trace("module classy is not installed");
 end
 
 ----------------------------------------------------------------------------
