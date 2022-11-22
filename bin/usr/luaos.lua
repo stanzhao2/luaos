@@ -388,7 +388,7 @@ luaos.rpc = {
     ---取消一个 RPC 函数(当前进程有效)
     ---@param name string
     ---@return boolean
-    cancel = function(name)
+    unregister = function(name)
         return _rpc.cancel(name);
     end,
     
