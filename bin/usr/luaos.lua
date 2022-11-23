@@ -669,29 +669,29 @@ end
 ---加载其他内置扩展模块
 ----------------------------------------------------------------------------
 
-ok, luaos.bind  = pcall(require, "luaos.bind");
+ok, luaos.bind = pcall(require, "luaos.bind");
 if not ok then
     trace("module bind is not installed");
 end
 
-ok, luaos.conv  = pcall(require, "luaos.conv");
+ok, luaos.conv = pcall(require, "luaos.conv");
 if not ok then
     trace("module conv is not installed");
 end
 
-ok, luaos.curl  = pcall(require, "luaos.curl");
+ok, luaos.curl = pcall(require, "luaos.curl");
 if not ok then
     trace("module curl is not installed");
 end
 
-ok, luaos.try   = pcall(require, "luaos.try");
+ok, luaos.try = pcall(require, "luaos.try");
 if not ok then
     trace("module try is not installed");
 end
 
-ok, luaos.astar = pcall(require, "luaos.astar");
+ok, luaos.finder = pcall(require, "luaos.finder");
 if not ok then
-    trace("module astar is not installed");
+    trace("module finder is not installed");
 end
 
 ok, luaos.class = pcall(require, "luaos.classy");
