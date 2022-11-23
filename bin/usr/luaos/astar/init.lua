@@ -18,7 +18,7 @@
 
 local astar = {}
 
-local jumper = "details.jumper."
+local jumper = "luaos.astar.jumper."
 
 local switch = {
 	["grid"] = function(...)
