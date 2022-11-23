@@ -264,6 +264,7 @@ namespace lua_twheel
 
     struct luaL_Reg methods[] = {
       { "__gc",	      lua_os_twheel_release   },
+      { "__close",	  lua_os_twheel_release   },
       { "max_delay" , lua_os_twheel_max_delay },
       { "close",      lua_os_twheel_release   },
       { "cancel",     lua_os_twheel_remove    },

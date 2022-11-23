@@ -152,11 +152,12 @@ void lua_job::init_metatable(lua_State* L)
   lua_pop(L, 1); //pop os from stack
 
   struct luaL_Reg methods[] = {
-    { "__gc", lua_os_job_gc   },
-    { "stop", lua_os_job_stop },
-    { "id",   lua_os_job_id   },
-    { "name", lua_os_job_name },
-    { NULL,   NULL },
+    { "__gc",     lua_os_job_gc    },
+    { "__close",  lua_os_job_stop  },
+    { "stop",     lua_os_job_stop  },
+    { "id",       lua_os_job_id    },
+    { "name",     lua_os_job_name  },
+    { NULL,       NULL },
   };
   lexnew_metatable(L, metatable_name(), methods);
   lua_pop(L, 1);
