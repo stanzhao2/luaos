@@ -674,6 +674,11 @@ if not ok then
     trace("module bind is not installed");
 end
 
+ok, luaos.try = pcall(require, "luaos.try");
+if not ok then
+    trace("module try is not installed");
+end
+
 ok, luaos.conv = pcall(require, "luaos.conv");
 if not ok then
     trace("module conv is not installed");
@@ -684,19 +689,9 @@ if not ok then
     trace("module curl is not installed");
 end
 
-ok, luaos.try = pcall(require, "luaos.try");
-if not ok then
-    trace("module try is not installed");
-end
-
 ok, luaos.odbc = pcall(require, "luaos.odbc");
 if not ok then
     trace("module odbc is not installed");
-end
-
-ok, luaos.finder = pcall(require, "luaos.finder");
-if not ok then
-    trace("module finder is not installed");
 end
 
 ok, luaos.class = pcall(require, "luaos.classy");
