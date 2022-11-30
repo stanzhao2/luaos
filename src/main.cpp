@@ -332,7 +332,7 @@ static int pmain(lua_State* L)
   }
 
   lua_pop(L, lua_gettop(L));
-  _printf(color_type::yellow, true, "LuaOS stopped, Goodbye!!\n");
+  _printf(color_type::yellow, true, "LuaOS stopped, Goodbye!!\n\n");
 
   if (check_thd.joinable()) {
     check_ios()->poll();
