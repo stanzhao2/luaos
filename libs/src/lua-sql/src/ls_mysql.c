@@ -991,8 +991,7 @@ static int stmt_getallresult(lua_State* L, stmt_data* stmt, MYSQL_RES* result, u
 				stmt_param_data* param = &my_paramwill[i];
 
 				enum_field_types eft = result->fields[i].type;
-				unsigned int flags = result->fields[i].flags;
-				int malloclen = 512;
+				int malloclen = 4096;
 				switch (eft)
 				{
 				case MYSQL_TYPE_DECIMAL:
