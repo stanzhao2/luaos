@@ -181,10 +181,6 @@ static void init_metatable(lua_State* L)
 
 static void signal_handler(int code)
 {
-  if (code == SIGINT) {
-    _printf(color_type::normal, true, "<Ctrl+C>\n");
-  }
-
   if (code == SIGINT || code == SIGTERM) {
     if (main_ios) {
       main_ios->stop();
@@ -336,11 +332,12 @@ static int pmain(lua_State* L)
   }
 
   lua_pop(L, lua_gettop(L));
+  _printf(color_type::yellow, true, "LuaOS stopped, Goodbye!!\n");
 
   if (check_thd.joinable()) {
+    check_ios()->poll();
     check_ios()->stop(), check_thd.join(); //wait for thread exit
   }
-  _printf(color_type::yellow, true, "goodbye...\n\n");
   lua_pushboolean(L, result == LUA_OK ? 1 : 0);
   return 1;
 }
