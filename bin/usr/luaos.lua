@@ -689,6 +689,11 @@ if not ok then
     trace("module try is not installed");
 end
 
+ok, luaos.odbc = pcall(require, "luaos.odbc");
+if not ok then
+    trace("module odbc is not installed");
+end
+
 ok, luaos.finder = pcall(require, "luaos.finder");
 if not ok then
     trace("module finder is not installed");
