@@ -107,7 +107,9 @@ static int ll_loadbuffer(lua_State* L, const char* buff, size_t size, const char
 #endif
 
   int topindex = lua_gettop(L);
-  ll_loader(L, buff, size, filename);
+  if (ll_loader(L, buff, size, filename) != LUA_OK) {
+    lua_error(L);
+  }
   lua_pushfstring(L, "%s", filename);
   int topnow = lua_gettop(L);
   return topnow - topindex;

@@ -735,62 +735,62 @@ static int stmt_bind(lua_State* L) {
 	int count = lua_gettop(L);
 	for (int i = 2; i <= count; i++)
 	{
-		if(stmt->used_bind_index >= stmt->need_bind_count)
-			return luasql_failmsg(L, "error stmt bind param more need. MySQL", "");
+	if(stmt->used_bind_index >= stmt->need_bind_count)
+		return luasql_failmsg(L, "error stmt bind param more need. MySQL", "");
 
-		MYSQL_BIND* my_bind = &stmt->my_bind[stmt->used_bind_index];
-		stmt_param_data* my_param_data = &stmt->bind_param[stmt->used_bind_index];
+	MYSQL_BIND* my_bind = &stmt->my_bind[stmt->used_bind_index];
+	stmt_param_data* my_param_data = &stmt->bind_param[stmt->used_bind_index];
 
 		int luatype = lua_type(L, i);
+	my_bind->is_null = &my_param_data->is_null;
+	switch (luatype)
+	{
+	case LUA_TNIL:
+		my_param_data->is_null = 1;
 		my_bind->is_null = &my_param_data->is_null;
-		switch (luatype)
-		{
-		case LUA_TNIL:
-			my_param_data->is_null = 1;
-			my_bind->is_null = &my_param_data->is_null;
-			my_bind->buffer_type = MYSQL_TYPE_NULL;
-			break;
-		case LUA_TBOOLEAN:
-			my_bind->buffer_type = MYSQL_TYPE_TINY;
-			my_bind->buffer_length = sizeof(my_param_data->willnumber.l);
+		my_bind->buffer_type = MYSQL_TYPE_NULL;
+		break;
+	case LUA_TBOOLEAN:
+		my_bind->buffer_type = MYSQL_TYPE_TINY;
+		my_bind->buffer_length = sizeof(my_param_data->willnumber.l);
 			my_param_data->willnumber.l = lua_tointeger(L, i);
-			my_bind->buffer = &my_param_data->willnumber.l;
-			break;
-		case LUA_TNUMBER:
-		{
+		my_bind->buffer = &my_param_data->willnumber.l;
+		break;
+	case LUA_TNUMBER:
+	{
 			lua_Integer x = lua_tointeger(L, i);
 			lua_Number n = lua_tonumber(L, i);
 
 			if (n == x)
-			{
-				my_bind->buffer_type = MYSQL_TYPE_LONG;
-				my_param_data->willnumber.l = lua_tointeger(L, i);
-				my_bind->buffer = &my_param_data->willnumber.l;
-			}
-			else
-			{
-				my_bind->buffer_type = MYSQL_TYPE_DOUBLE;
-				my_param_data->willnumber.d = lua_tonumber(L, i);
-				my_bind->buffer = &my_param_data->willnumber.l;
-			}
-			break;
-		}
-		case LUA_TSTRING:
 		{
-			my_bind->buffer_type = MYSQL_TYPE_STRING;
-			size_t sizelen = 0;
+			my_bind->buffer_type = MYSQL_TYPE_LONG;
+				my_param_data->willnumber.l = lua_tointeger(L, i);
+			my_bind->buffer = &my_param_data->willnumber.l;
+		}
+		else
+		{
+			my_bind->buffer_type = MYSQL_TYPE_DOUBLE;
+				my_param_data->willnumber.d = lua_tonumber(L, i);
+			my_bind->buffer = &my_param_data->willnumber.l;
+		}
+		break;
+	}
+	case LUA_TSTRING:
+	{
+		my_bind->buffer_type = MYSQL_TYPE_STRING;
+		size_t sizelen = 0;
 			const char* buffer = lua_tolstring(L, i, &sizelen);
 
-			my_param_data->willbuffer = malloc(sizelen);
-			memcpy(my_param_data->willbuffer, buffer, sizelen);
-			my_bind->buffer = my_param_data->willbuffer;
-			my_bind->buffer_length = (unsigned long)sizelen;
-			break;
-		}
-		default:
-			return luasql_failmsg(L, "error stmt bind. unkonw type", "");
-		}
-		stmt->used_bind_index++;
+		my_param_data->willbuffer = malloc(sizelen);
+		memcpy(my_param_data->willbuffer, buffer, sizelen);
+		my_bind->buffer = my_param_data->willbuffer;
+		my_bind->buffer_length = (unsigned long)sizelen;
+		break;
+	}
+	default:
+		return luasql_failmsg(L, "error stmt bind. unkonw type", "");
+	}
+	stmt->used_bind_index++;
 	}
 	
 	lua_pushboolean(L, 1);
@@ -799,6 +799,7 @@ static int stmt_bind(lua_State* L) {
 
 
 #ifdef WIN32
+
 
 inline struct tm* gmtime_r(
 	time_t const* const _Time,
@@ -811,7 +812,6 @@ inline struct tm* gmtime_r(
 
 	return NULL;
 }
-
 #endif
 /*
 ** Close the cursor on top of the stack.
@@ -927,34 +927,46 @@ static void stmt_pushvalue1(lua_State* L, MYSQL_STMT* stmt, stmt_param_data* par
 	}
 	else
 	{
-		//param_data->length 字段总长度
-		unsigned long offset = 0;
-		int pushnum = 0;
-		while (offset < param_data->length)
+		switch (bind->buffer_type)
 		{
-			if (offset != 0)
+		case MYSQL_TYPE_LONGLONG:
+			lua_pushinteger(L, param_data->willnumber.l);
+			break;
+		case MYSQL_TYPE_DOUBLE:
+			lua_pushnumber(L, param_data->willnumber.d);
+			break;
+		default:
+		{
+			unsigned long offset = 0;
+			int pushnum = 0;
+			while (offset < param_data->length)
 			{
-				int ret = mysql_stmt_fetch_column(stmt, bind, column, offset);
-				if (ret != 0)
+				if (offset != 0)
 				{
-					luaL_error(L, "");
+					int ret = mysql_stmt_fetch_column(stmt, bind, column, offset);
+					if (ret != 0)
+					{
+						luaL_error(L, "");
+					}
 				}
+
+				int readlen = param_data->length - offset;
+				if (readlen > (int)bind->buffer_length)
+					readlen = (int)bind->buffer_length;
+
+				lua_pushlstring(L, param_data->willbuffer, readlen);
+
+				offset += readlen;
+				pushnum++;
 			}
 
-			int readlen = param_data->length - offset;
-			if (readlen > (int)bind->buffer_length)
-				readlen = (int)bind->buffer_length;
-
-			lua_pushlstring(L, param_data->willbuffer, readlen);
-
-			offset += readlen;
-			pushnum++;
+			if (pushnum > 1)
+				lua_concat(L, pushnum);
+			else if (pushnum == 0)
+				lua_pushstring(L, ""); //长度是0得字符串
 		}
-
-		if (pushnum > 1)
-			lua_concat(L, pushnum);
-		else if (pushnum == 0)
-			lua_pushstring(L, ""); //长度是0得字符串
+			break;
+		}
 	}
 }
 
@@ -975,20 +987,45 @@ static int stmt_getallresult(lua_State* L, stmt_data* stmt, MYSQL_RES* result, u
 			ori_cols = cols;
 			for (unsigned int i = 0; i < cols; i++)
 			{
-				//enum_field_types eft = result->fields[i].type;
-				//unsigned int flags = result->fields[i].flags;
 				MYSQL_BIND* bind = &my_bindwill[i];
 				stmt_param_data* param = &my_paramwill[i];
 
+				enum_field_types eft = result->fields[i].type;
+				unsigned int flags = result->fields[i].flags;
 				int malloclen = 512;
-
-
-				param->willbuffer = malloc(malloclen);
-				bind->buffer_type = MYSQL_TYPE_STRING;
-				bind->buffer = param->willbuffer;
-				bind->length = &param->length;
-				bind->is_null = &param->is_null;
-				bind->buffer_length = malloclen;
+				switch (eft)
+				{
+				case MYSQL_TYPE_DECIMAL:
+				case MYSQL_TYPE_FLOAT:
+				case MYSQL_TYPE_DOUBLE:
+				case MYSQL_TYPE_NEWDECIMAL:
+					bind->buffer_type = MYSQL_TYPE_DOUBLE;
+					bind->buffer = &param->willnumber.d;
+					bind->length = &param->length;
+					bind->is_null = &param->is_null;
+				case MYSQL_TYPE_BIT:
+				case MYSQL_TYPE_TINY:
+				case MYSQL_TYPE_SHORT:
+				case MYSQL_TYPE_LONG:
+				case MYSQL_TYPE_LONGLONG:
+				case MYSQL_TYPE_INT24:
+				case MYSQL_TYPE_TIMESTAMP:
+				case MYSQL_TYPE_TIMESTAMP2:
+				case MYSQL_TYPE_ENUM:
+					bind->buffer_type = MYSQL_TYPE_LONGLONG;
+					bind->buffer = &param->willnumber.l;
+					bind->is_null = &param->is_null;
+					bind->length = &param->length;
+					break;
+				default:
+					param->willbuffer = malloc(malloclen);
+					bind->buffer_type = MYSQL_TYPE_STRING;
+					bind->buffer = param->willbuffer;
+					bind->length = &param->length;
+					bind->is_null = &param->is_null;
+					bind->buffer_length = malloclen;
+					break;
+				}
 			}
 		}
 
@@ -1025,6 +1062,7 @@ static int stmt_getallresult(lua_State* L, stmt_data* stmt, MYSQL_RES* result, u
 
 		
 		mysql_stmt_free_result(stmt->my_stmt);
+		mysql_free_result(result);
 		int status = mysql_stmt_next_result(stmt->my_stmt);
 		if (status == 0) {
 			unsigned int cur_count = mysql_stmt_field_count(stmt->my_stmt);
