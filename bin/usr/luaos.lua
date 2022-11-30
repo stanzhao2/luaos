@@ -371,37 +371,6 @@ local luaos = {
 };
 
 ----------------------------------------------------------------------------
----封装 RPC 模块
-----------------------------------------------------------------------------
-
-local _rpc = private.rpc;
-
-luaos.rpc = {
-    ---注册一个 RPC 函数(当前进程有效)
-    ---@param name string
-    ---@param func function
-    ---@return boolean
-    register = function(name, func)
-        return _rpc.register(name, func);
-    end,
-    
-    ---取消一个 RPC 函数(当前进程有效)
-    ---@param name string
-    ---@return boolean
-    unregister = function(name)
-        return _rpc.cancel(name);
-    end,
-    
-    ---同步执行一个 RPC 函数(当前进程有效)
-    ---@param name string
-    ---@param callback [function]
-    ---@return boolean,...
-    call = function(name, callback, ...)
-        return _rpc.call(name, callback, ...);
-    end,
-};
-
-----------------------------------------------------------------------------
 ---封装 SSL/TLS 模块
 ----------------------------------------------------------------------------
 
@@ -627,7 +596,38 @@ else
 end
 
 ----------------------------------------------------------------------------
----封装消息反应堆模块
+---封装 rpcall 模块
+----------------------------------------------------------------------------
+
+local rpcall = private.rpc;
+
+luaos.rpcall = setmetatable({
+    ---注册一个 RPC 函数(当前进程有效)
+    ---@param name string
+    ---@param func function
+    ---@return boolean
+    register = function(name, func)
+        return rpcall.register(name, func);
+    end,
+    
+    ---取消一个 RPC 函数(当前进程有效)
+    ---@param name string
+    ---@return boolean
+    unregister = function(name)
+        return rpcall.cancel(name);
+    end,
+    }, {
+    ---同步执行一个 RPC 函数(当前进程有效)
+    ---@param name string
+    ---@param callback [function]
+    ---@return boolean,...
+    __call = function(_, name, callback, ...)
+        return rpcall.call(name, callback, ...);
+    end
+});
+
+----------------------------------------------------------------------------
+---封装 pump_message 模块
 ----------------------------------------------------------------------------
 
 local class_pump;
