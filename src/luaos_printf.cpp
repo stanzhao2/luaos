@@ -118,9 +118,17 @@ static void async_printf(color_type type_color, const std::string& data)
 {
 #if defined(OS_WINDOWS)
 
+  static std::mutex _mutex;
+  static WORD default_color = -1;
   static HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
-  CONSOLE_SCREEN_BUFFER_INFO defaultScreenInfo;
-  GetConsoleScreenBufferInfo(out, &defaultScreenInfo);
+
+  std::unique_lock<std::mutex> lock(_mutex);
+  if (default_color < 0)
+  {
+    CONSOLE_SCREEN_BUFFER_INFO defaultScreenInfo;
+    GetConsoleScreenBufferInfo(out, &defaultScreenInfo);
+    default_color = defaultScreenInfo.wAttributes;
+  }
 
   WORD color = FOREGROUND_GREEN | FOREGROUND_BLUE;
   if (type_color == color_type::yellow) {
@@ -129,17 +137,16 @@ static void async_printf(color_type type_color, const std::string& data)
   else if (type_color == color_type::red) {
     color = FOREGROUND_RED;
   }
-
   color |= FOREGROUND_INTENSITY;
-  SetConsoleTextAttribute(out, color);
 
   std::string temp(data);
   if (is_utf8(data.c_str(), data.size())) {
     temp = utf8_to_mbs(data);
   }
 
+  SetConsoleTextAttribute(out, color);
   printf(temp.c_str());
-  SetConsoleTextAttribute(out, defaultScreenInfo.wAttributes);
+  SetConsoleTextAttribute(out, default_color);
 
 #else
 

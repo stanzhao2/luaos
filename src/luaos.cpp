@@ -366,8 +366,24 @@ bool is_debug_mode(lua_State* L)
 
 LUALIB_API int lua_pcall_error(lua_State* L)
 {
+  std::string info("<");
   const char* err = luaL_checkstring(L, -1);
+  if (err[0] == '[')
+  {
+    auto pos = strchr(err, ']');
+    if (pos) {
+      pos = strchr(pos + 2, ':');
+    }
+    if (pos) {
+      info.append(err, pos - err);
+      info.append(">");
+      info.append(pos + 1);
+      err = info.c_str();
+    }
+  }
+
   _printf(color_type::red, true, "%s\n", err);
+
   for (int i = 1; i < 100; i++)
   {
     lua_Debug ar;
@@ -381,7 +397,7 @@ LUALIB_API int lua_pcall_error(lua_State* L)
         continue;
       }
       char buffer[8192];
-      sprintf(buffer, "%s:%d\n", ar.short_src, ar.currentline);
+      sprintf(buffer, "<%s:%d>\n", ar.short_src, ar.currentline);
       _printf(color_type::red, true, buffer);
     }
   }

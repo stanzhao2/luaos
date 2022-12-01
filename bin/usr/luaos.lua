@@ -184,66 +184,18 @@ table.read_only = function(it)
 end
 
 ----------------------------------------------------------------------------
----封装系统内置模块
-----------------------------------------------------------------------------
-
-local private = {
-    storage = {
-        set      = storage.set,
-        get      = storage.get,
-        erase    = storage.erase,
-        clear    = storage.clear,
-    },
-    
-    ssl = {
-        context = ssl.context,
-    },
-    
-    rpc = {
-        register = rpc.register,
-        call     = rpc.call,
-        cancel   = rpc.cancel,
-    },
-    
-    socket       = io.socket,
-    deadline     = os.deadline,
-    files        = os.files,
-    timingwheel  = os.timingwheel,
-    typename     = os.typename,
-    id           = os.id,
-    execute      = os.execute,
-    exit         = os.exit,
-    wait         = os.wait,
-    stopped      = os.stopped,
-    publish      = os.publish,
-    watch        = os.watch,
-    cancel       = os.cancel,
-    subscribe    = os.subscribe,
-};
-
-storage          = nil; --disused
-ssl              = nil; --disused
-rpc              = nil; --disused
-io.socket        = nil; --disused
-os.deadline      = nil; --disused
-os.files         = nil; --disused
-os.timingwheel   = nil; --disused
-os.typename      = nil; --disused
-os.id            = nil; --disused
-os.execute       = nil; --disused
-os.exit          = nil; --disused
-os.wait          = nil; --disused
-os.stopped       = nil; --disused
-os.publish       = nil; --disused
-os.cancel        = nil; --disused
-os.watch         = nil; --disused
-os.subscribe     = nil; --disused
-
-----------------------------------------------------------------------------
 ---封装 luaos 主模块
 ----------------------------------------------------------------------------
 
-local function on_error(err)
+---Save to local variables for efficiency
+local ok;
+local storage   = storage;
+local ssl       = ssl;
+local rpc       = rpc;
+local io        = io;
+local os        = os;
+
+local function xpcall_error(err)
     error(debug.traceback(err));
 end
 
@@ -256,14 +208,14 @@ local luaos = {
     ---@param ... any
     ---@return boolean,string
     pcall = function(func, ...)
-        return xpcall(func, on_error, ...);
+        return xpcall(func, xpcall_error, ...);
     end,
     
     ---创建一个 socket
     ---@param family string
     ---@return luaos_socket
     socket = function(family)
-        return private.socket(family);
+        return io.socket(family);
     end,
     
     ---遍历目录下所有文件
@@ -271,56 +223,56 @@ local luaos = {
     ---@param path string
     ---@param ext string
     files = function(handler, path, ext)
-        return private.files(handler, path, ext);
+        return os.files(handler, path, ext);
     end,
     
     ---创建一个时间轮
     ---@return luaos_timingwheel
     timingwheel = function()
-        return private.timingwheel();
+        return os.timingwheel();
     end,
     
     ---获取当前操作系统类型名
     ---@return string
     typename = function()
-        return private.typename();
+        return os.typename();
     end,
     
     ---获取当前 lua 虚拟机编号
     ---@return integer
     id = function()
-        return private.id();
+        return os.id();
     end,
     
     ---执行一个 lua 模块
     ---@param name string
     ---@return luaos_job
     execute = function(name, ...)
-        return private.execute(name, ...);
+        return os.execute(name, ...);
     end,
     
     ---优雅退出当前 lua 模块运行
     exit = function()
-        return private.exit();
+        return os.exit();
     end,
     
     ---设置全局脚本最大阻塞时间(防止出现死循环)
     ---@param seconds integer
     deadline = function(seconds)
-        return private.deadline(seconds);
+        return os.deadline(seconds);
     end,
     
     ---等待系统消息,返回执行的消息数量
     ---@param timeout integer
     ---@return integer
     wait = function(timeout)
-        return private.wait(timeout);
+        return os.wait(timeout);
     end,
     
     ---判断当前 lua 虚拟机是否还在运行
     ---@return boolean
     stopped = function()
-        return private.stopped();
+        return os.stopped();
     end,
     
     ---发布一个系统消息(跨模块)
@@ -329,13 +281,13 @@ local luaos = {
     ---@param receiver integer
     ---@return integer
     publish = function(topic, mask, receiver, ...)
-        return private.publish(topic, mask, receiver, ...);
+        return os.publish(topic, mask, receiver, ...);
     end,
     
     ---取消一个消息订阅(跨模块)
     ---@param topic integer
     cancel = function(topic)
-        return private.cancel(topic);
+        return os.cancel(topic);
     end,
     
     ---监视一个消息订阅(跨模块)
@@ -343,7 +295,7 @@ local luaos = {
     ---@param handler fun(subscriber:integer, type:string):void
     ---@return boolean
     watch = function(topic, handler)
-        return private.watch(topic, handler);
+        return os.watch(topic, handler);
     end,
     
     ---订阅一个系统消息(跨模块)
@@ -351,139 +303,22 @@ local luaos = {
     ---@param handler fun(publisher:integer, mask:integer, ...):void
     ---@return boolean
     subscribe = function(topic, handler)
-        return private.subscribe(topic, handler);
+        return os.subscribe(topic, handler);
     end,
 };
 
-----------------------------------------------------------------------------
----封装 SSL/TLS 模块
-----------------------------------------------------------------------------
-
-local _ssl = private.ssl;
-
-luaos.ssl = {
-    ---创建一个 SSL context
-    ---@param cert string
-    ---@param key string
-    ---@param pwd string
-    ---@return userdata
-    context = function(cert, key, pwd)
-        if not _ssl then
-            return nil;
-        end
-        return _ssl.context(cert, key, pwd);
-    end
-};
+ok, luaos.bind  = pcall(require, "luaos.bind");
+ok, luaos.try   = pcall(require, "luaos.try");
+ok, luaos.conv  = pcall(require, "luaos.conv");
+ok, luaos.curl  = pcall(require, "luaos.curl");
+ok, luaos.odbc  = pcall(require, "luaos.odbc");
+ok, luaos.class = pcall(require, "luaos.classy");
 
 ----------------------------------------------------------------------------
----封装 nginx/http 模块
+---封装 storage 子模块
 ----------------------------------------------------------------------------
 
-luaos.nginx = {
-    ---启动一个 http 服务模块
-    ---@param host string
-    ---@param port integer
-    ---@param wwwroot string
-    ---@param ctx userdata
-    ---@return table
-    start = function(host, port, wwwroot, ctx)
-        local ok, server = pcall(
-            require, "luaos.nginx"
-        );
-        
-        if not ok then
-            throw("module nginx is not installed");
-        end
-        
-        local ok, reason = server.start(host, port, wwwroot, ctx);
-        if not ok then
-            return nil, reason;
-        end
-        
-        local result = {};
-        
-        function result:stop()
-            server.stop();
-        end
-        
-        function result:upgrade()
-            server.upgrade();
-        end
-        
-        return result;
-    end
-};
-
-----------------------------------------------------------------------------
----封装集群模块
-----------------------------------------------------------------------------
-
-luaos.cluster = {
-    ---创建一个集群监听
-    ---@param host string
-    ---@param port integer
-    ---@return table
-    listen = function(host, port)
-        local ok, master = pcall(
-            require, "luaos.cluster.master"
-        );
-        
-        if not ok then
-            throw("module master is not installed");
-        end
-        
-        local ok, reason = master.start(host, port);
-        if not ok then
-            return nil, reason;
-        end
-        
-        local result = {};
-        
-        function result:close()
-            master.stop();
-        end
-        
-        return result;
-    end,
-    
-    ---建立一个集群连接
-    ---@param host string
-    ---@param port integer
-    ---@param timeout integer
-    ---@return table
-    connect = function(host, port, timeout)
-        local ok, proxy = pcall(
-            require, "luaos.cluster.proxy"
-        );
-        
-        if not ok then
-            throw("module proxy is not installed");
-        end
-        
-        local ok, reason = proxy.start(host, port, timeout);
-        if not ok then
-            return nil, reason;
-        end
-        
-        local result = {};
-        
-        function result:close()
-            proxy.stop();
-        end
-        
-        function result:watch(topic)
-            proxy.watch(topic);
-        end
-        
-        return result;
-    end
-};
-
-----------------------------------------------------------------------------
----封装全局存储模块
-----------------------------------------------------------------------------
-
-local pack, storage = luaos.conv, private.storage;
+local pack = luaos.conv
 if pack then
     pack = luaos.conv.pack;
 end
@@ -557,10 +392,26 @@ luaos.storage = {
 };
 
 ----------------------------------------------------------------------------
----封装 rpcall 模块
+---封装 SSL/TLS 子模块
 ----------------------------------------------------------------------------
 
-local rpcall = private.rpc;
+luaos.ssl = {
+    ---创建一个 SSL context
+    ---@param cert string
+    ---@param key string
+    ---@param pwd string
+    ---@return userdata
+    context = function(cert, key, pwd)
+        if not ssl then
+            return nil;
+        end
+        return ssl.context(cert, key, pwd);
+    end
+};
+
+----------------------------------------------------------------------------
+---封装 rpcall 子模块
+----------------------------------------------------------------------------
 
 luaos.rpcall = setmetatable({
     ---注册一个 RPC 函数(当前进程有效)
@@ -568,14 +419,14 @@ luaos.rpcall = setmetatable({
     ---@param func function
     ---@return boolean
     register = function(name, func)
-        return rpcall.register(name, func);
+        return rpc.register(name, func);
     end,
     
     ---取消一个 RPC 函数(当前进程有效)
     ---@param name string
     ---@return boolean
     unregister = function(name)
-        return rpcall.cancel(name);
+        return rpc.cancel(name);
     end,
     }, {
     ---同步执行一个 RPC 函数(当前进程有效)
@@ -583,15 +434,120 @@ luaos.rpcall = setmetatable({
     ---@param callback [function]
     ---@return boolean,...
     __call = function(_, name, callback, ...)
-        return rpcall.call(name, callback, ...);
+        return rpc.call(name, callback, ...);
     end
 });
 
 ----------------------------------------------------------------------------
----封装 bigint 模块
+---封装 nginx/http 子模块
 ----------------------------------------------------------------------------
 
-local ok, bigint = pcall(require, "bigint");
+luaos.nginx = {
+    ---启动一个 http 服务模块
+    ---@param host string
+    ---@param port integer
+    ---@param wwwroot string
+    ---@param ctx userdata
+    ---@return table
+    start = function(host, port, wwwroot, ctx)
+        local ok, server = pcall(
+            require, "luaos.nginx"
+        );
+        
+        if not ok then
+            throw("module nginx is not installed");
+        end
+        
+        local ok, reason = server.start(host, port, wwwroot, ctx);
+        if not ok then
+            return nil, reason;
+        end
+        
+        local result = {};
+        
+        function result:stop()
+            server.stop();
+        end
+        
+        function result:upgrade()
+            server.upgrade();
+        end
+        
+        return result;
+    end
+};
+
+----------------------------------------------------------------------------
+---封装 cluster 子模块
+----------------------------------------------------------------------------
+
+luaos.cluster = {
+    ---创建一个集群监听
+    ---@param host string
+    ---@param port integer
+    ---@return table
+    listen = function(host, port)
+        local ok, master = pcall(
+            require, "luaos.cluster.master"
+        );
+        
+        if not ok then
+            throw("module master is not installed");
+        end
+        
+        local ok, reason = master.start(host, port);
+        if not ok then
+            return nil, reason;
+        end
+        
+        local result = {};
+        
+        function result:close()
+            master.stop();
+        end
+        
+        return result;
+    end,
+    
+    ---建立一个集群连接
+    ---@param host string
+    ---@param port integer
+    ---@param timeout integer
+    ---@return table
+    connect = function(host, port, timeout)
+        local ok, proxy = pcall(
+            require, "luaos.cluster.proxy"
+        );
+        
+        if not ok then
+            throw("module proxy is not installed");
+        end
+        
+        local ok, reason = proxy.start(host, port, timeout);
+        if not ok then
+            return nil, reason;
+        end
+        
+        local result = {};
+        
+        function result:close()
+            proxy.stop();
+        end
+        
+        function result:watch(topic)
+            proxy.watch(topic);
+        end
+        
+        return result;
+    end
+};
+
+----------------------------------------------------------------------------
+---封装 bigint 子模块
+----------------------------------------------------------------------------
+
+local bigint;
+ok, bigint = pcall(require, "bigint");
 
 local function bigint_check()
     if not bigint then
@@ -606,7 +562,7 @@ math.bigint = function(v)
 end
 
 ----------------------------------------------------------------------------
----封装随机数模块
+---封装 random 子模块
 ----------------------------------------------------------------------------
 
 local random;
@@ -637,7 +593,7 @@ math.random64 = function(...)
 end
 
 ----------------------------------------------------------------------------
----封装 pump_message 模块
+---封装 pump_message 子模块
 ----------------------------------------------------------------------------
 
 local class_pump, private_pump;
@@ -679,17 +635,6 @@ end
 luaos.dispatch = function(name, ...)
     return pump_check() or private_pump:dispatch(name, ...);
 end
-
-----------------------------------------------------------------------------
----加载其他内置扩展模块
-----------------------------------------------------------------------------
-
-ok, luaos.bind  = pcall(require, "luaos.bind");
-ok, luaos.try   = pcall(require, "luaos.try");
-ok, luaos.conv  = pcall(require, "luaos.conv");
-ok, luaos.curl  = pcall(require, "luaos.curl");
-ok, luaos.odbc  = pcall(require, "luaos.odbc");
-ok, luaos.class = pcall(require, "luaos.classy");
 
 ----------------------------------------------------------------------------
 ---设置元表，禁止添加新元素
