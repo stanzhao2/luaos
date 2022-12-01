@@ -21,7 +21,6 @@
 ----------------------------------------------------------------------------
 
 pcall(dofile, "luaos.extend");
-dofile("luaos.extend")
 
 ---Save to local variables for efficiency
 local ok;
