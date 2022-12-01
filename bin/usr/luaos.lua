@@ -188,14 +188,13 @@ end
 ----------------------------------------------------------------------------
 
 local ok, bigint = pcall(require, "bigint");
-if ok then
-    ---创建一个大整数
-    ---@param v integer
-    math.bigint = function(v)
-        return bigint.new(v);
+---创建一个大整数
+---@param v integer
+math.bigint = function(v)
+    if not bigint then
+        throw("module bigint is not installed");
     end
-else
-    trace("module bigint is not installed");
+    return bigint.new(v);
 end
 
 ----------------------------------------------------------------------------
@@ -407,7 +406,7 @@ luaos.nginx = {
         );
         
         if not ok then
-            return nil, "nginx is not found";
+            throw("module nginx is not installed");
         end
         
         local ok, reason = server.start(host, port, wwwroot, ctx);
@@ -444,7 +443,7 @@ luaos.cluster = {
         );
         
         if not ok then
-            return nil, "master is not found";
+            throw("module master is not installed");
         end
         
         local ok, reason = master.start(host, port);
@@ -472,7 +471,7 @@ luaos.cluster = {
         );
         
         if not ok then
-            return nil, "proxy is not found";
+            throw("module proxy is not installed");
         end
         
         local ok, reason = proxy.start(host, port, timeout);
@@ -572,30 +571,6 @@ luaos.storage = {
 };
 
 ----------------------------------------------------------------------------
----封装随机数模块
-----------------------------------------------------------------------------
-
-local random;
-ok, random = pcall(require, "luaos.random");
-if ok then
-    ---创建一个 32 位随机数
-    ---@retrun integer
-    local random32 = random.random32_create();
-    luaos.random32 = function(...)
-        random32:random(...);
-    end
-    
-    ---创建一个 64 位随机数
-    ---@retrun integer
-    local random64 = random.random64_create();
-    luaos.random64 = function(...)
-        random64:random(...);
-    end
-else
-    trace("module random is not installed");
-end
-
-----------------------------------------------------------------------------
 ---封装 rpcall 模块
 ----------------------------------------------------------------------------
 
@@ -627,77 +602,90 @@ luaos.rpcall = setmetatable({
 });
 
 ----------------------------------------------------------------------------
+---封装随机数模块
+----------------------------------------------------------------------------
+
+local random;
+ok, random = pcall(require, "luaos.random");
+
+local random32, random64;
+if random then
+    random32 = random.random32_create();
+    random64 = random.random64_create();
+end
+
+local function random_check()
+    if not random then
+        throw("module random is not installed");
+    end
+end
+
+---创建一个 32 位随机数
+---@retrun integer
+luaos.random32 = function(...)
+    return random_check() or random32:random(...);
+end
+
+---创建一个 64 位随机数
+---@retrun integer
+luaos.random64 = function(...)
+    return random_check() or random64:random(...);
+end
+
+----------------------------------------------------------------------------
 ---封装 pump_message 模块
 ----------------------------------------------------------------------------
 
-local class_pump;
+local class_pump, private_pump;
 ok, class_pump = pcall(require, "luaos.pump");
-if ok then
-    local pump_message = class_pump();
-    
-    ---创建一个消息反应堆
-    luaos.pump_message = function()
-        return class_pump();
+
+if class_pump then
+    private_pump = class_pump();
+end
+
+local function pump_check()
+    if not class_pump then
+        throw("module pump is not installed");
     end
-    
-    ---注册一个消息回调(仅当前模块)
-    ---@param name integer|string
-    ---@param handler fun(...):void
-    ---@return function
-    luaos.register = function(name, handler, priority)
-        return pump_message:register(name, handler, priority);
-    end
-    
-    ---取消一个消息回调(仅当前模块)
-    ---@param name integer|string
-    ---@param handler fun(...):void
-    luaos.unregister = function(name, handler)
-        return pump_message:unregister(name, handler);
-    end
-    
-    ---派发一个回调消息(仅当前模块)
-    ---@param name integer|string
-    ---@return integer
-    luaos.dispatch = function(name, ...)
-        return pump_message:dispatch(name, ...);
-    end
-else
-    trace("module pump-message is not installed");
+end
+
+---创建一个消息反应堆
+luaos.pump_message = function()
+    return pump_check() or class_pump();
+end
+
+---注册一个消息回调(仅当前模块)
+---@param name integer|string
+---@param handler fun(...):void
+---@return function
+luaos.register = function(name, handler, priority)
+    return pump_check() or private_pump:register(name, handler, priority);
+end
+
+---取消一个消息回调(仅当前模块)
+---@param name integer|string
+---@param handler fun(...):void
+luaos.unregister = function(name, handler)
+    return pump_check() or private_pump:unregister(name, handler);
+end
+
+---派发一个回调消息(仅当前模块)
+---@param name integer|string
+---@return integer
+luaos.dispatch = function(name, ...)
+    return pump_check() or private_pump:dispatch(name, ...);
 end
 
 ----------------------------------------------------------------------------
 ---加载其他内置扩展模块
 ----------------------------------------------------------------------------
 
-ok, luaos.bind = pcall(require, "luaos.bind");
-if not ok then
-    trace("module bind is not installed");
-end
-
-ok, luaos.try = pcall(require, "luaos.try");
-if not ok then
-    trace("module try is not installed");
-end
-
-ok, luaos.conv = pcall(require, "luaos.conv");
-if not ok then
-    trace("module conv is not installed");
-end
-
-ok, luaos.curl = pcall(require, "luaos.curl");
-if not ok then
-    trace("module curl is not installed");
-end
-
-ok, luaos.odbc = pcall(require, "luaos.odbc");
-if not ok then
-    trace("module odbc is not installed");
-end
-
+ok, luaos.bind  = pcall(require, "luaos.bind");
+ok, luaos.try   = pcall(require, "luaos.try");
+ok, luaos.conv  = pcall(require, "luaos.conv");
+ok, luaos.curl  = pcall(require, "luaos.curl");
+ok, luaos.odbc  = pcall(require, "luaos.odbc");
 ok, luaos.class = pcall(require, "luaos.classy");
-if not ok then
-    trace("module classy is not installed");
-end
 
 ----------------------------------------------------------------------------
 ---设置元表，禁止添加新元素
