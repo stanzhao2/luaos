@@ -1,4 +1,5 @@
-﻿local addNode(self, node, nextNode, ed)
+﻿
+local function addNode(self, node, nextNode, ed)
 	if not self._pathDB[node] then self._pathDB[node] = {} end
 	self._pathDB[node][ed] = (nextNode == ed and node or nextNode)
 end

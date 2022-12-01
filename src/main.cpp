@@ -304,7 +304,6 @@ const char* get_params(const std::string& key)
 
 static int pmain(lua_State* L)
 {
-  std::thread check_thd(check_thread);
   main_ios = this_thread().lua_reactor();
   _printf(color_type::yellow, true, "loading main module...\n");
 
@@ -333,13 +332,16 @@ static int pmain(lua_State* L)
 
   lua_pop(L, lua_gettop(L));
   _printf(color_type::yellow, true, "LuaOS stopped, Goodbye!!\n\n");
-
-  if (check_thd.joinable()) {
-    check_ios()->poll();
-    check_ios()->stop(), check_thd.join(); //wait for thread exit
-  }
   lua_pushboolean(L, result == LUA_OK ? 1 : 0);
   return 1;
+}
+
+static void wait_exit(std::thread& thd)
+{
+  if (thd.joinable()) {
+    check_ios()->poll();
+    check_ios()->stop(), thd.join(); //wait for thread exit
+  }
 }
 
 int main(int argc, char* argv[])
@@ -347,6 +349,8 @@ int main(int argc, char* argv[])
 #ifndef OS_WINDOWS
   MallocExtension::instance()->SetMemoryReleaseRate(0);
 #endif
+
+  std::thread check_thd(check_thread);
 
   print_copyright();
   signal(SIGINT,  signal_handler);
@@ -357,6 +361,7 @@ int main(int argc, char* argv[])
 
   if ((argc - 1) & 1) {
     _printf(color_type::red, true, "invalid arguments\n");
+    wait_exit(check_thd);
     return EXIT_FAILURE;
   }
 
@@ -369,6 +374,7 @@ int main(int argc, char* argv[])
   //check bom header of lua files
   _printf(color_type::yellow, true, "checking file encoding...\n");
   if (!check_bom_header()) {
+    wait_exit(check_thd);
     return EXIT_FAILURE;
   }
 
@@ -376,6 +382,7 @@ int main(int argc, char* argv[])
   {
     if (argv[i][0] != '-') {
       _printf(color_type::red, true, "invalid argument: %s\n\n", argv[i]);
+      wait_exit(check_thd);
       return EXIT_FAILURE;
     }
     params[argv[i]] = argv[i + 1];
@@ -387,6 +394,7 @@ int main(int argc, char* argv[])
     _printf(color_type::yellow, true, "compiling lua files...\n");
     lua_compile(compile);
     _printf(color_type::yellow, true, "compilation completed\n\n");
+    wait_exit(check_thd);
     return EXIT_SUCCESS;
   }
 
@@ -405,14 +413,18 @@ int main(int argc, char* argv[])
     _printf(
       color_type::red, true, "lua_State initialization failed\n\n"
     );
+    wait_exit(check_thd);
     return EXIT_FAILURE;
   }
+
   lua_pushcfunction(L, &pmain);  /* to call 'pmain' in protected mode */
   lua_pushinteger(L, argc);  /* 1st argument */
   lua_pushlightuserdata(L, argv); /* 2nd argument */
   int status = lua_pcall(L, 2, 1, 0);  /* do the call */
   result = lua_toboolean(L, -1);  /* get result */
   lua_close(L);
+
+  wait_exit(check_thd);
   return (result && status == LUA_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
