@@ -20,7 +20,7 @@
 ---封装 luaos 主模块
 ----------------------------------------------------------------------------
 
-pcall(dofile, "luaos.extend");
+pcall(dofile, "luaos.global");
 
 ---Save to local variables for efficiency
 local ok;
