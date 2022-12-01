@@ -184,20 +184,6 @@ table.read_only = function(it)
 end
 
 ----------------------------------------------------------------------------
----封装 bigint 模块
-----------------------------------------------------------------------------
-
-local ok, bigint = pcall(require, "bigint");
----创建一个大整数
----@param v integer
-math.bigint = function(v)
-    if not bigint then
-        throw("module bigint is not installed");
-    end
-    return bigint.new(v);
-end
-
-----------------------------------------------------------------------------
 ---封装系统内置模块
 ----------------------------------------------------------------------------
 
@@ -602,6 +588,24 @@ luaos.rpcall = setmetatable({
 });
 
 ----------------------------------------------------------------------------
+---封装 bigint 模块
+----------------------------------------------------------------------------
+
+local ok, bigint = pcall(require, "bigint");
+
+local function bigint_check()
+    if not bigint then
+        throw("module bigint is not installed");
+    end
+end
+
+---创建一个大整数
+---@param v integer
+math.bigint = function(v)
+    return bigint_check() or bigint.new(v);
+end
+
+----------------------------------------------------------------------------
 ---封装随机数模块
 ----------------------------------------------------------------------------
 
@@ -622,13 +626,13 @@ end
 
 ---创建一个 32 位随机数
 ---@retrun integer
-luaos.random32 = function(...)
+math.random32 = function(...)
     return random_check() or random32:random(...);
 end
 
 ---创建一个 64 位随机数
 ---@retrun integer
-luaos.random64 = function(...)
+math.random64 = function(...)
     return random_check() or random64:random(...);
 end
 
