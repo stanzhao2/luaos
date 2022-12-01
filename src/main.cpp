@@ -360,7 +360,7 @@ int main(int argc, char* argv[])
   int result = chdir(rundir.c_str());
 
   if ((argc - 1) & 1) {
-    _printf(color_type::red, true, "invalid arguments\n");
+    _printf(color_type::red, true, "invalid arguments\n\n");
     wait_exit(check_thd);
     return EXIT_FAILURE;
   }
@@ -374,6 +374,7 @@ int main(int argc, char* argv[])
   //check bom header of lua files
   _printf(color_type::yellow, true, "checking file encoding...\n");
   if (!check_bom_header()) {
+    printf("\n");
     wait_exit(check_thd);
     return EXIT_FAILURE;
   }
@@ -404,6 +405,7 @@ int main(int argc, char* argv[])
     if (access(rom_fname, 0) < 0)
     {
       _printf(color_type::red, true, "%s not found\n\n", rom_fname);
+      wait_exit(check_thd);
       return EXIT_FAILURE;
     }
   }

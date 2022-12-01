@@ -1,6 +1,6 @@
 ﻿
 
-local luaos = require("luaos")
+local luaos = require("luaos");
 
 function main()
 	local nginx = luaos.nginx;
