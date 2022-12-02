@@ -304,12 +304,17 @@ const char* get_params(const std::string& key)
 
 static int pmain(lua_State* L)
 {
-  main_ios = this_thread().lua_reactor();
-  _printf(color_type::yellow, true, "loading main module...\n");
+  const char* entryfile = get_params("-f");
+  if (!entryfile) {
+    entryfile = LUAOS_MAIN;
+  }
 
-  int result = lua_dofile(L, LUAOS_MAIN);
+  main_ios = this_thread().lua_reactor();
+  _printf(color_type::yellow, true, "loading %s module...\n", entryfile);
+
+  int result = lua_dofile(L, entryfile);
   if (result != LUA_OK) {
-    luaos_pop_error(L, LUAOS_MAIN);
+    luaos_pop_error(L, entryfile);
   }
   else
   {
