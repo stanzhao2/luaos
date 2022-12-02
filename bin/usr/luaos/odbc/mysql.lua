@@ -33,7 +33,7 @@ function mysql:__init(sqlenv, conf)
     self.conf   = conf;
     self.sqlenv = sqlenv;
     self.closed = false;
-    self:keepalive();
+    assert(self:keepalive());
 end
 
 ----------------------------------------------------------------------------
@@ -56,6 +56,12 @@ function mysql:close()
         self.conn = nil;
     end
     self.closed = true;
+end
+
+----------------------------------------------------------------------------
+
+function mysql:is_open()
+    return self.conn ~= nil and not self.closed;
 end
 
 ----------------------------------------------------------------------------
@@ -83,6 +89,13 @@ function mysql:begin()
     );
 end
 
+function mysql:lastid()
+    if not self.conn then
+        return nil;
+    end
+    return self.conn:getlastautoid();
+end
+
 ----------------------------------------------------------------------------
 
 function mysql:execute(sql, ...)    
@@ -90,9 +103,9 @@ function mysql:execute(sql, ...)
         return nil;
     end
     
-    local stmt <close> = assert(self.conn:prepare(sql));    
+    local stmt <close> = self.conn:prepare(sql);
     assert(stmt:bind(...));
-    return assert(stmt:execute({}));
+    return stmt:execute({});
 end
 
 ----------------------------------------------------------------------------
