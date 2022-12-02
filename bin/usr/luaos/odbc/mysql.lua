@@ -112,7 +112,7 @@ function mysql:keepalive()
     if not self.conn then
         local ok, conn, errmsg = pcall(connect, self.sqlenv, self.conf);
         if not ok or not conn then
-            error("connect to mysql failed: ", conn or errmsg);
+            error(conn or errmsg);
             return false;
         end
         self.conn = conn;
