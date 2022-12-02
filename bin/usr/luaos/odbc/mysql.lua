@@ -92,7 +92,7 @@ function mysql:execute(sql, ...)
     
     local stmt <close> = assert(self.conn:prepare(sql));    
     assert(stmt:bind(...));
-    return stmt:execute({});
+    return assert(stmt:execute({}));
 end
 
 ----------------------------------------------------------------------------
@@ -110,9 +110,9 @@ function mysql:keepalive()
     end
     
     if not self.conn then
-        local _, conn = pcall(connect, self.sqlenv, self.conf);
-        if not conn then
-            error("connect to mysql failed");
+        local ok, conn, errmsg = pcall(connect, self.sqlenv, self.conf);
+        if not ok or not conn then
+            error("connect to mysql failed: ", conn or errmsg);
             return false;
         end
         self.conn = conn;
