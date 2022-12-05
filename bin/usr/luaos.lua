@@ -130,6 +130,7 @@ local luaos = {
     end,
 };
 
+ok, luaos.pcall = pcall(require, "luaos.pcall");
 ok, luaos.bind  = pcall(require, "luaos.bind");
 ok, luaos.try   = pcall(require, "luaos.try");
 ok, luaos.conv  = pcall(require, "luaos.conv");
