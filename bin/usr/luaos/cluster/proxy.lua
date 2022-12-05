@@ -26,7 +26,7 @@ local format = string.format;
 
 local pcall = pcall;
 if _DEBUG then
-    pcall = luaos.pcall
+    pcall = require("luaos.pcall");
 end
 
 ----------------------------------------------------------------------------

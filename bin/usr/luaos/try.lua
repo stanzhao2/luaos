@@ -18,7 +18,7 @@
 
 ----------------------------------------------------------------------------
 
-local traceback = debug.traceback
+local pcall = require("luaos.pcall");
 
 local function is_function(v)
     return type(v) == "function"
@@ -78,7 +78,7 @@ local function try(self, block)
 
     local handler = block[1]
     if is_function(handler) then
-        t.ok, t.err = xpcall(handler, traceback)
+        t.ok, t.err = pcall(handler)
     end
 
     t.catch = function(block)

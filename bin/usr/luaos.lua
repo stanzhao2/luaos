@@ -30,21 +30,9 @@ local rpc       = rpc;
 local io        = io;
 local os        = os;
 
-local function xpcall_error(err)
-    error(debug.traceback(err));
-end
-
 ---@class luaos
 local luaos = {
     read = 1, write = 2,
-    
-    ---以保护模式运行函数
-    ---@param func function
-    ---@param ... any
-    ---@return boolean,string
-    pcall = function(func, ...)
-        return xpcall(func, xpcall_error, ...);
-    end,
     
     ---创建一个 socket
     ---@param family string

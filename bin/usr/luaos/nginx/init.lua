@@ -22,7 +22,7 @@ local parser = require("luaos.parser")
 
 local pcall = pcall;
 if _DEBUG then
-    pcall = luaos.pcall
+    pcall = require("luaos.pcall");
 end
 
 local bind     = luaos.bind;

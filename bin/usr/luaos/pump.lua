@@ -18,15 +18,10 @@
 
 ----------------------------------------------------------------------------
 
-local class = require("luaos.classy")
+local class = require("luaos.classy");
+local pcall = require("luaos.pcall");
 local pump_message = class("pump_message");
-local skiplist = require("skiplist")
-
-----------------------------------------------------------------------------
-
-local function on_error(err)
-    error(debug.traceback(err));
-end
+local skiplist = require("skiplist");
 
 ----------------------------------------------------------------------------
 
@@ -67,7 +62,7 @@ function pump_message:dispatch(name, ...)
     
     local result = true;
     for i, handler in pairs(event:rank_range()) do
-        local ok = xpcall(handler, on_error, ...);
+        local ok = pcall(handler, ...);
         if not ok then
             result = false;
         end
