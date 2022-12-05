@@ -241,7 +241,7 @@ LUALIB_API int lua_os_watch(lua_State* L)
 LUALIB_API int lua_os_publish(lua_State* L)
 {
   int argc = lua_gettop(L);
-  if (argc < 4) {
+  if (argc < 3) {
     luaL_error(L, "too few parameters");
   }
 
