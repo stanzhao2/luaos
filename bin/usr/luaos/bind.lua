@@ -19,9 +19,7 @@
 ----------------------------------------------------------------------------
 
 local function bind(callback, ...)
----[=[#if DEBUG]
     assert(type(callback) == "function")
---]=]
     local params = {...}
     local n = #params
     if n == 0 then
