@@ -41,6 +41,16 @@ local luaos = {
         return io.socket(family);
     end,
     
+    ---获取当前 UTC 时间(精确到毫秒)
+    system_clock = function()
+        return os.system_clock();
+    end,
+    
+    ---获取单调时钟(精确到毫秒)
+    steady_clock = function()
+        return os.steady_clock();
+    end,
+    
     ---遍历目录下所有文件
     ---@param handler fun(filename:string, ext:string):void
     ---@param path string
