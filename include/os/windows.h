@@ -61,19 +61,27 @@ namespace os
   }
   inline static size_t nanoseconds()
   {
-    return std::chrono::steady_clock::now().time_since_epoch().count();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+      std::chrono::system_clock::now().time_since_epoch()
+    ).count();
   }
   inline static size_t microseconds()
   {
-    return nanoseconds() / 1000;
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+      std::chrono::system_clock::now().time_since_epoch()
+    ).count();
   }
   inline static size_t milliseconds()
   {
-    return microseconds() / 1000;
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::system_clock::now().time_since_epoch()
+    ).count();
   }
   inline static size_t seconds()
   {
-    return milliseconds() / 1000;
+    return std::chrono::duration_cast<std::chrono::seconds>(
+      std::chrono::system_clock::now().time_since_epoch()
+    ).count();
   }
 }
 

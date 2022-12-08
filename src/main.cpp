@@ -110,6 +110,22 @@ static void lua_protect(lua_State* L, lua_CFunction fn)
   lua_pop(L, 1);
 }
 
+static int lua_os_system_clock(lua_State* L)
+{
+  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+    std::chrono::system_clock::now().time_since_epoch()
+  ).count();
+  lua_pushinteger(L, ms);
+  return 1;
+}
+
+static int lua_os_steady_clock(lua_State* L)
+{
+  auto ms = os::milliseconds();
+  lua_pushinteger(L, (lua_Integer)ms);
+  return 1;
+}
+
 static void init_lua_state(lua_State* L)
 {
   lua_getglobal(L, "error");
@@ -125,6 +141,12 @@ static void init_lua_state(lua_State* L)
   lua_setglobal(L, "trace");
 
   lua_getglobal(L, "os");
+  lua_pushcfunction(L, lua_os_system_clock);
+  lua_setfield(L, -2, "system_clock");
+
+  lua_pushcfunction(L, lua_os_steady_clock);
+  lua_setfield(L, -2, "steady_clock");
+
   lua_pushcfunction(L, lua_os_files);
   lua_setfield(L, -2, "files");
 
