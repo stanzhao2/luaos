@@ -27,24 +27,6 @@ string.trim = function(str)
     return (string.gsub(str, "^%s*(.-)%s*$", "%1")) ;
 end
 
----将指定的字符串以指定的分隔符拆分
----@param str string
----@param seq string
----@retrun table
-string.split = function(str, seq)
-    if str == nil or type(str) ~= "string" then
-        return nil;
-    end
-    
-    local r, insert = {}, table.insert;
-    
-    for word in string.gmatch(str,"[^{"..seq.."}*]+") do
-        insert(r, word);
-    end
-    
-    return r
-end
-
 ----------------------------------------------------------------------------
 ---为 table 添加功能
 ----------------------------------------------------------------------------
