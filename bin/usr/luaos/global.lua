@@ -20,11 +20,21 @@
 ---为 string 添加功能
 ----------------------------------------------------------------------------
 
+local string_split = string.split;
+
 ---去掉字符串前后空格
 ---@param str string
 ---@retrun string
 string.trim = function(str)
     return (string.gsub(str, "^%s*(.-)%s*$", "%1")) ;
+end
+
+---按照指定分隔符拆分字符串
+---@param str string
+---@param delimiter string
+---@retrun table
+string.split = function(str, delimiter)
+    return string_split(str, delimiter);
 end
 
 ----------------------------------------------------------------------------
