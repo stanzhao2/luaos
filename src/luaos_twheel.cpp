@@ -23,7 +23,12 @@ typedef struct tw_handler
       return;
     }
     if (handle) {
-      luaL_unref(L, LUA_REGISTRYINDEX, handle);
+      if (L)
+      {
+        L = this_thread().lua_state();
+        luaL_unref(L, LUA_REGISTRYINDEX, handle);
+        L = nullptr;
+      }
       handle = 0;
     }
     ptw = nullptr;

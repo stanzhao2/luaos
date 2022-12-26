@@ -77,7 +77,10 @@ __this_thread::__this_thread()
 
 __this_thread::~__this_thread()
 {
-  post_alive_exit(L);
+  if (L) {
+    post_alive_exit(L);
+    L = nullptr;
+  }
   if (_timer) delete _timer;
 }
 
