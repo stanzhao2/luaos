@@ -23,12 +23,7 @@ typedef struct tw_handler
       return;
     }
     if (handle) {
-      if (L)
-      {
-        L = this_thread().lua_state();
-        luaL_unref(L, LUA_REGISTRYINDEX, handle);
-        L = nullptr;
-      }
+      luaL_unref(L, LUA_REGISTRYINDEX, handle);
       handle = 0;
     }
     ptw = nullptr;
@@ -197,7 +192,6 @@ LUALIB_API int lua_os_twheel_add_time(lua_State* L)
   for (int i = index; i <= top; i++) {
     c->params.push_back(lexget_anyref(L, i));
   }
-
   if (timewheel_add_time(ptw->ptw, twheel_callback, (void*)c, (uint32_t)delay))
   {
     ptw->task->insert(c);
@@ -258,6 +252,11 @@ LUALIB_API int lua_os_twheel_release(lua_State* L)
   return 0;
 }
 
+LUALIB_API int lua_os_twheel_close(lua_State* L)
+{
+  return lua_os_twheel_release(L);
+}
+
 namespace lua_twheel
 {
   void init_metatable(lua_State* L)
@@ -269,9 +268,9 @@ namespace lua_twheel
 
     struct luaL_Reg methods[] = {
       { "__gc",	      lua_os_twheel_release   },
-      { "__close",	  lua_os_twheel_release   },
+      //{ "__close",	  lua_os_twheel_close     },
       { "max_delay" , lua_os_twheel_max_delay },
-      { "close",      lua_os_twheel_release   },
+      { "close",      lua_os_twheel_close     },
       { "cancel",     lua_os_twheel_remove    },
       { "scheme",     lua_os_twheel_add_time  },
       { NULL,		      NULL                    }

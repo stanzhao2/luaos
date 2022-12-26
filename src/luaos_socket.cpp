@@ -118,7 +118,7 @@ void lua_socket::init_metatable(lua_State* L)
 
   struct luaL_Reg methods[] = {
     { "__gc",         lua_os_socket_gc            },
-    { "__close",      lua_os_socket_close         },
+    //{ "__close",      lua_os_socket_close         },
     { "listen",       lua_os_socket_listen        },
     { "bind",         lua_os_socket_bind          },
     { "connect",      lua_os_socket_connect       },
@@ -169,7 +169,7 @@ void lua_socket::init_ssl_metatable(lua_State* L)
 
   struct luaL_Reg methods[] = {
     { "__gc",         lua_os_socket_ssl_gc       },
-    { "__close",      lua_os_socket_ssl_close    },
+    //{ "__close",      lua_os_socket_ssl_close    },
     { "close",        lua_os_socket_ssl_close    },
     { NULL,           NULL },
   };

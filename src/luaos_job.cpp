@@ -153,7 +153,7 @@ void lua_job::init_metatable(lua_State* L)
 
   struct luaL_Reg methods[] = {
     { "__gc",     lua_os_job_gc    },
-    { "__close",  lua_os_job_stop  },
+    //{ "__close",  lua_os_job_stop  },
     { "stop",     lua_os_job_stop  },
     { "id",       lua_os_job_id    },
     { "name",     lua_os_job_name  },
