@@ -21,6 +21,7 @@
 
 #include "luaset.h"
 #include "luaos_printf.h"
+#include "luaos_twheel.h"
 
 #define LUAOS_VERSION "1.0.1"
 
@@ -99,7 +100,7 @@ void print_copyright();
 
 void post_alive(lua_State* L);
 
-void post_alive_exit(lua_State* L);
+void post_alive_exit(lua_State* L, twheel_t *tw);
 
 bool is_debug_mode(lua_State* L);
 

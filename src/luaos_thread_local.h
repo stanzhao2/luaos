@@ -16,6 +16,7 @@
 #pragma once
 
 #include "luaset.h"
+#include "luaos_twheel.h"
 #include <socket/socket.hpp>
 
 using namespace eth;
@@ -29,6 +30,7 @@ class __this_thread final
   reactor_type  _ios;
   lua_State*    L;
   steady_timer* _timer;
+  twheel_t*     _twheel;
   void on_timer(const error_code& ec, int interval);
 
 public:
@@ -36,6 +38,7 @@ public:
   ~__this_thread();
   void set_timer(int interval);
   lua_State* lua_state() const;
+  twheel_t*  lua_twheel() const;
   reactor::ref lua_reactor() const;
 };
 

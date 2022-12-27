@@ -14,7 +14,6 @@
 ********************************************************************************/
 
 #include "luaos.h"
-#include "luaos_twheel.h"
 #include "luaos_thread_local.h"
 
 /*******************************************************************************/
@@ -32,10 +31,11 @@ void __this_thread::on_timer(const error_code& ec, int interval)
 {
   static thread_local size_t lastpost = 0;
   size_t now = os::milliseconds();
-  twheel_t* ptw = this_timingwheel();
 
-  if (ptw->need_update) {
-    timewheel_update(ptw, now);
+  if (_twheel) {
+    if (_twheel->need_update) {
+      timewheel_update(_twheel, now);
+    }
   }
   if (now - lastpost >= 1000)
   {
@@ -71,6 +71,7 @@ __this_thread::__this_thread()
   L = luaL_newstate();
   post_alive(L);
 
+  _twheel = timewheel_create(0);
   _ios = reactor::create();
   _ios->post([this]() { set_timer(10); });
 }
@@ -78,14 +79,19 @@ __this_thread::__this_thread()
 __this_thread::~__this_thread()
 {
   if (L) {
-    post_alive_exit(L);
+    post_alive_exit(L, _twheel);
     L = nullptr;
+    _twheel = nullptr;
   }
   if (_timer) delete _timer;
 }
 
 lua_State* __this_thread::lua_state() const {
   return L;
+}
+
+twheel_t* __this_thread::lua_twheel() const {
+  return _twheel;
 }
 
 reactor::ref __this_thread::lua_reactor() const {

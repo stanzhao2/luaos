@@ -287,13 +287,14 @@ LUALIB_API int lua_os_deadline(lua_State* L)
   return 0;
 }
 
-void post_alive_exit(lua_State* L)
+void post_alive_exit(lua_State* L, twheel_t* tw)
 {
   reactor_type ios = check_ios();
   ios->post(
-    [L]() {
+    [L, tw]() {
       __lua_runtime.erase(L);
       lua_close(L);
+      timewheel_release(tw);
     }
   );
 }

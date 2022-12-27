@@ -19,7 +19,7 @@ typedef struct tw_handler
   lua_State* L;
   inline void clear()
   {
-    if (!ptw) {
+    if (ptw == nullptr) {
       return;
     }
     if (handle) {
@@ -41,22 +41,7 @@ typedef struct
 
 twheel_t* this_timingwheel()
 {
-  static thread_local struct _G_timingwheel {
-    twheel_t* ptw;
-    inline _G_timingwheel() {
-      ptw = nullptr;
-    }
-
-    inline ~_G_timingwheel() {
-      timewheel_release(ptw);
-    }
-
-    inline twheel_t* create() {
-      if (!ptw) ptw = timewheel_create(0);
-      return ptw;
-    }
-  } _G_ptw;
-  return _G_ptw.create();
+  return this_thread().lua_twheel();
 }
 
 static void twheel_cancel(timingwheel* ptw)
@@ -103,7 +88,7 @@ static tw_handler* alloc_handler(timingwheel* ptw)
 
 static void free_handler(timingwheel* ptw, tw_handler* handler)
 {
-  if (ptw)
+  if (ptw && handler)
   {
     handler->clear();
     if (ptw->free)
