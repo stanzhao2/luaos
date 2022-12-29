@@ -386,7 +386,7 @@ LUALIB_API int lua_traceback(lua_State* L)
         stack.append("\nstack traceback:");
       }
       char buffer[1024];
-      sprintf(buffer, "\n\t#%02d: <%s:%d: %s>", j++, ar.short_src, ar.currentline, ar.what ? ar.what : "");
+      sprintf(buffer, "\n\t#%02d: %s:%d: %s", j++, ar.short_src, ar.currentline, ar.what ? ar.what : "");
       stack.append(buffer);
     }
   }

@@ -214,7 +214,7 @@ static int lua_printf(lua_State* L, color_type color)
       if (lua_getinfo(L, "Sl", &ar))
       {
         if (ar.currentline > 0){
-          sprintf(filename, "<%s:%d> ", ar.short_src, ar.currentline);
+          sprintf(filename, "- %s:%d - ", ar.short_src, ar.currentline);
           break;
         }
       }
