@@ -106,11 +106,14 @@ static int ll_loadbuffer(lua_State* L, const char* buff, size_t size, const char
   filename = modename.c_str();
 #endif
 
+  char luaname[1024];
   int topindex = lua_gettop(L);
-  if (ll_loader(L, buff, size, filename) != LUA_OK) {
+  snprintf(luaname, sizeof(luaname), "@%s", filename);
+
+  if (ll_loader(L, buff, size, luaname) != LUA_OK) {
     lua_error(L);
   }
-  lua_pushfstring(L, "%s", filename);
+  lua_pushfstring(L, "%s", luaname);
   int topnow = lua_gettop(L);
   return topnow - topindex;
 }
