@@ -186,6 +186,11 @@ static void init_lua_state(lua_State* L)
   lua_setfield(L, -2, "split");
   lua_pop(L, 1); //pop string from stack
 
+  lua_getglobal(L, "debug");
+  lua_pushcfunction(L, lua_traceback);
+  lua_setfield(L, -2, "traceback");
+  lua_pop(L, 1); //pop debug from stack
+
   lua_getglobal(L, "utf8");
   if (lua_type(L, -1) == LUA_TNIL)
   {

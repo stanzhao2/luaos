@@ -97,6 +97,7 @@ static int ll_loader(lua_State* L, const char* buff, size_t size, const char* na
 /* private / internal */
 static int ll_loadbuffer(lua_State* L, const char* buff, size_t size, const char* filename)
 {
+/*
 #ifdef OS_WINDOWS
   std::string modename(filename);
   char* p = (char*)modename.c_str();
@@ -105,6 +106,10 @@ static int ll_loadbuffer(lua_State* L, const char* buff, size_t size, const char
   }
   filename = modename.c_str();
 #endif
+*/
+  if (filename[0] == '.' && filename[1] == LUA_DIRSEP[0]) {
+    filename += 2;
+  }
 
   char luaname[1024];
   int topindex = lua_gettop(L);

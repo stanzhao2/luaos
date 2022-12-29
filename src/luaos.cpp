@@ -364,39 +364,12 @@ bool is_debug_mode(lua_State* L)
   return result;
 }
 
-LUALIB_API int lua_pcall_error(lua_State* L)
+LUALIB_API int lua_traceback(lua_State* L)
 {
-  std::string info("<");
-  const char* err = luaL_checkstring(L, -1);
-  const char* pos = 0;
+  std::string stack = luaL_checkstring(L, -1);
+  bool showstack = false;
 
-  bool finded = false;
-  if (err[0] == '[')
-  {
-    pos = strchr(err, ']');
-    if (pos) {
-      pos = strchr(pos + 2, ':');
-      finded = true;
-    }
-  }
-  else if (err[0] != '<') {
-    pos = strchr(err, ':');
-    if (pos) {
-      pos = strchr(pos + 1, ':');
-      finded = true;
-    }
-  }
-  if (finded) {
-    info.append(err, pos - err);
-    info.append(">");
-    info.append(pos + 1);
-    err = info.c_str();
-  }
-
-  bool skipfirst = false;
-  std::string stack(err);
-
-  for (int i = 1; i < 100; i++)
+  for (int i = 1, j = 1; i < 100; i++)
   {
     lua_Debug ar;
     int result = lua_getstack(L, i, &ar);
@@ -408,17 +381,25 @@ LUALIB_API int lua_pcall_error(lua_State* L)
       if (ar.currentline < 0) {
         continue;
       }
-      if (!skipfirst) {
-        skipfirst = true;
-        continue;
+      if (!showstack) {
+        showstack = true;
+        stack.append("\nstack traceback:");
       }
       char buffer[1024];
-      sprintf(buffer, "\n\tstack: <%s:%d>", ar.short_src, ar.currentline);
+      sprintf(buffer, "\n\t#%02d: <%s:%d: %s>", j++, ar.short_src, ar.currentline, ar.what ? ar.what : "");
       stack.append(buffer);
     }
   }
 
-  _printf(color_type::red, true, "%s\n", stack.c_str());
+  lua_pop(L, 1);
+  lua_pushlstring(L, stack.c_str(), stack.size());
+  return 1;
+}
+
+LUALIB_API int lua_pcall_error(lua_State* L)
+{
+  lua_traceback(L);
+  _printf(color_type::red, true, "%s\n", luaL_checkstring(L, -1));
   return 1;
 }
 

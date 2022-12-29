@@ -90,6 +90,8 @@ LUALIB_API int lua_os_typename(lua_State* L);
 
 LUALIB_API int lua_is_utf8(lua_State* L);
 
+LUALIB_API int lua_traceback(lua_State* L);
+
 LUALIB_API int lua_pcall_error(lua_State* L);
 
 /*******************************************************************************/
