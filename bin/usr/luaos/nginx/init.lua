@@ -155,12 +155,22 @@ local table_concat  = table.concat
 local string_format = string.format
 local string_match  = string.match
 local string_trim   = string.trim
-local string_split  = string.split
 local string_gsub   = string.gsub
 local string_sub    = string.sub
 local string_lower  = string.lower
 local string_pack   = string.pack
 local string_unpack = string.unpack
+
+local string_split  = function(str, delimiter)
+    local splited = {};
+    local result = string.split(str, delimiter);
+    for i = 1, #result do
+        if #result[i] > 0 then
+            table_insert(splited, result[i]);
+        end
+    end
+    return splited;
+end
 
 local function default_headers()
     local headers = {
