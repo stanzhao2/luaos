@@ -368,21 +368,33 @@ LUALIB_API int lua_pcall_error(lua_State* L)
 {
   std::string info("<");
   const char* err = luaL_checkstring(L, -1);
+  const char* pos = 0;
+
+  bool finded = false;
   if (err[0] == '[')
   {
-    auto pos = strchr(err, ']');
+    pos = strchr(err, ']');
     if (pos) {
       pos = strchr(pos + 2, ':');
-    }
-    if (pos) {
-      info.append(err, pos - err);
-      info.append(">");
-      info.append(pos + 1);
-      err = info.c_str();
+      finded = true;
     }
   }
+  else if (err[0] != '<') {
+    pos = strchr(err, ':');
+    if (pos) {
+      pos = strchr(pos + 1, ':');
+      finded = true;
+    }
+  }
+  if (finded) {
+    info.append(err, pos - err);
+    info.append(">");
+    info.append(pos + 1);
+    err = info.c_str();
+  }
 
-  _printf(color_type::red, true, "%s\n", err);
+  bool skipfirst = false;
+  std::string stack(err);
 
   for (int i = 1; i < 100; i++)
   {
@@ -396,11 +408,17 @@ LUALIB_API int lua_pcall_error(lua_State* L)
       if (ar.currentline < 0) {
         continue;
       }
-      char buffer[8192];
-      sprintf(buffer, "<%s:%d>\n", ar.short_src, ar.currentline);
-      _printf(color_type::red, true, buffer);
+      if (!skipfirst) {
+        skipfirst = true;
+        continue;
+      }
+      char buffer[1024];
+      sprintf(buffer, "\n\tstack: <%s:%d>", ar.short_src, ar.currentline);
+      stack.append(buffer);
     }
   }
+
+  _printf(color_type::red, true, "%s\n", stack.c_str());
   return 1;
 }
 
