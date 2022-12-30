@@ -398,13 +398,13 @@ int main(int argc, char* argv[])
 {
 #ifndef OS_WINDOWS
   MallocExtension::instance()->SetMemoryReleaseRate(0);
-#endif
-  std::thread check_thd(check_thread);
-
+#else
   HANDLE original = GetStdHandle(STD_OUTPUT_HANDLE);
   CONSOLE_SCREEN_BUFFER_INFO defaultScreenInfo;
   GetConsoleScreenBufferInfo(original, &defaultScreenInfo);
   WORD default_color = defaultScreenInfo.wAttributes;
+#endif
+  std::thread check_thd(check_thread);
 
   print_copyright();
   signal(SIGINT,  signal_handler);
@@ -425,7 +425,9 @@ int main(int argc, char* argv[])
     if (!parse(argc, argv, cli)) {
       _printf(color_type::red, true, "invalid arguments\n\n");
       wait_exit(check_thd);
+#ifdef OS_WINDOWS
       SetConsoleTextAttribute(original, default_color);
+#endif
       return EXIT_FAILURE;
     }
   }
@@ -441,7 +443,9 @@ int main(int argc, char* argv[])
   if (!check_bom_header()) {
     printf("\n");
     wait_exit(check_thd);
+#ifdef OS_WINDOWS
     SetConsoleTextAttribute(original, default_color);
+#endif
     return EXIT_FAILURE;
   }
 
@@ -451,7 +455,9 @@ int main(int argc, char* argv[])
     lua_compile(infile.c_str());
     _printf(color_type::yellow, true, "compilation completed\n\n");
     wait_exit(check_thd);
+#ifdef OS_WINDOWS
     SetConsoleTextAttribute(original, default_color);
+#endif
     return EXIT_SUCCESS;
   }
 
@@ -460,7 +466,9 @@ int main(int argc, char* argv[])
     {
       _printf(color_type::red, true, "%s not found\n\n", infile.c_str());
       wait_exit(check_thd);
+#ifdef OS_WINDOWS
       SetConsoleTextAttribute(original, default_color);
+#endif
       return EXIT_FAILURE;
     }
     rom_fname = infile.c_str();
@@ -472,7 +480,9 @@ int main(int argc, char* argv[])
       color_type::red, true, "lua_State initialization failed\n\n"
     );
     wait_exit(check_thd);
+#ifdef OS_WINDOWS
     SetConsoleTextAttribute(original, default_color);
+#endif
     return EXIT_FAILURE;
   }
 
@@ -484,7 +494,9 @@ int main(int argc, char* argv[])
   lua_close(L);
 
   wait_exit(check_thd);
+#ifdef OS_WINDOWS
   SetConsoleTextAttribute(original, default_color);
+#endif
   return (result && status == LUA_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
