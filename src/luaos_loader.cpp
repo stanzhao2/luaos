@@ -97,16 +97,6 @@ static int ll_loader(lua_State* L, const char* buff, size_t size, const char* na
 /* private / internal */
 static int ll_loadbuffer(lua_State* L, const char* buff, size_t size, const char* filename)
 {
-/*
-#ifdef OS_WINDOWS
-  std::string modename(filename);
-  char* p = (char*)modename.c_str();
-  for (; *p; p++) {
-    if (*p == '\\') *p = '/';
-  }
-  filename = modename.c_str();
-#endif
-*/
   if (filename[0] == '.' && filename[1] == LUA_DIRSEP[0]) {
     filename += 2;
   }
@@ -195,6 +185,10 @@ static int ll_require(lua_State* L)
   size_t size, i = 0, j = 0;
   const char* name = luaL_checklstring(L, 1, &size);
 
+  if (is_fullname(name)) {
+    return ll_loadfile(L, name);
+  }
+
   std::string filename(name);
   for (size_t i = 0; i < filename.size(); i++) {
     if (filename[i] == '.') {
@@ -202,9 +196,6 @@ static int ll_require(lua_State* L)
     }
   }
   name = filename.c_str();
-  if (is_fullname(name)) {
-    return ll_loadfile(L, name);
-  }
 
   lua_getglobal(L, LUA_LOADLIBNAME);
   lua_getfield(L, -1, "path");
@@ -239,17 +230,12 @@ static int ll_require(lua_State* L)
 /* private / internal */
 static int ll_dofile(lua_State* L)
 {
-  lua_pushcfunction(L, lua_pcall_error);
-  int error_fn_index = lua_gettop(L);
-
+  stack_checker checker(L);
   if (ll_require(L) <= 0) {
-    lua_pop(L, 1);
-    return luaL_error(L, "module %s not found", luaL_checkstring(L, -1));
+    luaL_error(L, "file '%s' not found", luaL_checkstring(L, -1));
   }
-
   lua_rotate(L, -2, 1);
-  lua_pcall(L, 0, LUA_MULTRET, error_fn_index);
-  lua_pop(L, lua_gettop(L));
+  lua_call(L, 0, LUA_MULTRET);
   return LUA_OK;
 }
 
@@ -273,8 +259,7 @@ int lua_new_loader(lua_State* L, lua_CFunction loader)
 /* export function */
 int lua_dofile(lua_State* L, const char* filename)
 {
-  assert(filename);
-  const char* pend;
+  stack_checker checker(L);
   lua_getglobal(L, LUA_LOADLIBNAME);
   lua_getfield(L, -1, LUA_LOADER_NAME);
   lua_rawgeti(L, -1, 2);
@@ -287,18 +272,9 @@ int lua_dofile(lua_State* L, const char* filename)
 
   lua_pushcfunction(L, lua_pcall_error);
   int error_fn_index = lua_gettop(L);
-
   lua_pushcfunction(L, ll_dofile);
-  pend = strrchr(filename, '.');
-  if (pend) {
-    lua_pushlstring(L, filename, pend - filename);
-  }
-  else {
-    lua_pushstring(L, filename);
-  }
-  int result = lua_pcall(L, 1, LUA_MULTRET, error_fn_index);
-  lua_remove(L, (result == LUA_OK) ? -1 : -2);
-  return result;
+  lua_pushstring(L, filename);
+  return lua_pcall(L, 1, LUA_MULTRET, error_fn_index);
 }
 
 /***********************************************************************************/

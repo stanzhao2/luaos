@@ -20,7 +20,7 @@
 ---封装 luaos 主模块
 ----------------------------------------------------------------------------
 
-pcall(dofile, "luaos.global");
+dofile("luaos.global");
 
 ---Save to local variables for efficiency
 local ok;
@@ -289,7 +289,7 @@ luaos.nginx = {
         );
         
         if not ok then
-            throw("module nginx is not installed");
+            throw(server);
         end
         
         local ok, reason = server.start(host, port, wwwroot, ctx);
@@ -326,7 +326,7 @@ luaos.cluster = {
         );
         
         if not ok then
-            throw("module master is not installed");
+            throw(master);
         end
         
         local ok, reason = master.start(host, port);
@@ -354,7 +354,7 @@ luaos.cluster = {
         );
         
         if not ok then
-            throw("module proxy is not installed");
+            throw(proxy);
         end
         
         local ok, reason = proxy.start(host, port, timeout);
