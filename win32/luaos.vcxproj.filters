@@ -19,6 +19,9 @@
     <Filter Include="源文件\dumper">
       <UniqueIdentifier>{dff1ebf5-a712-4e5b-a647-b90325934649}</UniqueIdentifier>
     </Filter>
+    <Filter Include="源文件\clipp">
+      <UniqueIdentifier>{30ea14b9-4432-47b6-9bd0-782371652f99}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\luaos.cpp">
@@ -100,6 +103,9 @@
     </ClInclude>
     <ClInclude Include="..\src\dumper\ifdumper.h">
       <Filter>源文件\dumper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\clipp\include\clipp.h">
+      <Filter>源文件\clipp</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

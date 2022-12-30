@@ -13,10 +13,12 @@
 ** 
 ********************************************************************************/
 
+#include <iostream>
 #include <signal.h>
 #include <thread>
 #include <memory>
 #include <conv.h>
+#include "clipp/include/clipp.h"
 
 #include "luaos.h"
 #include "luaos_loader.h"
@@ -276,7 +278,6 @@ lua_State* new_lua_state()
 }
 
 static int __deadline_time = 30;
-static std::map<std::string, std::string> params;
 static std::map<lua_State*, int> __lua_runtime;
 
 LUALIB_API int lua_os_deadline(lua_State* L)
@@ -350,15 +351,9 @@ static void check_thread()
   }
 }
 
-const char* get_params(const std::string& key)
-{
-  auto iter = params.find(key);
-  return iter == params.end() ? 0 : iter->second.c_str();
-}
-
 static int pmain(lua_State* L)
 {
-  const char* entryfile = get_params("-f");
+  const char* entryfile = rom_fname;
   if (!entryfile) {
     entryfile = LUAOS_MAIN;
   }
@@ -422,11 +417,21 @@ int main(int argc, char* argv[])
   std::string rundir = dir::current();
   int result = chdir(rundir.c_str());
 
-  if ((argc - 1) & 1) {
-    _printf(color_type::red, true, "invalid arguments\n\n");
-    wait_exit(check_thd);
-    SetConsoleTextAttribute(original, default_color);
-    return EXIT_FAILURE;
+  using namespace clipp;
+  std::string infile;
+  bool opt_build = false;
+  auto cli = (
+    value("input file", infile),
+    option("-c", "--compile").set(opt_build).doc("compile lua files")
+  );
+
+  if (argc > 1) {
+    if (!parse(argc, argv, cli)) {
+      _printf(color_type::red, true, "invalid arguments\n\n");
+      wait_exit(check_thd);
+      SetConsoleTextAttribute(original, default_color);
+      return EXIT_FAILURE;
+    }
   }
 
 #ifdef OS_WINDOWS
@@ -444,38 +449,25 @@ int main(int argc, char* argv[])
     return EXIT_FAILURE;
   }
 
-  for (int i = 1; i < argc; i += 2)
-  {
-    if (argv[i][0] != '-') {
-      _printf(color_type::red, true, "invalid argument: %s\n\n", argv[i]);
-      wait_exit(check_thd);
-      SetConsoleTextAttribute(original, default_color);
-      return EXIT_FAILURE;
-    }
-    params[argv[i]] = argv[i + 1];
-  }
-
-  const char* compile = get_params("-c");
-  if (compile)
+  if (opt_build)
   {
     _printf(color_type::yellow, true, "compiling lua files...\n");
-    lua_compile(compile);
+    lua_compile(infile.c_str());
     _printf(color_type::yellow, true, "compilation completed\n\n");
     wait_exit(check_thd);
     SetConsoleTextAttribute(original, default_color);
     return EXIT_SUCCESS;
   }
 
-  rom_fname = get_params("-r");
-  if (rom_fname)
-  {
-    if (access(rom_fname, 0) < 0)
+  if (!infile.empty()) {
+    if (access(infile.c_str(), 0) < 0)
     {
-      _printf(color_type::red, true, "%s not found\n\n", rom_fname);
+      _printf(color_type::red, true, "%s not found\n\n", infile.c_str());
       wait_exit(check_thd);
       SetConsoleTextAttribute(original, default_color);
       return EXIT_FAILURE;
     }
+    rom_fname = infile.c_str();
   }
 
   lua_State* L = new_lua_state();  /* create state */
