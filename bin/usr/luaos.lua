@@ -433,12 +433,12 @@ end
 local class_pump, private_pump;
 ok, class_pump = pcall(require, "luaos.pump");
 
-if class_pump then
+if ok then
     private_pump = class_pump();
 end
 
 local function pump_check()
-    if not class_pump then
+    if type(class_pump) ~= "table" then
         throw("module pump is not installed");
     end
 end
