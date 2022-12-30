@@ -29,6 +29,9 @@
 
 inline static void luaos_pop_error(lua_State* L, const char* name) 
 {
+  if (lua_type(L, -1) != LUA_TSTRING) {
+    return;
+  }
   const char* strerr = luaL_checkstring(L, -1);
   _printf(color_type::red, true, "%s runtime error: %s\n", name, strerr);
   lua_pop(L, 1);
