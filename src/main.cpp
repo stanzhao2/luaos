@@ -353,11 +353,7 @@ static void check_thread()
 
 static int pmain(lua_State* L)
 {
-  const char* entryfile = rom_fname;
-  if (!entryfile) {
-    entryfile = LUAOS_MAIN;
-  }
-
+  const char* entryfile = LUAOS_MAIN;
   main_ios = this_thread().lua_reactor();
   _printf(color_type::yellow, true, "loading %s module...\n", entryfile);
 
