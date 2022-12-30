@@ -188,13 +188,24 @@ static int ll_require(lua_State* L)
   if (is_fullname(name)) {
     return ll_loadfile(L, name);
   }
-
   std::string filename(name);
+  for (size_t i = 0; i < size; i++) {
+    char c = filename[i];
+    if (c == '/' || c == '\\') {
+      filename[i] = '.';
+    }
+  }
+  if (size > 4) {
+    if (_tinydir_stricmp(name + size - 4, ".lua") == 0) {
+      filename = filename.substr(0, size - 4);
+    }
+  }
   for (size_t i = 0; i < filename.size(); i++) {
     if (filename[i] == '.') {
       filename[i] = LUA_DIRSEP[0];
     }
   }
+  size = filename.size();
   name = filename.c_str();
 
   lua_getglobal(L, LUA_LOADLIBNAME);
