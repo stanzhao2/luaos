@@ -408,8 +408,12 @@ int main(int argc, char* argv[])
 #ifndef OS_WINDOWS
   MallocExtension::instance()->SetMemoryReleaseRate(0);
 #endif
-
   std::thread check_thd(check_thread);
+
+  HANDLE original = GetStdHandle(STD_OUTPUT_HANDLE);
+  CONSOLE_SCREEN_BUFFER_INFO defaultScreenInfo;
+  GetConsoleScreenBufferInfo(original, &defaultScreenInfo);
+  WORD default_color = defaultScreenInfo.wAttributes;
 
   print_copyright();
   signal(SIGINT,  signal_handler);
@@ -421,6 +425,7 @@ int main(int argc, char* argv[])
   if ((argc - 1) & 1) {
     _printf(color_type::red, true, "invalid arguments\n\n");
     wait_exit(check_thd);
+    SetConsoleTextAttribute(original, default_color);
     return EXIT_FAILURE;
   }
 
@@ -435,6 +440,7 @@ int main(int argc, char* argv[])
   if (!check_bom_header()) {
     printf("\n");
     wait_exit(check_thd);
+    SetConsoleTextAttribute(original, default_color);
     return EXIT_FAILURE;
   }
 
@@ -443,6 +449,7 @@ int main(int argc, char* argv[])
     if (argv[i][0] != '-') {
       _printf(color_type::red, true, "invalid argument: %s\n\n", argv[i]);
       wait_exit(check_thd);
+      SetConsoleTextAttribute(original, default_color);
       return EXIT_FAILURE;
     }
     params[argv[i]] = argv[i + 1];
@@ -455,6 +462,7 @@ int main(int argc, char* argv[])
     lua_compile(compile);
     _printf(color_type::yellow, true, "compilation completed\n\n");
     wait_exit(check_thd);
+    SetConsoleTextAttribute(original, default_color);
     return EXIT_SUCCESS;
   }
 
@@ -465,6 +473,7 @@ int main(int argc, char* argv[])
     {
       _printf(color_type::red, true, "%s not found\n\n", rom_fname);
       wait_exit(check_thd);
+      SetConsoleTextAttribute(original, default_color);
       return EXIT_FAILURE;
     }
   }
@@ -475,6 +484,7 @@ int main(int argc, char* argv[])
       color_type::red, true, "lua_State initialization failed\n\n"
     );
     wait_exit(check_thd);
+    SetConsoleTextAttribute(original, default_color);
     return EXIT_FAILURE;
   }
 
@@ -486,6 +496,7 @@ int main(int argc, char* argv[])
   lua_close(L);
 
   wait_exit(check_thd);
+  SetConsoleTextAttribute(original, default_color);
   return (result && status == LUA_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
