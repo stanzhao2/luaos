@@ -103,7 +103,7 @@ public:
   const char* what() const throw () { return m_err.c_str(); }
 };
 
-extern std::any lexget_any(lua_State* L, int index);
+extern std::any lexget_any(lua_State* L, int index, int level);
 extern void lexpush_any(lua_State* L, const std::any& value);
 
 /***********************************************************************************/
@@ -152,12 +152,16 @@ inline lua_function lexpop_function(lua_State* L, int index)
 /*
 ** Internal use, do not call directly
 */
-inline lua_table<> lexpop_table(lua_State* L, int index)
+inline lua_table<> lexpop_table(lua_State* L, int index, int level = 0)
 {
+  if (level > 32) {
+    luaL_error(L, "table nesting level is too deep");
+  }
   lua_table<> table;
   lua_pushnil(L);
-  while (lua_next(L, index)) {
-    std::any v = lexget_any(L, lua_gettop(L));
+  while (lua_next(L, index))
+  {
+    std::any v = lexget_any(L, lua_gettop(L), level);
     lua_pop(L, 1);
     int ltype = lua_type(L, -1);
     if (ltype == LUA_TNUMBER) {
@@ -213,7 +217,7 @@ inline void lexpush_function(lua_State* L, const lua_function& func)
 /*
 ** Read any type of data on stack
 */
-inline std::any lexget_any(lua_State* L, int index)
+inline std::any lexget_any(lua_State* L, int index, int level = 0)
 {
   std::any value;
   if (lua_isnoneornil(L, index)) {
@@ -248,7 +252,7 @@ inline std::any lexget_any(lua_State* L, int index)
     value = lua_touserdata(L, index);
     break;
   case LUA_TTABLE:
-    value = lexpop_table(L, index);
+    value = lexpop_table(L, index, ++level);
     break;
   }
   return value;
