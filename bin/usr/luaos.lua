@@ -141,12 +141,39 @@ local luaos = {
 };
 
 ok, luaos.pcall = pcall(require, "luaos.pcall");
+if not ok then
+    throw(luaos.pcall);
+end
+
 ok, luaos.bind  = pcall(require, "luaos.bind");
+if not ok then
+    throw(luaos.bind);
+end
+
 ok, luaos.try   = pcall(require, "luaos.try");
+if not ok then
+    throw(luaos.try);
+end
+
 ok, luaos.conv  = pcall(require, "luaos.conv");
+if not ok then
+    throw(luaos.conv);
+end
+
 ok, luaos.curl  = pcall(require, "luaos.curl");
+if not ok then
+    throw(luaos.curl);
+end
+
 ok, luaos.odbc  = pcall(require, "luaos.odbc");
+if not ok then
+    throw(luaos.odbc);
+end
+
 ok, luaos.class = pcall(require, "luaos.classy");
+if not ok then
+    throw(luaos.class);
+end
 
 ----------------------------------------------------------------------------
 ---封装 storage 子模块
@@ -382,17 +409,14 @@ luaos.cluster = {
 
 local bigint;
 ok, bigint = pcall(require, "bigint");
-
-local function bigint_check()
-    if not bigint then
-        throw("module bigint is not installed");
-    end
+if not ok then
+    throw(bigint);
 end
 
 ---创建一个大整数
 ---@param v integer
 math.bigint = function(v)
-    return bigint_check() or bigint.new(v);
+    return bigint.new(v);
 end
 
 ----------------------------------------------------------------------------
@@ -401,29 +425,23 @@ end
 
 local random;
 ok, random = pcall(require, "luaos.random");
-
-local random32, random64;
-if random then
-    random32 = random.random32_create();
-    random64 = random.random64_create();
+if not ok then
+    throw(random);
 end
 
-local function random_check()
-    if not random then
-        throw("module random is not installed");
-    end
-end
+local random32 = random.random32_create();
+local random64 = random.random64_create();
 
 ---创建一个 32 位随机数
 ---@retrun integer
 math.random32 = function(...)
-    return random_check() or random32:random(...);
+    return random32:random(...);
 end
 
 ---创建一个 64 位随机数
 ---@retrun integer
 math.random64 = function(...)
-    return random_check() or random64:random(...);
+    return random64:random(...);
 end
 
 ----------------------------------------------------------------------------
@@ -432,20 +450,15 @@ end
 
 local class_pump, private_pump;
 ok, class_pump = pcall(require, "luaos.pump");
-
-if ok then
+if not ok then
+    throw(class_pump);
+else
     private_pump = class_pump();
-end
-
-local function pump_check()
-    if type(class_pump) ~= "table" then
-        throw("module pump is not installed");
-    end
 end
 
 ---创建一个消息反应堆
 luaos.pump_message = function()
-    return pump_check() or class_pump();
+    return class_pump();
 end
 
 ---注册一个消息回调(仅当前模块)
@@ -453,21 +466,21 @@ end
 ---@param handler fun(...):void
 ---@return function
 luaos.register = function(name, handler, priority)
-    return pump_check() or private_pump:register(name, handler, priority);
+    return private_pump:register(name, handler, priority);
 end
 
 ---取消一个消息回调(仅当前模块)
 ---@param name integer|string
 ---@param handler fun(...):void
 luaos.unregister = function(name, handler)
-    return pump_check() or private_pump:unregister(name, handler);
+    return private_pump:unregister(name, handler);
 end
 
 ---派发一个回调消息(仅当前模块)
 ---@param name integer|string
 ---@return integer
 luaos.dispatch = function(name, ...)
-    return pump_check() or private_pump:dispatch(name, ...);
+    return private_pump:dispatch(name, ...);
 end
 
 ----------------------------------------------------------------------------

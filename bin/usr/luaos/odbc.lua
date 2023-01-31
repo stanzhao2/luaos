@@ -24,7 +24,7 @@ local odbc = { mysql_env = nil };
 function odbc.mysql(dbname, user, pwd, host, port)
     local ok, luasql = pcall(require, "luasql.mysql")
     if not ok then
-        return nil
+        throw(luasql);
     end
     
     local conf = {
