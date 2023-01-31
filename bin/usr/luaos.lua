@@ -215,7 +215,7 @@ luaos.storage = {
     ---@return any
     erase = function(key)
         key = tostring(key);        
-        local value = storage.erase();
+        local value = storage.erase(key);
         
         if pack and value then
             value = pack.decode(value)
