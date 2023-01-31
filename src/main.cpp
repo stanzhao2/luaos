@@ -165,6 +165,9 @@ static void init_lua_state(lua_State* L)
 
   lua_getglobal(L, "os");
   lua_pushcfunction(L, lua_os_system_clock);
+  lua_setfield(L, -2, "clock");
+
+  lua_pushcfunction(L, lua_os_system_clock);
   lua_setfield(L, -2, "system_clock");
 
   lua_pushcfunction(L, lua_os_steady_clock);
