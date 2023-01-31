@@ -22,12 +22,6 @@
 
 twheel_t* this_timingwheel();
 
-LUALIB_API int lua_os_twheel_create   (lua_State* L);
-LUALIB_API int lua_os_twheel_remove   (lua_State* L);
-LUALIB_API int lua_os_twheel_add_time (lua_State* L);
-LUALIB_API int lua_os_twheel_max_delay(lua_State* L);
-LUALIB_API int lua_os_twheel_release  (lua_State* L);
-
 namespace lua_twheel
 {
   void init_metatable(lua_State* L);

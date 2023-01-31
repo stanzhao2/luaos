@@ -13,7 +13,7 @@
 typedef struct tw_handler
 {
   void*  ptw;
-  int    handle;
+  int    luafunc;
   size_t uuid;
   std::list<std::any> params;
   lua_State* L;
@@ -22,9 +22,10 @@ typedef struct tw_handler
     if (ptw == nullptr) {
       return;
     }
-    if (handle) {
-      luaL_unref(L, LUA_REGISTRYINDEX, handle);
-      handle = 0;
+    if (luafunc)
+    {
+      luaL_unref(L, LUA_REGISTRYINDEX, luafunc);
+      luafunc = 0;
     }
     ptw = nullptr;
     params.clear();
@@ -112,13 +113,13 @@ static void twheel_callback(void* arg)
     lua_State* L = c->L;
     stack_checker checker(L);
 
-    int handle = c->handle;
+    int luafunc = c->luafunc;
     std::list<std::any>& params = c->params;
 
     lua_pushcfunction(L, lua_pcall_error);
     int error_fn_index = lua_gettop(L);
 
-    lua_rawgeti(L, LUA_REGISTRYINDEX, handle);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, luafunc);
     if (lua_isfunction(L, -1))
     {
       auto iter = params.begin();
@@ -150,7 +151,7 @@ static timingwheel* check_self(lua_State* L)
   return self;
 }
 
-LUALIB_API int lua_os_twheel_add_time(lua_State* L)
+static int lua_os_twheel_add_time(lua_State* L)
 {
   timingwheel* ptw = check_self(L);
   if (!ptw) {
@@ -169,9 +170,9 @@ LUALIB_API int lua_os_twheel_add_time(lua_State* L)
   }
 
   lua_pushvalue(L, index++);
-  c->ptw    = ptw;
-  c->handle = luaL_ref(L, LUA_REGISTRYINDEX);
-  c->L      = this_thread().lua_state();
+  c->ptw     = ptw;
+  c->luafunc = luaL_ref(L, LUA_REGISTRYINDEX);
+  c->L       = this_thread().lua_state();
 
   int top = lua_gettop(L);
   for (int i = index; i <= top; i++) {
@@ -187,7 +188,7 @@ LUALIB_API int lua_os_twheel_add_time(lua_State* L)
   return 0;
 }
 
-LUALIB_API int lua_os_twheel_remove(lua_State* L)
+static int lua_os_twheel_remove(lua_State* L)
 {
   timingwheel* ptw = check_self(L);
   if (!ptw) {
@@ -200,6 +201,7 @@ LUALIB_API int lua_os_twheel_remove(lua_State* L)
     tw_handler* p = *iter;
     if (p->uuid == uuid)
     {
+      ptw->task->erase(p);
       p->clear();
       break;
     }
@@ -207,7 +209,7 @@ LUALIB_API int lua_os_twheel_remove(lua_State* L)
   return 0;
 }
 
-LUALIB_API int lua_os_twheel_create(lua_State* L)
+static int lua_os_twheel_create(lua_State* L)
 {
   timingwheel* userdata = lexnew_userdata<timingwheel>(L, TWHEEL_NAME);
   userdata->ptw = this_timingwheel();
@@ -216,7 +218,7 @@ LUALIB_API int lua_os_twheel_create(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_twheel_max_delay(lua_State* L)
+static int lua_os_twheel_max_delay(lua_State* L)
 {
   timingwheel* ptw = check_self(L);
   if (!ptw) {
@@ -228,7 +230,7 @@ LUALIB_API int lua_os_twheel_max_delay(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_twheel_release(lua_State* L)
+static int lua_os_twheel_release(lua_State* L)
 {
   timingwheel* ptw = check_self(L);
   if (ptw) {
@@ -237,7 +239,7 @@ LUALIB_API int lua_os_twheel_release(lua_State* L)
   return 0;
 }
 
-LUALIB_API int lua_os_twheel_close(lua_State* L)
+static int lua_os_twheel_close(lua_State* L)
 {
   return lua_os_twheel_release(L);
 }
