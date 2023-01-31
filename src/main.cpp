@@ -142,15 +142,6 @@ static int lua_os_system_clock(lua_State* L)
   return 1;
 }
 
-static int lua_os_clock(lua_State* L)
-{
-  lua_os_system_clock(L);
-  lua_Integer now = luaL_checkinteger(L, -1);
-  lua_pop(L, 1);
-  lua_pushnumber(L, (lua_Number)now / (lua_Number)1000.0);
-  return 1;
-}
-
 static int lua_os_steady_clock(lua_State* L)
 {
   auto ms = os::milliseconds();
@@ -173,9 +164,6 @@ static void init_lua_state(lua_State* L)
   lua_setglobal(L, "trace");
 
   lua_getglobal(L, "os");
-  lua_pushcfunction(L, lua_os_clock);
-  lua_setfield(L, -2, "clock");
-
   lua_pushcfunction(L, lua_os_system_clock);
   lua_setfield(L, -2, "system_clock");
 
