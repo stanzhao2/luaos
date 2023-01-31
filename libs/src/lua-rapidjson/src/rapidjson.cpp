@@ -400,9 +400,7 @@ static const luaL_Reg methods[] = {
 	{NULL, NULL }
 };
 
-extern "C" {
-
-LUALIB_API int luaopen_rapidjson(lua_State* L)
+extern "C" int luaopen_rapidjson(lua_State* L)
 {
 	lua_newtable(L); // [rapidjson]
 
@@ -425,6 +423,4 @@ LUALIB_API int luaopen_rapidjson(lua_State* L)
 	Userdata<SchemaValidator>::luaopen(L);
 
 	return 1;
-}
-
 }

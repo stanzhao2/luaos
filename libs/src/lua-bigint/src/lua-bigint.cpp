@@ -67,7 +67,7 @@ static int bigint_metatable(lua_State* L)
 /***********************************************************************************/
 
 /* Module initializer, called from Lua when the module is loaded. */
-LUA_API int luaopen_bigint(lua_State* L)
+extern "C" int luaopen_bigint(lua_State* L)
 {
   bigint_metatable(L);
   struct luaL_Reg methods[] = {

@@ -641,7 +641,7 @@ static int rsa_verify(lua_State* L)
 
 /***********************************************************************************/
 
-LUALIB_API int luaopen_conv(lua_State* L)
+extern "C" int luaopen_conv(lua_State* L)
 {
   lua_newtable(L);
   lua_newtable(L);

@@ -52,7 +52,7 @@ static int uuid_create(lua_State* L)
 
 /***********************************************************************************/
 
-LUALIB_API int luaopen_uuid(lua_State* L)
+extern "C" int luaopen_uuid(lua_State * L)
 {
   struct luaL_Reg methods[] = {
     { "generate",   uuid_create },

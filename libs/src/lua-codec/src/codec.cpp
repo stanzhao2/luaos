@@ -170,7 +170,7 @@ static int decoder_metatable(lua_State* L)
 
 /*******************************************************************************/
 
-LUALIB_API int luaopen_codec_encoder(lua_State* L)
+extern "C" int luaopen_codec_encoder(lua_State* L)
 {
   encoder_metatable(L);
   struct luaL_Reg methods[] = {
@@ -182,7 +182,7 @@ LUALIB_API int luaopen_codec_encoder(lua_State* L)
   return 1;
 }
 
-LUALIB_API int luaopen_codec_decoder(lua_State* L)
+extern "C" int luaopen_codec_decoder(lua_State* L)
 {
   decoder_metatable(L);
   struct luaL_Reg methods[] = {

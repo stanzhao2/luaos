@@ -44,14 +44,14 @@ static random64* check_random64(lua_State* L)
 
 /***********************************************************************************/
 
-LUALIB_API int random32_create(lua_State* L)
+static int random32_create(lua_State* L)
 {
   random32* userdata = lexnew_userdata<random32>(L, LIB_RANDOM32NAME);
   userdata->gen = MT19937_state32();
   return 1;
 }
 
-LUALIB_API int random32_srand(lua_State* L)
+static int random32_srand(lua_State* L)
 {
   random32* self = check_random32(L);
   if (self) {
@@ -60,7 +60,7 @@ LUALIB_API int random32_srand(lua_State* L)
   return 0;
 }
 
-LUALIB_API int random32_generate(lua_State* L)
+static int random32_generate(lua_State* L)
 {
   random32* self = check_random32(L);
   if (!self) {
@@ -92,7 +92,7 @@ LUALIB_API int random32_generate(lua_State* L)
   return 1;
 }
 
-LUALIB_API int random32_delete(lua_State* L)
+static int random32_delete(lua_State* L)
 {
   random32* self = check_random32(L);
   if (self) {
@@ -102,14 +102,14 @@ LUALIB_API int random32_delete(lua_State* L)
   return 0;
 }
 
-LUALIB_API int random64_create(lua_State* L)
+static int random64_create(lua_State* L)
 {
   random64* userdata = lexnew_userdata<random64>(L, LIB_RANDOM64NAME);
   userdata->gen = MT19937_state64();
   return 1;
 }
 
-LUALIB_API int random64_srand(lua_State* L)
+static int random64_srand(lua_State* L)
 {
   random64* self = check_random64(L);
   if (self) {
@@ -118,7 +118,7 @@ LUALIB_API int random64_srand(lua_State* L)
   return 0;
 }
 
-LUALIB_API int random64_generate(lua_State* L)
+static int random64_generate(lua_State* L)
 {
   random64* self = check_random64(L);
   if (!self) {
@@ -150,7 +150,7 @@ LUALIB_API int random64_generate(lua_State* L)
   return 1;
 }
 
-LUALIB_API int random64_delete(lua_State* L)
+static int random64_delete(lua_State* L)
 {
   random64* self = check_random64(L);
   if (self) {
@@ -190,7 +190,7 @@ static int random64_metatable(lua_State* L)
 
 /***********************************************************************************/
 
-LUALIB_API int luaopen_random(lua_State* L)
+extern "C" int luaopen_random(lua_State* L)
 {
   random32_metatable(L);
   random64_metatable(L);
