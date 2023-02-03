@@ -25,6 +25,7 @@
 #include "luaos_thread_local.h"
 
 static std::set<std::string> lualist;
+static std::map<std::string, std::string> lua_romfiles;
 
 /*******************************************************************************/
 
@@ -227,22 +228,17 @@ static std::string get_tm_compile() {
   return szDateTime;
 }
 
-bool lua_compile(const char* romname)
+static bool lua_rom_unzip(const char* romname)
 {
-  return lua_encode(romname);
-}
-
-bool lua_decode(const char* filename, const char* romname, std::string& data)
-{
-  data.clear();
+  lua_romfiles.clear();
   unzFile unzip = unzOpen(romname);
   if (unzip == nullptr) {
     return false;
   }
-
   unz_global_info* ginfo = new unz_global_info;
   auto result = unzGetGlobalInfo(unzip, ginfo);
   if (result != UNZ_OK) {
+    delete ginfo;
     return false;
   }
 
@@ -270,16 +266,11 @@ bool lua_decode(const char* filename, const char* romname, std::string& data)
       }
 #endif
     }
-    if (strcmp(zipname, filename) != 0) {
-      unzGoToNextFile(unzip);
-      continue;
-    }
-
     result = unzOpenCurrentFile(unzip);
     if (result != UNZ_OK) {
       break;
     }
-
+    std::string data;
     char buffer[8192];
     while (!unzeof(unzip))
     {
@@ -288,17 +279,43 @@ bool lua_decode(const char* filename, const char* romname, std::string& data)
         data.append(buffer, n);
       }
     }
-
+    lua_romfiles[zipname] = std::move(data);
     unzCloseCurrentFile(unzip);
-    break;
+    unzGoToNextFile(unzip);
   }
 
+  delete finfo;
+  delete ginfo;
   unzClose(unzip);
-  if (!data.empty())
+  return true;
+}
+
+bool lua_compile(const char* romname)
+{
+  return lua_encode(romname);
+}
+
+bool lua_decode(const char* filename, const char* romname, std::string& data)
+{
+  data.clear();
+  if (lua_romfiles.empty())
   {
-    size_t size = data.size();
-    size = (size >> 2) << 2;
-    size = xxtea::decrypt(data.c_str(), (int)size, (char*)data.c_str(), 0);
+    _printf(
+      color_type::yellow, true, "please wait while the package is being expanded\n"
+    );
+    lua_rom_unzip(romname);
+  }
+
+  auto finded = lua_romfiles.find(filename);
+  if (finded != lua_romfiles.end())
+  {
+    data = finded->second;
+    if (!data.empty())
+    {
+      size_t size = data.size();
+      size = (size >> 2) << 2;
+      size = xxtea::decrypt(data.c_str(), (int)size, (char*)data.c_str(), 0);
+    }
   }
   return !data.empty();
 }
