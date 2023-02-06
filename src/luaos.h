@@ -105,6 +105,8 @@ void print_copyright();
 
 void post_alive(lua_State* L);
 
+const char* module_fname();
+
 void post_alive_exit(lua_State* L, twheel_t *tw);
 
 bool is_debug_mode(lua_State* L);

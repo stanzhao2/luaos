@@ -43,6 +43,7 @@ static CMiniDumper _G_dumper(true);
 static const identifier hold_id;
 static reactor::ref main_ios = 0;
 static const char* rom_fname = 0;
+static const char* mod_fname = LUAOS_MAIN;
 
 /*******************************************************************************/
 
@@ -321,6 +322,11 @@ void post_alive(lua_State* L)
   );
 }
 
+const char* module_fname()
+{
+  return mod_fname;
+}
+
 static void interrupt(lua_State *L, lua_Debug *ar)
 {
   (void)ar;  /* unused arg. */
@@ -353,13 +359,12 @@ static void check_thread()
 
 static int pmain(lua_State* L)
 {
-  const char* entryfile = LUAOS_MAIN;
   main_ios = this_thread().lua_reactor();
-  _printf(color_type::yellow, true, "loading %s module...\n", entryfile);
+  _printf(color_type::yellow, true, "loading %s module...\n", mod_fname);
 
-  int result = lua_dofile(L, entryfile);
+  int result = lua_dofile(L, mod_fname);
   if (result != LUA_OK) {
-    luaos_pop_error(L, entryfile);
+    luaos_pop_error(L, mod_fname);
   }
   else
   {
@@ -406,7 +411,6 @@ int main(int argc, char* argv[])
 #endif
   std::thread check_thd(check_thread);
 
-  print_copyright();
   signal(SIGINT,  signal_handler);
   signal(SIGTERM, signal_handler);
 
@@ -414,23 +418,28 @@ int main(int argc, char* argv[])
   int result = chdir(rundir.c_str());
 
   using namespace clipp;
-  std::string infile;
+  std::string infile, modname;
   bool opt_build = false;
   auto cli = (
-    value("input file", infile),
-    option("-c", "--compile").set(opt_build).doc("compile lua files")
+    opt_value("luaos rom file", infile),
+    option("-c", "--compile").set(opt_build).doc("compile lua files"),
+    required("-m", "--module") & value("module name", modname)
   );
 
   if (argc > 1) {
     if (!parse(argc, argv, cli)) {
-      _printf(color_type::red, true, "invalid arguments\n\n");
       wait_exit(check_thd);
 #ifdef OS_WINDOWS
       SetConsoleTextAttribute(original, default_color);
 #endif
       return EXIT_FAILURE;
     }
+    if (!modname.empty()) {
+      mod_fname = modname.c_str();
+    }
   }
+
+  print_copyright();
 
 #ifdef OS_WINDOWS
   char env[2048] = { ".\\lib;" };
@@ -452,6 +461,9 @@ int main(int argc, char* argv[])
   if (opt_build)
   {
     _printf(color_type::yellow, true, "compiling lua files...\n");
+    if (infile.empty()) {
+      infile = "main.bin";
+    }
     lua_compile(infile.c_str());
     _printf(color_type::yellow, true, "compilation completed\n\n");
     wait_exit(check_thd);

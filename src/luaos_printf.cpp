@@ -27,11 +27,25 @@ static thread_local int this_thread_id = 0;
 static const int _G_maxsize = 32 * 1024 * 1024;
 static thread_local char print_buffer[8192];
 
+static std::string make_path(const std::string& name)
+{
+  char buffer[256];
+  snprintf(buffer, sizeof(buffer), ".%s%s", LUA_DIRSEP, name.c_str());
+  std::string path(buffer);
+
+  dir::make(path.c_str());
+  path += LUA_DIRSEP;
+  path += module_fname();
+  dir::make(path.c_str());
+  path += LUA_DIRSEP;
+  return path;
+}
+
 static void write_error(const std::string& data, struct tm* ptm)
 {
-  dir::make("./err");
+  std::string path = make_path("err");
   char filename[256];
-  snprintf(filename, sizeof(filename), "./err/%d%02d%02d.log", ptm->tm_year + 1900, ptm->tm_mon + 1, ptm->tm_mday);
+  snprintf(filename, sizeof(filename), "%s%d%02d%02d.log", path.c_str(), ptm->tm_year + 1900, ptm->tm_mon + 1, ptm->tm_mday);
 
   FILE* fp = fopen(filename, "w");
   if (fp) {
@@ -48,14 +62,7 @@ static void write_file(const std::string& data, struct tm* ptm)
   std::string filename;
   if (fp == nullptr)
   {
-#ifdef OS_WINDOWS
-    dir::make(".\\log");
-    std::string path(".\\log\\");
-#else
-    dir::make("./log");
-    std::string path("./log/");
-#endif
-
+    std::string path = make_path("log");
     for (int i = 0; i < 1000; i++)
     {
       char name[256];
