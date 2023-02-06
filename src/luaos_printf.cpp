@@ -192,7 +192,7 @@ static void os_printf(color_type type_color, bool prefix, std::string& data)
   {
     char buffer[128];
     auto ms = (int)(os::milliseconds() % 1000);
-    snprintf(buffer, sizeof(buffer), "[%02d:%02d:%02d,%03d #%02d] <%s> ", ptm->tm_hour, ptm->tm_min, ptm->tm_sec, ms, this_thread_id, type);
+    snprintf(buffer, sizeof(buffer), "[%02d:%02d:%02d,%03d %s] <%s> ", ptm->tm_hour, ptm->tm_min, ptm->tm_sec, ms, module_fname(), type);
     data = buffer + data;
   }
 
