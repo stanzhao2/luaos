@@ -108,9 +108,9 @@ local function on_local_cancel(topic, subscriber)
     send_to_master(message);
     
     --如果没有其他节点订阅该主题
-    if not remote_topics[topic] then
-        luaos_cancel(topic, "local");
-    end
+    --if not remote_topics[topic] then
+    --    luaos_cancel(topic, "local");
+    --end
 end
 
 local function on_local_subscribe(topic, subscriber)    
@@ -128,9 +128,9 @@ local function on_local_subscribe(topic, subscriber)
     send_to_master(message);
     
     --如果没有其他节点订阅该主题
-    if not remote_topics[topic] then
-        luaos_subscribe(topic, bind(on_local_publish, topic), "local");
-    end
+    --if not remote_topics[topic] then
+    --    luaos_subscribe(topic, bind(on_local_publish, topic), "local");
+    --end
 end
 
 local function on_local_watch(topic, subscriber, option)
@@ -178,11 +178,7 @@ local function on_remote_cancel(message)
     end
     
     remote_topics[topic] = nil;
-    
-    --如果没有本地节点订阅该主题
-    if not local_topics[topic] then
-        luaos_cancel(topic, "remote");
-    end    
+    luaos_cancel(topic, "remote");
 end
 
 local function on_remote_subscribe(message)
@@ -193,16 +189,13 @@ local function on_remote_subscribe(message)
     end
     
     remote_topics[topic] = 1;
-    
-    --如果没有本地节点订阅该主题
-    if not local_topics[topic] then
-        luaos_subscribe(topic, bind(on_local_publish, topic), "remote");
-    end
+    luaos_subscribe(topic, bind(on_local_publish, topic), "remote");
 end
 
 ----------------------------------------------------------------------------
 
 local switch = {
+    [cmd_heartbeat] = function() end,
     [cmd_publish]   = on_remote_publish,
     [cmd_cancel]    = on_remote_cancel,
     [cmd_ready]     = on_remote_ready,

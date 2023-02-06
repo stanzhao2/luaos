@@ -156,6 +156,7 @@ local function on_socket_dispatch(session, data)
     
     local cmd = tb.type;
     if cmd == cmd_heartbeat then
+        send_to_peer(session.peer, data);
         return;
     end
     
