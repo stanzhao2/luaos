@@ -421,9 +421,9 @@ int main(int argc, char* argv[])
   std::string infile, modname;
   bool opt_build = false;
   auto cli = (
-    opt_value("luaos rom file", infile),
-    option("-c", "--compile").set(opt_build).doc("compile lua files"),
-    required("-m", "--module") & value("module name", modname)
+    option("-f") & value("rom filename", infile),
+    option("-c", "--compile").set(opt_build),
+    option("-m", "--module") & value("module name", modname)
   );
 
   if (argc > 1) {
