@@ -13,8 +13,14 @@
 **
 ************************************************************************************/
 
+#include "clipp/include/clipp.h"
 #include "luaos.h"
 #include "luaos_logo.h"
+
+#ifndef _MSC_VER
+#include <gperftools/malloc_extension.h>
+#include <gperftools/tcmalloc.h>
+#endif
 
 /***********************************************************************************/
 
@@ -51,6 +57,7 @@ static int pmain(lua_State* L)
   name = normal(name);
 
   lua_pushstring(L, name);                /* push name of module */
+  luaos_trace("LuaOS has been started\n");
   int result = luaos_pexec(L, 0);         /* load and run module in protect mode */
   if (result != LUA_OK) {
     lua_error(L);                         /* run error */
@@ -59,9 +66,29 @@ static int pmain(lua_State* L)
   return 1;
 }
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
   display_logo();
+#ifndef _MSC_VER
+  MallocExtension::instance()->SetMemoryReleaseRate(0);
+#endif
+
+  using namespace clipp;
+  bool compile = false;
+  std::string infile;
+  auto cli = (
+    opt_value("filename", infile),
+    option("-c", "--compile").set(compile)
+  );
+  if (!parse(argc, argv, cli)) {
+    return 1;
+  }
+  if (compile) {
+    int count = luaos_luabuild("." LUA_DIRSEP);
+    luaos_trace("successfully compiled %d files\n\n", count);
+    return 0;
+  }
+
   lua_Integer error = -1;
   lua_State* L = luaos_local.lua_state();
 

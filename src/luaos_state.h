@@ -35,6 +35,7 @@ int luaos_pcall   (lua_State* L, int n, int r);
 int luaos_pexec   (lua_State* L, int n);
 int luaos_close   (lua_State* L);
 int luaos_printf  (color_type color, const char* fmt, ...);
+int luaos_luabuild(const char* path);
 
 /***********************************************************************************/
 

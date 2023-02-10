@@ -57,7 +57,6 @@ void display_logo()
   sprintf(version, "  > + Depends: %s\n\n", LUA_RELEASE);
   logo += version;
   logo_print(logo.c_str(), color_type::normal);
-  luaos_trace("LuaOS has been started\n");
 }
 
 /***********************************************************************************/

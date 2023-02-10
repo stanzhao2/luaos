@@ -793,6 +793,63 @@ static int enum_files(lua_State* L)
   return 0;
 }
 
+int luaos_luabuild(const char* path)
+{
+  char output[128];
+  time_t now = time(0);
+  struct tm* ptm = localtime(&now);
+  snprintf(output, sizeof(output), "~build_%02d%02d%02d%02d"
+    , ptm->tm_mday
+    , ptm->tm_hour
+    , ptm->tm_min
+    , ptm->tm_sec
+  );
+  std::vector<std::string> files;
+  dir_eachof(path, "lua", [&](const char* dir, const tinydir_file& file) {
+    if (!file.is_dir)
+    {
+      if (strchr(dir, '~')) {
+        return;
+      }
+      char filename[1024];
+      snprintf(filename, sizeof(filename), "%s%s%s", dir, LUA_DIRSEP, file.name);
+      const char* p = filename;
+      if (p[0] == '.' && is_slash(p[1])) {
+        p += 2;
+      }
+      files.push_back(p);
+    }
+  });
+  char folder[1024], command[1024];
+  for (size_t i = 0; i < files.size(); i++)
+  {
+    const char* name = files[i].c_str();
+    auto p = strrchr(name, LUA_DIRSEP[0]);
+    if (!p) {
+      strcpy(folder, output);
+    } else {
+      std::string f = files[i].substr(0, p - name);
+      snprintf(folder, sizeof(folder), "%s%s%s"
+        , output
+        , LUA_DIRSEP
+        , f.c_str()
+      );
+    }
+    dir::make(folder);
+    snprintf(command, sizeof(command), "luac -o %s%s%s %s"
+      , output
+      , LUA_DIRSEP
+      , name, name
+    );
+    if (system(command) != 0) {
+      luaos_error("%s build failed\n", name);
+      return (int)i;
+    }
+    luaos_trace("%s build OK\n", name);
+  }
+  return (int)files.size();
+}
+
 static int local_thread(luaos_job* job, const std::vector<std::any>& argv, io_handler ios)
 {
   lua_State* L = luaos_local.lua_state();
