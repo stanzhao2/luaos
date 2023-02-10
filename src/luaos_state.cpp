@@ -893,12 +893,15 @@ static int steady_timer(lua_State* L)
 
   io_handler ios = luaos_local.lua_service();
   auto userdata = lexnew_userdata<luaos_timer>(L, luaos_timer_name);
-  
   auto timer = new (userdata) luaos_timer(ios);
+
+  lua_pushvalue(L, -1);
+  int ref = luaL_ref(L, LUA_REGISTRYINDEX);
+  
   timer->steady.expires_after(
     std::chrono::milliseconds(expires)
   );
-  timer->steady.async_wait([L, index](const asio::error_code& ec) {
+  timer->steady.async_wait([L, index, ref](const asio::error_code& ec) {
     if (!ec)
     {
       lua_rawgeti(L, LUA_REGISTRYINDEX, index);
@@ -907,6 +910,7 @@ static int steady_timer(lua_State* L)
         lua_pop(L, 1);
       }
     }
+    luaL_unref(L, LUA_REGISTRYINDEX, ref);
     luaL_unref(L, LUA_REGISTRYINDEX, index);
   });
   return 1;
