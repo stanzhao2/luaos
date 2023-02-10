@@ -13,13 +13,15 @@
 **
 ************************************************************************************/
 
-#include "clipp/include/clipp.h"
 #include "luaos.h"
 #include "luaos_logo.h"
 
 #ifndef _MSC_VER
 #include <gperftools/malloc_extension.h>
 #include <gperftools/tcmalloc.h>
+#else
+#include "dumper/ifdumper.h"
+static CMiniDumper _G_dumper(true);
 #endif
 
 /***********************************************************************************/
@@ -72,22 +74,6 @@ int main(int argc, char* argv[])
 #ifndef _MSC_VER
   MallocExtension::instance()->SetMemoryReleaseRate(0);
 #endif
-
-  using namespace clipp;
-  bool compile = false;
-  std::string infile;
-  auto cli = (
-    opt_value("filename", infile),
-    option("-c", "--compile").set(compile)
-  );
-  if (!parse(argc, argv, cli)) {
-    return 1;
-  }
-  if (compile) {
-    int count = luaos_luabuild("." LUA_DIRSEP);
-    luaos_trace("successfully compiled %d files\n\n", count);
-    return 0;
-  }
 
   lua_Integer error = -1;
   lua_State* L = luaos_local.lua_state();

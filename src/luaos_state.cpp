@@ -65,7 +65,10 @@ static int traceback(lua_State* L)
         snprintf(info, sizeof(info), "%s (%s)", ar.name, ar.namewhat);
       }
       char buffer[1024];
-      snprintf(buffer, sizeof(buffer), "\n\t%s:%d: %s", ar.short_src, ar.currentline, info);
+      if (ar.source[0] == '@') {
+        ar.source++;
+      }
+      snprintf(buffer, sizeof(buffer), "\n\t%s:%d: %s", ar.source, ar.currentline, info);
       stack.append(buffer);
     }
   }
@@ -210,7 +213,7 @@ static int ll_fload(lua_State* L, const char* buff, size_t size, const char* fil
   int result = lua_loader(L, buff, size, luaname);
 
   if (is_success(result))
-    lua_pushfstring(L, "%s", luaname);
+    lua_pushfstring(L, "%s", luaname + 1);
   return result;
 }
 
@@ -787,70 +790,12 @@ static int enum_files(lua_State* L)
         luaos_error("%s\n", lua_tostring(L, -1));
         lua_pop(L, 1); //pop error from stack
       }
-      lua_pop(L, 1); //pop lua_pcall_error from stack
     }
   );
   return 0;
 }
 
-int luaos_luabuild(const char* path)
-{
-  char output[128];
-  time_t now = time(0);
-  struct tm* ptm = localtime(&now);
-  snprintf(output, sizeof(output), "~build_%02d%02d%02d%02d"
-    , ptm->tm_mday
-    , ptm->tm_hour
-    , ptm->tm_min
-    , ptm->tm_sec
-  );
-  std::vector<std::string> files;
-  dir_eachof(path, "lua", [&](const char* dir, const tinydir_file& file) {
-    if (!file.is_dir)
-    {
-      if (strchr(dir, '~')) {
-        return;
-      }
-      char filename[1024];
-      snprintf(filename, sizeof(filename), "%s%s%s", dir, LUA_DIRSEP, file.name);
-      const char* p = filename;
-      if (p[0] == '.' && is_slash(p[1])) {
-        p += 2;
-      }
-      files.push_back(p);
-    }
-  });
-  char folder[1024], command[1024];
-  for (size_t i = 0; i < files.size(); i++)
-  {
-    const char* name = files[i].c_str();
-    auto p = strrchr(name, LUA_DIRSEP[0]);
-    if (!p) {
-      strcpy(folder, output);
-    } else {
-      std::string f = files[i].substr(0, p - name);
-      snprintf(folder, sizeof(folder), "%s%s%s"
-        , output
-        , LUA_DIRSEP
-        , f.c_str()
-      );
-    }
-    dir::make(folder);
-    snprintf(command, sizeof(command), "luac -o %s%s%s %s"
-      , output
-      , LUA_DIRSEP
-      , name, name
-    );
-    if (system(command) != 0) {
-      luaos_error("%s build failed\n", name);
-      return (int)i;
-    }
-    luaos_trace("%s build OK\n", name);
-  }
-  return (int)files.size();
-}
-
-static int local_thread(luaos_job* job, const std::vector<std::any>& argv, io_handler ios)
+static int local_thread(luaos_job* job, const std::vector<std::any>& argv, io_handler ios, int* result)
 {
   lua_State* L = luaos_local.lua_state();
   job->ios = luaos_local.lua_service();
@@ -861,13 +806,13 @@ static int local_thread(luaos_job* job, const std::vector<std::any>& argv, io_ha
   for (size_t i = 0; i < argv.size(); i++) {
     lexpush_any(L, argv[i]);
   }
-  int result = luaos_pexec(L, (int)argv.size());
-  if (!is_success(result)) {
+  *result = luaos_pexec(L, (int)argv.size());
+  if (!is_success(*result)) {
     luaos_error("%s\n", lua_tostring(L, -1));
     lua_pop(L, 1);
   }
   ios->stop();
-  return result;
+  return *result;
 }
 
 static luaos_job* check_jobself(lua_State* L)
@@ -910,10 +855,11 @@ static int load_execute(lua_State* L)
   auto userdata = lexnew_userdata<luaos_job>(L, luaos_job_name);
   luaos_job* newjob = new (userdata) luaos_job();
 
+  int result = LUA_OK;
   newjob->name = name;
-  newjob->thread.reset(new std::thread(std::bind(&local_thread, newjob, argv, ios_wait)));
+  newjob->thread.reset(new std::thread(std::bind(&local_thread, newjob, argv, ios_wait, &result)));
   ios_wait->run();
-  return userdata ? 1 : 0;
+  return is_success(result) ? 1 : 0;
 }
 
 static luaos_timer* check_timerself(lua_State* L) 
@@ -1116,36 +1062,30 @@ int luaos_pexec(lua_State* L, int n)
       lua_insert(L, -nameidx);
     }
   }
+  lua_pushcfunction(L, ll_require);
   lua_pushstring(L, name);
-  if (ll_require(L) < 2)
+  int result = luaos_pcall(L, 1, LUA_MULTRET);
+  if (!is_success(result)) {
+    return result;
+  }
+  if (!lua_isfunction(L, -2))
   {
     lua_settop(L, topidx - nameidx);
     lua_pushfstring(L, "module '%s' not found", original);
     return LUA_ERRERR;
   }
   luaos_trace("module '%s' has been started\n", original);
-  lua_remove(L, -3);      /* remove name from stack */
-  int result = luaos_pcall(L, 1, 0);
-  if (!is_success(result))
+  result = luaos_pcall(L, 1, 0);
+  if (is_success(result))
   {
-    lua_insert(L, topidx - nameidx);
-    lua_settop(L, topidx - nameidx);
-  }
-  else {
-    lua_pop(L, 1);         /* pop filename from stack */
     lua_getglobal(L, luaos_fmain);
     if (lua_isfunction(L, -1))
     {
       if (n > 0) {
-        lua_insert(L, -nameidx);
+        lua_insert(L, -nameidx); /* push main to stack */
       }
+      lua_remove(L, -nameidx - 1);
       result = luaos_pcall(L, n, 0);
-      if (is_success(result)) {
-        lua_pop(L, 1);     /* pop name from stack */
-      }
-      else {
-        lua_remove(L, -2); /* remove name from stack */
-      }
     }
     else {
       lua_settop(L, topidx - nameidx);
@@ -1289,15 +1229,16 @@ static int luaopen_timer(lua_State* L)
 int luaos_openlibs(lua_State* L)
 {
   luaL_Reg modules[] = {
-    {"basic",   luaopen_basic   },
-    {"debug",   luaopen_ldebug  },
-    {"os",      luaopen_los     },
-    {"string",  luaopen_lstring },
-    {"utf8",    luaopen_lutf8   },
-    {"job",     luaopen_job     },
-    {"socket",  luaopen_socket  },
-    {"timer",   luaopen_timer   },
-    { NULL,     NULL            }
+    {"basic",       luaopen_basic      },
+    {"debug",       luaopen_ldebug     },
+    {"os",          luaopen_los        },
+    {"string",      luaopen_lstring    },
+    {"utf8",        luaopen_lutf8      },
+    {"job",         luaopen_job        },
+    {"socket",      luaopen_socket     },
+    {"timer",       luaopen_timer      },
+    {"subscriber",  luaopen_subscriber },
+    { NULL,         NULL               }
   };
   for (const luaL_Reg* libs = modules; libs->func; libs++) {
     libs->func(L);

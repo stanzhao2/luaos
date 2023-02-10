@@ -1,8 +1,7 @@
 ﻿
-
 local luaos = require("luaos");
 
-function main()
+function main(...)
 	local nginx = luaos.nginx;
 	local server, reason = nginx.start("0.0.0.0", 8899, "wwwroot")
 	

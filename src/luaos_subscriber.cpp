@@ -312,7 +312,7 @@ static int lua_os_publish(lua_State* L)
 
 /*******************************************************************************/
 
-namespace luaos_subscriber
+namespace subscriber
 {
   void init_metatable(lua_State* L)
   {

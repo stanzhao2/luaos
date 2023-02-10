@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="源文件\dumper">
+      <UniqueIdentifier>{2a78f6d1-8637-4c05-bc61-de7247314d1d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\luaos.cpp">
@@ -32,6 +35,9 @@
     </ClCompile>
     <ClCompile Include="..\src\luaos_logo.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\dumper\ifdumper.cpp">
+      <Filter>源文件\dumper</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -61,6 +67,9 @@
     </ClInclude>
     <ClInclude Include="..\src\luaos_logo.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\dumper\ifdumper.h">
+      <Filter>源文件\dumper</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

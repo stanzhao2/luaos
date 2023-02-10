@@ -240,7 +240,7 @@ end
 
 ----------------------------------------------------------------------------
 
-local proxy = {}, timer;
+local proxy, timer = {}, nil;
 
 local function update_proxy(interval)
     local message = {};

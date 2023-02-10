@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\dumper\ifdumper.cpp" />
     <ClCompile Include="..\src\luaos.cpp" />
     <ClCompile Include="..\src\luaos_logo.cpp" />
     <ClCompile Include="..\src\luaos_socket.cpp" />
@@ -19,6 +20,7 @@
     <ClCompile Include="..\src\luaos_subscriber.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\dumper\ifdumper.h" />
     <ClInclude Include="..\src\luaos.h" />
     <ClInclude Include="..\src\luaos_color.h" />
     <ClInclude Include="..\src\luaos_console.h" />
