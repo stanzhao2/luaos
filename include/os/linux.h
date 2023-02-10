@@ -107,7 +107,7 @@ namespace dir
     return (mkdir(path, mode) == 0);
   }
 
-  inline const char* current(char* path, int count)
+  inline const char* exedir(char* path, int count)
   {
     int i;
     int rslt = readlink("/proc/self/exe", path, count - 1);
@@ -122,6 +122,11 @@ namespace dir
       }
     }
     return path;
+  }
+  
+  inline const char* current(char* path, int count)
+  {
+    return getcwd(path, count);
   }
 
   inline const std::string& current()

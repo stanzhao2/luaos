@@ -17,26 +17,18 @@ TARGET_NAME = luaos
 OUTPUT  := ../bin/$(TARGET_NAME)
 
 #source files
-SOURCE  := ../src/twheel/twheel.o \
-           ../src/luaos.o \
-		   ../src/luaos_rpc.o \
-		   ../src/luaos_job.o \
-		   ../src/luaos_loader.o \
-		   ../src/luaos_printf.o \
-		   ../src/luaos_socket.o \
-		   ../src/luaos_storage.o \
-		   ../src/luaos_subscriber.o \
-		   ../src/luaos_thread_local.o \
-		   ../src/luaos_twheel.o \
-		   ../src/main.o
+SOURCE  := luaos.o \
+           luaos_logo.o \
+		   luaos_socket.o \
+		   luaos_local.o \
+		   luaos_state.o \
+		   luaos_subscriber.o
 		   
-MINIZIP_DIR := ../3rd/zlib/contrib/minizip
-
 #library path
-LIBDIRS := -L$(LUA_LIBDIR) -L$(PREFIX)/lib -L$(MINIZIP_DIR)
+LIBDIRS := -L$(LUA_LIBDIR) -L$(PREFIX)/lib
 
 #include path
-INCDIRS := $(LUA_INCLUDE) -I$(PREFIX)/include -I$(MINIZIP_DIR) -I../include -I../3rd/asio
+INCDIRS := $(LUA_INCLUDE) -I$(PREFIX)/include -I../include
 
 #precompile macro
 CC_FLAG := $(SSL)
@@ -45,13 +37,13 @@ CC_FLAG := $(SSL)
 COMPILEOPTION := -std=c++11 -fPIC -w -Wfatal-errors -O3 -pipe -m64
 
 #rpath options
-LIBLOADPATH := -Wl,-rpath=./ -Wl,-rpath=./lib -Wl,-rpath=/usr/local/lib
+LIBLOADPATH := -Wl,-rpath=./ -Wl,-rpath=../lib -Wl,-rpath=/usr/local/lib
 
 #link options
 LINKOPTION := -o $(OUTPUT) $(LIBLOADPATH)
 
 #dependency librarys
-LIBS := -llua -lunz -lz -ldl -lcrypto -lssl -lpthread -ltcmalloc
+LIBS := -llua -ldl -lcrypto -lssl -lpthread -ltcmalloc
 
 ########################## OPTIONS END ############################
 

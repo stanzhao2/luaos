@@ -15,14 +15,7 @@
 
 #pragma once
 
-#include "luaos_thread_local.h"
-
-LUALIB_API int lua_os_subscribe(lua_State* L);
-LUALIB_API int lua_os_cancel(lua_State* L);
-LUALIB_API int lua_os_watch(lua_State* L);
-LUALIB_API int lua_os_publish(lua_State* L);
-
-namespace luaos_subscriber
+namespace subscriber
 {
   void init_metatable(lua_State* L);
 }

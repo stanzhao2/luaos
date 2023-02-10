@@ -15,7 +15,10 @@
 
 #pragma once
 
-#include "luaos_thread_local.h"
+#include "luaos_io.h"
+
+using namespace eth;
+typedef socket::ref socket_type;
 
 /*******************************************************************************/
 

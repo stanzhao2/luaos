@@ -15,7 +15,6 @@
 
 #pragma once
 
-#include "xxtea.h"
 #include "rc4.h"
 #include "quicklz.h"
 #include "circular_buffer.h"

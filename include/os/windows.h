@@ -100,7 +100,7 @@ namespace dir
     return (_mkdir(path) == 0);
   }
 
-  inline const char* current(char* path, int count)
+  inline const char* exedir(char* path, int count)
   {
     char filename[MAX_PATH] = { 0 };
     GetModuleFileNameA(NULL, filename, MAX_PATH);
@@ -108,10 +108,16 @@ namespace dir
     if (!pos) {
       return 0;
     }
-    *pos = 0;
+    *(pos + 1) = 0;
     if ((int)strlen(filename) + 1 > count)
       return 0;
     return (strcpy_s(path, MAX_PATH, filename), path);
+  }
+
+  inline const char* current(char* path, int count)
+  {
+    GetCurrentDirectoryA(count, path);
+	return path;
   }
 
   inline const std::string& current()

@@ -1,7 +1,7 @@
 
-/********************************************************************************
-** 
-** Copyright 2021-2022 stanzhao
+/************************************************************************************
+**
+** Copyright 2021-2023 LuaOS
 **
 ** THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 ** IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -10,15 +10,14 @@
 ** LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 ** OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ** SOFTWARE.
-** 
-********************************************************************************/
+**
+************************************************************************************/
 
 #include "luaos.h"
-#include "luaos_subscriber.h"
 
 typedef struct {
   int index;
-  reactor_type ios;
+  io_handler ios;
 } subscriber_item;
 
 typedef std::vector<std::any> params_type;
@@ -33,11 +32,8 @@ static topic_array _watchs;
 
 static void on_publish(size_t publisher, size_t mask, int index, const params_type& params)
 {
-  lua_State* L = this_thread().lua_state();
-  stack_checker checker(L);
-
-  lua_pushcfunction(L, lua_pcall_error);
-  int error_fn_index = lua_gettop(L);
+  lua_State* L = luaos_local.lua_state();
+  stack_rollback rollback(L);
 
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   lua_pushinteger(L, (lua_Integer)publisher);
@@ -46,21 +42,24 @@ static void on_publish(size_t publisher, size_t mask, int index, const params_ty
   for (size_t i = 0; i < params.size(); i++) {
     lexpush_any(L, params[i]);
   }
-  lua_pcall(L, (int)params.size() + 2, 0, error_fn_index);
+  if (luaos_pcall(L, (int)params.size() + 2, 0) != LUA_OK) {
+    luaos_error("%s\n", lua_tostring(L, -1));
+    lua_pop(L, 1);
+  }
 }
 
 static void on_watch(size_t topic, bool cancel, int index, int fromid)
 {
-  lua_State* L = this_thread().lua_state();
-  stack_checker checker(L);
-
-  lua_pushcfunction(L, lua_pcall_error);
-  int error_fn_index = lua_gettop(L);
+  lua_State* L = luaos_local.lua_state();
+  stack_rollback rollback(L);
 
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   lua_pushinteger(L, fromid);
   lua_pushstring (L, cancel ? "cancel" : "subscribe");
-  lua_pcall(L, 2, 0, error_fn_index);
+  if (luaos_pcall(L, 2, 0) != LUA_OK) {
+    luaos_error("%s\n", lua_tostring(L, -1));
+    lua_pop(L, 1);
+  }
 }
 
 static void on_notify(size_t topic, bool cancel, int fromid)
@@ -81,26 +80,9 @@ static void on_notify(size_t topic, bool cancel, int fromid)
   }
 }
 
-namespace luaos_subscriber
-{
-  void init_metatable(lua_State* L)
-  {
-    struct luaL_Reg methods[] = {
-      { "subscribe",    lua_os_subscribe  },
-      { "cancel",       lua_os_cancel     },
-      { "watch",        lua_os_watch      },
-      { "publish",      lua_os_publish    },
-      { NULL,           NULL },
-    };
-    lua_getglobal(L, "os");
-    luaL_setfuncs(L, methods, 0);
-    lua_pop(L, 1); //pop os from stack
-  }
-}
-
 /*******************************************************************************/
 
-LUALIB_API int lua_os_subscribe(lua_State* L)
+static int lua_os_subscribe(lua_State* L)
 {
   size_t topic = luaL_checkinteger(L, 1);
   if (topic == 0) {
@@ -112,7 +94,7 @@ LUALIB_API int lua_os_subscribe(lua_State* L)
   }
 
   subscriber_item item;
-  auto ios   = this_thread().lua_reactor();
+  auto ios   = luaos_local.lua_service();
   item.ios   = ios;
   item.index = luaL_ref(L, LUA_REGISTRYINDEX);
 
@@ -145,14 +127,14 @@ LUALIB_API int lua_os_subscribe(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_cancel(lua_State* L)
+static int lua_os_cancel(lua_State* L)
 {
   size_t topic = luaL_checkinteger(L, 1);
   if (topic == 0) {
     luaL_argerror(L, 1, "must be an integer greater than 0");
   }
 
-  auto ios = this_thread().lua_reactor();
+  auto ios = luaos_local.lua_service();
   std::unique_lock<std::mutex> lock(_mutex);
 
   auto iter = _topics.find(topic);
@@ -196,7 +178,7 @@ LUALIB_API int lua_os_cancel(lua_State* L)
   return 0;
 }
 
-LUALIB_API int lua_os_watch(lua_State* L)
+static int lua_os_watch(lua_State* L)
 {
   size_t topic = luaL_checkinteger(L, 1);
   if (topic == 0) {
@@ -208,7 +190,7 @@ LUALIB_API int lua_os_watch(lua_State* L)
   }
 
   subscriber_item item;
-  item.ios   = this_thread().lua_reactor();
+  item.ios   = luaos_local.lua_service();
   item.index = luaL_ref(L, LUA_REGISTRYINDEX);
 
   std::unique_lock<std::mutex> lock(_mutex);
@@ -238,7 +220,7 @@ LUALIB_API int lua_os_watch(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_publish(lua_State* L)
+static int lua_os_publish(lua_State* L)
 {
   int argc = lua_gettop(L);
   if (argc < 3) {
@@ -256,7 +238,7 @@ LUALIB_API int lua_os_publish(lua_State* L)
   size_t highbits = receiver >> 16;
   receiver = receiver & 0xffff;
 
-  auto this_ios = this_thread().lua_reactor();
+  auto this_ios = luaos_local.lua_service();
   const int self_id = this_ios->id();
   if (receiver > 0)
   {
@@ -326,6 +308,25 @@ LUALIB_API int lua_os_publish(lua_State* L)
 
   lua_pushinteger(L, (lua_Integer)total);
   return 1;
+}
+
+/*******************************************************************************/
+
+namespace luaos_subscriber
+{
+  void init_metatable(lua_State* L)
+  {
+    struct luaL_Reg methods[] = {
+      { "subscribe",    lua_os_subscribe  },
+      { "cancel",       lua_os_cancel     },
+      { "watch",        lua_os_watch      },
+      { "publish",      lua_os_publish    },
+      { NULL,           NULL },
+    };
+    lua_getglobal(L, "os");
+    luaL_setfuncs(L, methods, 0);
+    lua_pop(L, 1); //pop os from stack
+  }
 }
 
 /*******************************************************************************/

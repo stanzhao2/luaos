@@ -13,32 +13,6 @@
 **
 ********************************************************************************/
 
-/**
-int main()
-{
-  using namespace eth;
-  reactor_type reactor = reactor::create();
-  socket_type  sock = socket::create(reactor, socket::family::sock_stream);
-  error_code   ec = sock->connect("www.baidu.com", 80);
-  if (!ec)
-  {
-    //Wait for data to arrive
-    sock->async_wait(socket::wait_type::wait_read, [=](const error_code& ec, size_t bytes)
-    {
-      size_t n = sock->decode(true, bytes, [](const char* data, size_t size, int opcode, bool flag)
-      {
-
-      });
-    });
-    sock->async_send("GET / HTTP/1.1\r\n\r\n");
-    reactor->run();
-  }
-  return 0;
-}
-**/
-
-/*******************************************************************************/
-
 #pragma once
 
 #ifndef ASIO_STANDALONE
@@ -51,8 +25,8 @@ int main()
 
 #include <memory>
 #include <functional>
+#include <asio.hpp> /* include asio c++ library */
 #include <os/os.h>
-#include <asio.hpp>
 
 #ifdef TLS_SSL_ENABLE
 #include <asio/ssl.hpp>
@@ -88,110 +62,20 @@ namespace eth
     inline reactor()
       : _work_guard(make_work_guard(*this)) {
     }
-
-    inline void showerror(const std::exception& e, const char* wheres)
-    {
+    inline void showerror(const std::exception& e, const char* wheres) {
       //printf("reactor %s error: %s\n", wheres, e.what());
     }
-
     typedef executor_work_guard<io_context::executor_type> io_work_guard;
 
   public:
-    inline static ref create()
-    {
-      return ref(new reactor());
-    }
+    inline static ref create() { return ref(new reactor()); }
 
-    inline int id() const
-    {
-      return _id.value();
-    }
+    inline int id() const { return _id.value(); }
 
-    size_t run()
-    {
-      size_t ret = 0;
-      while (!stopped()) {
-        try {
-          ret += io_context::run();
-        }
-        catch(std::exception& e){
-          showerror(e, "run");
-        }
-      }
-      return ret;
-    }
-
-    template <typename Rep, typename Period>
-    size_t run_for(const chrono::duration<Rep, Period>& rel_time)
-    {
-      size_t ret = 0;
-      try {
-        ret += io_context::run_for(rel_time);
-      }
-      catch(std::exception& e){
-        showerror(e, "run_for");
-      }
-      return ret;
-    }
-
-    size_t run_one()
-    {
-      size_t ret = 0;
-      try {
-        ret += io_context::run_one();
-      }
-      catch(std::exception& e){
-        showerror(e, "run_one");
-      }
-      return ret;
-    }
-
-    template <typename Rep, typename Period>
-    size_t run_one_for(const chrono::duration<Rep, Period>& rel_time)
-    {
-      size_t ret = 0;
-      try {
-        ret += io_context::run_one_for(rel_time);
-      }
-      catch(std::exception& e){
-        showerror(e, "run_one_for");
-      }
-      return ret;
-    }
-
-    size_t poll()
-    {
-      size_t ret = 0;
-      try {
-        ret += io_context::poll();
-      }
-      catch(std::exception& e){
-        showerror(e, "poll");
-      }
-      return ret;
-    }
-
-    size_t poll_one()
-    {
-      size_t ret = 0;
-      try {
-        ret += io_context::poll_one();
-      }
-      catch(std::exception& e){
-        showerror(e, "poll_one");
-      }
-      return ret;
-    }
-
-    template <typename Handler>
-    void post(Handler handler)
-    {
+    template <typename Handler> inline void post(Handler handler) {
       asio::post(*this, handler);
     }
-
-    template <typename Handler>
-    void dispatch(Handler handler)
-    {
+    template <typename Handler> inline void dispatch(Handler handler) {
       asio::dispatch(*this, handler);
     }
 

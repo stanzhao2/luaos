@@ -25,13 +25,7 @@
 #include <cctype>
 #include <vector>
 #include <algorithm>
-#include <os/os.h>
 #include <wrapper/lex_type.h>
-
-#ifdef __cplusplus
-# undef  LUA_API
-# define LUA_API extern "C"
-#endif
 
 /***********************************************************************************/
 //Compatibility adaptation
@@ -285,6 +279,9 @@ inline void lexpush_any(lua_State* L, const std::any& value)
   {
   case c_type::i_void_ptr:
     lua_pushlightuserdata(L, type_cast<void*>(value));
+    break;
+  case c_type::i_char_ptr:
+    lua_pushstring (L, type_cast<const char*>(value));
     break;
   case c_type::i_bool:
     lua_pushboolean(L, type_cast<bool>(value));

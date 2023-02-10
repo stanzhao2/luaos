@@ -1,7 +1,7 @@
 
-/********************************************************************************
-** 
-** Copyright 2021-2022 stanzhao
+/************************************************************************************
+**
+** Copyright 2021-2023 LuaOS
 **
 ** THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 ** IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -10,12 +10,13 @@
 ** LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 ** OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ** SOFTWARE.
-** 
-********************************************************************************/
+**
+************************************************************************************/
 
-#include <tinydir.h>
 #include "luaos.h"
 #include "luaos_socket.h"
+
+static identifier _G_placeholders;
 
 /*******************************************************************************/
 
@@ -33,7 +34,7 @@ lua_socket::lua_socket(socket::ref sock, family_type type)
 lua_socket::~lua_socket()
 {
 #ifdef _DEBUG
-  _printf(color_type::yellow, true, "%s\n", __FUNCTION__);
+  luaos_print("%s\n", __FUNCTION__);
 #endif
 }
 
@@ -118,7 +119,6 @@ void lua_socket::init_metatable(lua_State* L)
 
   struct luaL_Reg methods[] = {
     { "__gc",         lua_os_socket_gc            },
-    //{ "__close",      lua_os_socket_close         },
     { "listen",       lua_os_socket_listen        },
     { "bind",         lua_os_socket_bind          },
     { "connect",      lua_os_socket_connect       },
@@ -169,7 +169,6 @@ void lua_socket::init_ssl_metatable(lua_State* L)
 
   struct luaL_Reg methods[] = {
     { "__gc",         lua_os_socket_ssl_gc       },
-    //{ "__close",      lua_os_socket_ssl_close    },
     { "close",        lua_os_socket_ssl_close    },
     { NULL,           NULL },
   };
@@ -192,17 +191,14 @@ shared_ctx** lua_socket::check_ssl_metatable(lua_State* L, int index)
 
 static void on_error(const error_code& ec, int index, socket_type peer)
 {
-  lua_State* L = this_thread().lua_state();
-  stack_checker checker(L);
+  lua_State* L = luaos_local.lua_state();
+  stack_rollback rollback(L);
 
   int sndref = (int)(size_t)peer->context();
   if (sndref > 0) {
     luaL_unref(L, LUA_REGISTRYINDEX, sndref);
     peer->context(0);
   }
-
-  lua_pushcfunction(L, lua_pcall_error);
-  int error_fn_index = lua_gettop(L);
 
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   if (!lua_isfunction(L, -1)) {
@@ -215,15 +211,18 @@ static void on_error(const error_code& ec, int index, socket_type peer)
 
   lua_pushinteger(L, ec.value());
   lua_pushnil(L);
-  lua_pcall(L, 2, 0, error_fn_index);
+  if (luaos_pcall(L, 2, 0) != LUA_OK) {
+    luaos_error("%s\n", lua_tostring(L, -1));
+    lua_pop(L, 1);
+  }
   collectgarbage(L); //DEBUG: for windows only
 }
 
 static error_code on_read(size_t size, int index, socket_type peer)
 {
   static thread_local std::string data;
-  lua_State* L = this_thread().lua_state();
-  stack_checker checker(L);
+  lua_State* L = luaos_local.lua_state();
+  stack_rollback rollback(L);
 
   if (data.size() < size) {
     data.resize(size);
@@ -234,9 +233,6 @@ static error_code on_read(size_t size, int index, socket_type peer)
     return ec;
   }
 
-  lua_pushcfunction(L, lua_pcall_error);
-  int error_fn_index = lua_gettop(L);
-
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   if (!lua_isfunction(L, -1)) {
     return error::invalid_argument;
@@ -244,7 +240,9 @@ static error_code on_read(size_t size, int index, socket_type peer)
 
   lua_pushinteger(L, 0); //no error
   lua_pushlstring(L, data.c_str(), size);
-  if (lua_pcall(L, 2, 0, error_fn_index) != LUA_OK) {
+  if (luaos_pcall(L, 2, 0) != LUA_OK) {
+    luaos_error("%s\n", lua_tostring(L, -1));
+    lua_pop(L, 1);
     peer->close();
   }
   return ec;
@@ -268,15 +266,12 @@ static void on_receive(const error_code& ec, size_t size, int index, socket_type
 
 static void on_send(const error_code& ec, size_t size, int index, socket_type peer)
 {
-  lua_State* L = this_thread().lua_state();
-  stack_checker checker(L);
+  lua_State* L = luaos_local.lua_state();
+  stack_rollback rollback(L);
 
   if (ec) {
     peer->close();
   }
-
-  lua_pushcfunction(L, lua_pcall_error);
-  int error_fn_index = lua_gettop(L);
 
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   if (!lua_isfunction(L, -1)) {
@@ -284,15 +279,17 @@ static void on_send(const error_code& ec, size_t size, int index, socket_type pe
   }
 
   lua_pushinteger(L, ec.value());
-  if (lua_pcall(L, 1, 0, error_fn_index) != LUA_OK) {
+  if (luaos_pcall(L, 1, 0) != LUA_OK) {
+    luaos_error("%s\n", lua_tostring(L, -1));
+    lua_pop(L, 1);
     peer->close();
   }
 }
 
 static void on_accept(const error_code& ec, socket_type peer, int index, socket_type acceptor)
 {
-  lua_State* L = this_thread().lua_state();
-  stack_checker checker(L);
+  lua_State* L = luaos_local.lua_state();
+  stack_rollback rollback(L);
 
   if (ec) {
     if (!acceptor->is_open())
@@ -308,9 +305,6 @@ static void on_accept(const error_code& ec, socket_type peer, int index, socket_
     return;
   }
 
-  lua_pushcfunction(L, lua_pcall_error);
-  int error_fn_index = lua_gettop(L);
-
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   if (!lua_isfunction(L, -1)) {
     return;
@@ -323,7 +317,9 @@ static void on_accept(const error_code& ec, socket_type peer, int index, socket_
   }
 
   *userdata = lua_sock;
-  if (lua_pcall(L, 1, 0, error_fn_index) != LUA_OK) {
+  if (luaos_pcall(L, 1, 0) != LUA_OK) {
+    luaos_error("%s\n", lua_tostring(L, -1));
+    lua_pop(L, 1);
     peer->close();
   }
 
@@ -339,11 +335,8 @@ static void on_accept(const error_code& ec, socket_type peer, int index, socket_
 
 static void on_connect(const error_code& ec, int index, socket_type peer)
 {
-  lua_State* L = this_thread().lua_state();
-  stack_checker checker(L);
-
-  lua_pushcfunction(L, lua_pcall_error);
-  int error_fn_index = lua_gettop(L);
+  lua_State* L = luaos_local.lua_state();
+  stack_rollback rollback(L);
 
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   luaL_unref (L, LUA_REGISTRYINDEX, index);
@@ -352,7 +345,9 @@ static void on_connect(const error_code& ec, int index, socket_type peer)
   }
 
   lua_pushinteger(L, ec.value());
-  if (lua_pcall(L, 1, 0, error_fn_index) != LUA_OK) {
+  if (luaos_pcall(L, 1, 0) != LUA_OK) {
+    luaos_error("%s\n", lua_tostring(L, -1));
+    lua_pop(L, 1);
     peer->close();
   }
 
@@ -368,11 +363,8 @@ static void on_connect(const error_code& ec, int index, socket_type peer)
 
 static void on_handshake(const error_code& ec, int index, socket_type peer)
 {
-  lua_State* L = this_thread().lua_state();
-  stack_checker checker(L);
-
-  lua_pushcfunction(L, lua_pcall_error);
-  int error_fn_index = lua_gettop(L);
+  lua_State* L = luaos_local.lua_state();
+  stack_rollback rollback(L);
 
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   luaL_unref (L, LUA_REGISTRYINDEX, index);
@@ -381,7 +373,9 @@ static void on_handshake(const error_code& ec, int index, socket_type peer)
   }
 
   lua_pushinteger(L, ec.value());
-  if (lua_pcall(L, 1, 0, error_fn_index) != LUA_OK) {
+  if (luaos_pcall(L, 1, 0) != LUA_OK) {
+    luaos_error("%s\n", lua_tostring(L, -1));
+    lua_pop(L, 1);
     peer->close();
   }
 
@@ -730,18 +724,17 @@ LUALIB_API int lua_os_socket_decode(lua_State* L)
 
   int ec = 0;
   lua_socket* lua_sock = *mt;
-  lua_pushcfunction(L, lua_pcall_error);
-  int error_fn_index = lua_gettop(L);
-
-  size = lua_sock->decode(data, size, ec, [L, error_fn_index](const char* p, size_t n, const decoder::header* h)
+  size = lua_sock->decode(data, size, ec, [L](const char* p, size_t n, const decoder::header* h)
   {
     lua_pushvalue(L, 3);
     lua_pushlstring(L, p, n);
     lua_pushinteger(L, h->opcode);
-    lua_pcall(L, 2, 0, error_fn_index);
+    if (luaos_pcall(L, 2, 0) != LUA_OK) {
+      luaos_error("%s\n", lua_tostring(L, -1));
+      lua_pop(L, 1);
+    }
   });
 
-  lua_pop(L, 1); //pop lua_pcall_error from stack
   if (ec > 0)
   {
     lua_pushnil(L);
@@ -903,7 +896,7 @@ LUALIB_API int lua_os_socket_close(lua_State* L)
 LUALIB_API int lua_os_socket(lua_State* L)
 {
   socket::ref sock;
-  auto ios = this_thread().lua_reactor();
+  auto ios = luaos_local.lua_service();
   const char* family = luaL_optstring(L, 1, "tcp");
 
   lua_socket* lua_sock = 0;
