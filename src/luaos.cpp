@@ -13,6 +13,7 @@
 **
 ************************************************************************************/
 
+#include <clipp/include/clipp.h>
 #include "luaos.h"
 #include "luaos_logo.h"
 
@@ -20,6 +21,7 @@
 #include <gperftools/malloc_extension.h>
 #include <gperftools/tcmalloc.h>
 #else
+#include "luaos_compile.h"
 #include "dumper/ifdumper.h"
 static CMiniDumper _G_dumper(true);
 #endif
@@ -72,10 +74,26 @@ int main(int argc, char* argv[])
   display_logo();
 #ifndef _MSC_VER
   MallocExtension::instance()->SetMemoryReleaseRate(0);
+#else
+  using namespace clipp;
+  bool compile = false;
+  std::string filename;
+  auto cli = (
+    option("-c", "--compile").set(compile) & value("filename", filename)
+  );
+  if (!parse(argc, argv, cli)) {
+    luaos_error("Invalid command line argument\n\n");
+    return 1;
+  }
 #endif
-
   lua_Integer error = -1;
   lua_State* L = luaos_local.lua_state();
+  if (compile) {
+    luaos_trace("Prepare to compile and copy files\n");
+    int count = luaos_compile(L, filename.c_str());
+    luaos_trace("Successfully compiled %d lua files\n\n", count);
+    return 0;
+  }
 
   lua_pushcfunction(L, &pmain);           /* to call 'pmain' in protected mode */
   lua_pushinteger(L, argc);               /* 1st argument */
