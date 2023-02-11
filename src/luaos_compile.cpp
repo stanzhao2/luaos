@@ -84,7 +84,7 @@ static int luaos_build(const char* path, const tinydir_file& file)
   char filename[1024];
   snprintf(filename, sizeof(filename), "%s/%s", path, file.name);
   char target[1024];
-  snprintf(target, sizeof(target), "%s/%s", curpath.c_str(), file.name);
+  snprintf(target, sizeof(target), "%s/%s", strbuild.c_str(), filename);
   /* not lua file */
   if (_tinydir_strcmp(file.extension, "lua")) {
     if (copyfile(filename, target) == 0) {
@@ -106,7 +106,6 @@ static int luaos_build(const char* path, const tinydir_file& file)
 
 static int luaos_build(const char* path)
 {
-  dir::make(curpath.c_str());
   _tinydir_char_t fdir[_TINYDIR_PATH_MAX];
   _tinydir_strcpy(fdir, path);
 
@@ -136,7 +135,7 @@ static int luaos_build(const char* path)
       sprintf(newdir, "%s/%s", fdir, file.name);
 
       std::string oldpath(curpath);
-      curpath = strbuild + newdir;
+      curpath = strbuild + "/" + std::string(newdir);
       luaos_build(newdir);
       curpath = oldpath;
     }
@@ -147,11 +146,31 @@ static int luaos_build(const char* path)
 
 int luaos_compile(lua_State* L, const char* filename)
 {
-  filename = find_file(L, filename);
+  char* realname = (char*)find_file(L, filename);
+  if (!realname) {
+    luaos_error("%s not found\n", filename);
+    return 0;
+  }
+  for (size_t i = 0; realname[i]; i++) {
+    if (realname[i] == '\\') {
+      realname[i] = '/';
+    }
+  }
+  dir::make(curpath.c_str());
+  std::string folder(strbuild + "/");
+  const char* p = filename;
+  while (*p) {
+    char c = *p;
+    if (c == '/') {
+      dir::make(folder.c_str());
+    }
+    folder += c;
+    p++;
+  }
   char filepath[1024];
-  const char* pos = strrchr(filename, LUA_DIRSEP[0]);
-  memcpy(filepath, filename, pos - filename);
-  filepath[pos - filename] = 0;
+  const char* pos = strrchr(realname, '/');
+  memcpy(filepath, realname, pos - realname);
+  filepath[pos - realname] = 0;
   return luaos_build(filepath);
 }
 
