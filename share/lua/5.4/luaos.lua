@@ -68,7 +68,7 @@ local luaos = {
     ---@callback function
     ---@return userdata
     scheme = function(expires, callback)
-        return os.scheme();
+        return os.scheme(expires, callback);
     end,
     
     ---执行一个 lua 模块

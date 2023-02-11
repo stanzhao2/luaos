@@ -363,7 +363,10 @@ static std::string location(lua_State* L)
     }
     if (lua_getinfo(L, "Sl", &ar)) {
       if (ar.currentline > 0){
-        sprintf(filename, "<%s:%d> ", ar.short_src, ar.currentline);
+        if (ar.source[0] == '@') {
+          ar.source++;
+        }
+        sprintf(filename, "<%s:%d> ", ar.source, ar.currentline);
         data.append(filename);
         break;
       }

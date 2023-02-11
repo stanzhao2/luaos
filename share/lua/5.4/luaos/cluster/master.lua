@@ -265,7 +265,7 @@ function master.stop()
         master.acceptor = nil;
     end
     if timer then
-        timer:close();
+        timer:cancel();
     end
     for k, v in pairs(sessions) do
         v.peer:close();
