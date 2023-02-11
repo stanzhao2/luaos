@@ -79,6 +79,7 @@ int main(int argc, char* argv[])
   bool compile = false;
   std::string filename;
   auto cli = (
+    opt_value("filename", filename),
     option("-c", "--compile").set(compile) & value("filename", filename)
   );
   if (!parse(argc, argv, cli)) {
