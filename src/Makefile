@@ -22,7 +22,8 @@ SOURCE  := luaos.o \
 		   luaos_socket.o \
 		   luaos_local.o \
 		   luaos_state.o \
-		   luaos_subscriber.o
+		   luaos_subscriber.o \
+		   luaos_traceback.o
 		   
 #library path
 LIBDIRS := -L$(LUA_LIBDIR) -L$(PREFIX)/lib

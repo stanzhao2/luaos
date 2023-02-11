@@ -24,6 +24,7 @@
 #include "luaos.h"
 #include "luaos_socket.h"
 #include "luaos_subscriber.h"
+#include "luaos_traceback.h"
 
 #ifdef _MSC_VER
 #include "luaos_console.h"
@@ -35,46 +36,6 @@
 
 inline static int is_success(int result) {
   return result == LUA_OK;
-}
-
-/***********************************************************************************/
-//lua pcall function
-/***********************************************************************************/
-
-static int traceback(lua_State* L)
-{
-  bool showstack = false;
-  std::string stack = luaL_checkstring(L, -1);
-  for (int i = 1; i < 100; i++)
-  {
-    lua_Debug ar;
-    int result = lua_getstack(L, i, &ar);
-    if (result == 0) {
-      break;
-    }
-    if (lua_getinfo(L, "Sln", &ar)) {
-      if (ar.currentline < 0) {
-        continue;
-      }
-      if (!showstack) {
-        showstack = true;
-        stack.append("\nstack traceback:");
-      }
-      char info[256] = { 0 };
-      if (ar.name) {
-        snprintf(info, sizeof(info), "%s (%s)", ar.name, ar.namewhat);
-      }
-      char buffer[1024];
-      if (ar.source[0] == '@') {
-        ar.source++;
-      }
-      snprintf(buffer, sizeof(buffer), "\n\t%s:%d: %s", ar.source, ar.currentline, info);
-      stack.append(buffer);
-    }
-  }
-  lua_pop(L, 1);
-  lua_pushlstring(L, stack.c_str(), stack.size());
-  return 1;
 }
 
 static int pcall(lua_State* L)
@@ -89,7 +50,7 @@ static int pcall(lua_State* L)
 int luaos_pcall(lua_State* L, int n, int r)
 {
   int index = lua_gettop(L) - n;
-  lua_pushcfunction(L, traceback);
+  lua_pushcfunction(L, luaos_traceback);
   lua_insert(L, index);
   int result = lua_pcall(L, n, r, index);
   lua_remove(L, index); /* remove traceback from stack */
@@ -191,7 +152,7 @@ static void chdir_fpath(const char* filename)
   }
   *finded = 0;
   int result = chdir(path);
-  luaos_trace("PATH: %s\n", path);
+  luaos_trace("Switch work path to: %s\n", path);
 }
 
 static int ll_fload(lua_State* L, const char* buff, size_t size, const char* filename)
@@ -288,7 +249,7 @@ static int ll_require(lua_State* L)
 {
   char filename[256];
   size_t namelen = 0;
-  const char* name = luaL_checklstring(L, -1, &namelen);
+  const char* name = luaL_checklstring(L, 1, &namelen);
   if (is_fullname(name)) {
     strcpy(filename, name);
     int result = ll_fread(L, filename);
@@ -343,7 +304,7 @@ static int ll_dofile(lua_State* L)
   bool replace = false;
   size_t namelen = 0;
   char name[256], original[256];
-  strcpy(name, luaL_checklstring(L, -1, &namelen));
+  strcpy(name, luaL_checklstring(L, 1, &namelen));
   strcpy(original, name);
 
   for (size_t i = 0; i < namelen; i++) {
@@ -402,7 +363,7 @@ static std::string location(lua_State* L)
     }
     if (lua_getinfo(L, "Sl", &ar)) {
       if (ar.currentline > 0){
-        sprintf(filename, "%s:%d: ", ar.short_src, ar.currentline);
+        sprintf(filename, "<%s:%d> ", ar.short_src, ar.currentline);
         data.append(filename);
         break;
       }
@@ -795,24 +756,35 @@ static int enum_files(lua_State* L)
   return 0;
 }
 
+static int local_pthread(lua_State* L)
+{
+  const char* name = luaL_checkstring(L, 1);
+  lua_remove(L, 1);
+  int result = luaos_pexec(L, name, lua_gettop(L));
+  return is_success(result) ? 0 : lua_error(L);
+}
+
 static int local_thread(luaos_job* job, const std::vector<std::any>& argv, io_handler ios, int* result)
 {
   lua_State* L = luaos_local.lua_state();
   job->ios = luaos_local.lua_service();
+
   lua_pushlightuserdata(L, ios.get());
   lua_setglobal(L, luaos_waiting_name);
 
-  lua_pushstring(L, job->name.c_str());  /* push name of module */
+  lua_pushcfunction(L, local_pthread);
+  lua_pushstring(L, job->name.c_str());
   for (size_t i = 0; i < argv.size(); i++) {
     lexpush_any(L, argv[i]);
   }
-  *result = luaos_pexec(L, (int)argv.size());
-  if (!is_success(*result)) {
+
+  int perror = luaos_pcall(L, (int)argv.size() + 1, 0);
+  if (!is_success(perror)) {
     luaos_error("%s\n", lua_tostring(L, -1));
     lua_pop(L, 1);
   }
   ios->stop();
-  return *result;
+  return (*result = perror);
 }
 
 static luaos_job* check_jobself(lua_State* L)
@@ -1035,15 +1007,10 @@ int luaos_close(lua_State* L)
   return LUA_OK;
 }
 
-int luaos_pexec(lua_State* L, int n)
+int luaos_pexec(lua_State* L, const char* filename, int n)
 {
-  bool replace = false;
-  int nameidx = n + 1;
-  int topidx  = lua_gettop(L);
-
-  size_t namelen = 0;
   char name[256], original[256];
-  const char* filename = luaL_checklstring(L, -nameidx, &namelen);
+  size_t namelen = strlen(filename);
   if (filename[0] == '.') {
     if (filename[1] == LUA_DIRSEP[0]) {
       namelen  -= 2;
@@ -1052,48 +1019,45 @@ int luaos_pexec(lua_State* L, int n)
   }
   strcpy(name, filename);
   strcpy(original, name);
+  luaos_trace("Start module '%s' in protected mode\n", original);
 
   if (!is_fullname(name)) {
     for (size_t i = 0; i < namelen; i++) {
       if (is_slash(name[i])) {
         name[i] = '.';
-        replace = true;
       }
     }
-    if (replace) {
-      lua_remove(L, -nameidx);
-      lua_pushlstring(L, name, namelen);
-      lua_insert(L, -nameidx);
-    }
   }
+  int stack_top = lua_gettop(L);
   lua_pushcfunction(L, ll_require);
   lua_pushstring(L, name);
   int result = luaos_pcall(L, 1, LUA_MULTRET);
   if (!is_success(result)) {
+    lua_insert(L, -(n + 1));  /* insert error to bottom of params */
+    lua_pop(L, n);  /* pop params from stack */
     return result;
   }
-  if (!lua_isfunction(L, -2))
-  {
-    lua_settop(L, topidx - nameidx);
+
+  int stack_now = lua_gettop(L);
+  if (stack_now - stack_top < 2) {
+    lua_pop(L, n);  /* pop params from stack */
     lua_pushfstring(L, "module '%s' not found", original);
     return LUA_ERRERR;
   }
-  luaos_trace("module '%s' has been started\n", original);
+
   result = luaos_pcall(L, 1, 0);
   if (is_success(result))
   {
     lua_getglobal(L, luaos_fmain);
-    if (lua_isfunction(L, -1))
-    {
-      if (n > 0) {
-        lua_insert(L, -nameidx); /* push main to stack */
-      }
-      lua_remove(L, -nameidx - 1);
+    if (lua_isfunction(L, -1)) {
+      if (n > 0)
+        lua_insert(L, -(n + 1)); /* insert main to bottom of params */
       result = luaos_pcall(L, n, 0);
     }
-    else {
-      lua_settop(L, topidx - nameidx);
-    }
+  }
+  else {
+    lua_insert(L, -(n + 1));  /* insert error to bottom of params */
+    lua_pop(L, n);  /* pop params from stack */
   }
   luaos_trace("module '%s' has exited\n", original);
   return result;
@@ -1135,8 +1099,8 @@ static int luaopen_ldebug(lua_State* L)
 {
   lua_getglobal(L, "debug");
   luaL_Reg methods[] = {
-    {"traceback",     traceback     },
-    { NULL,           NULL          }
+    {"traceback",     luaos_traceback },
+    { NULL,           NULL            }
   };
   luaL_setfuncs(L, methods, 0);
   lua_pop(L, 1); //pop debug from stack

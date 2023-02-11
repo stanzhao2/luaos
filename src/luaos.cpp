@@ -58,9 +58,8 @@ static int pmain(lua_State* L)
   const char* name = argc > 1 ? argv[1] : luaos_fmain;
   name = normal(name);
 
-  lua_pushstring(L, name);                /* push name of module */
   luaos_trace("LuaOS has been started\n");
-  int result = luaos_pexec(L, 0);         /* load and run module in protect mode */
+  int result = luaos_pexec(L, name, 0);   /* load and run module in protect mode */
   if (result != LUA_OK) {
     lua_error(L);                         /* run error */
   }

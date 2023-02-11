@@ -39,6 +39,9 @@
     <ClCompile Include="..\src\dumper\ifdumper.cpp">
       <Filter>源文件\dumper</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\luaos_traceback.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\luaos.h">
@@ -70,6 +73,9 @@
     </ClInclude>
     <ClInclude Include="..\src\dumper\ifdumper.h">
       <Filter>源文件\dumper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\luaos_traceback.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -18,6 +18,7 @@
     <ClCompile Include="..\src\luaos_local.cpp" />
     <ClCompile Include="..\src\luaos_state.cpp" />
     <ClCompile Include="..\src\luaos_subscriber.cpp" />
+    <ClCompile Include="..\src\luaos_traceback.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\dumper\ifdumper.h" />
@@ -30,6 +31,7 @@
     <ClInclude Include="..\src\luaos_local.h" />
     <ClInclude Include="..\src\luaos_state.h" />
     <ClInclude Include="..\src\luaos_subscriber.h" />
+    <ClInclude Include="..\src\luaos_traceback.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -69,7 +71,7 @@
     <IncludePath>$(ProjectDir)..\include;$(ProjectDir)..\3rd\asio;$(ProjectDir)..\3rd\lua\src;$(IncludePath)</IncludePath>
     <OutDir>$(ProjectDir)..\bin\</OutDir>
     <TargetName>luaos</TargetName>
-    <LibraryPath>$(ProjectDir)..\3rd\lua\src;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <LibraryPath>$(ProjectDir)..\3rd\lua\src;$(ProjectDir)..\3rd\lua\openssl;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -82,13 +84,13 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;TLS_SSL_ENABLE;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>lua54.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>lua54.lib;libcrypto;libssl.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
