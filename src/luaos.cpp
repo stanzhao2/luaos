@@ -72,6 +72,8 @@ static int pmain(lua_State* L)
 int main(int argc, char* argv[])
 {
   display_logo();
+  lua_Integer error = -1;
+  lua_State* L = luaos_local.lua_state();
 #ifndef _MSC_VER
   MallocExtension::instance()->SetMemoryReleaseRate(0);
 #else
@@ -86,16 +88,13 @@ int main(int argc, char* argv[])
     luaos_error("Invalid command line argument\n\n");
     return 1;
   }
-#endif
-  lua_Integer error = -1;
-  lua_State* L = luaos_local.lua_state();
   if (compile) {
     luaos_trace("Prepare to compile and copy files\n");
     int count = luaos_compile(L, filename.c_str());
     luaos_trace("Successfully compiled %d lua files\n\n", count);
     return 0;
   }
-
+#endif
   lua_pushcfunction(L, &pmain);           /* to call 'pmain' in protected mode */
   lua_pushinteger(L, argc);               /* 1st argument */
   lua_pushlightuserdata(L, argv);         /* 2nd argument */
