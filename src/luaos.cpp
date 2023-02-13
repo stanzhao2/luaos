@@ -58,7 +58,6 @@ static int pmain(lua_State* L)
   const char* name = luaL_checkstring(L, 1);
   name = normal(name);
 
-  luaos_trace("LuaOS has been started\n");
   int result = luaos_pexec(L, name, 0);   /* load and run module in protect mode */
   if (result != LUA_OK) {
     lua_error(L);                         /* run error */
@@ -79,23 +78,26 @@ static void replace(std::string& filename)
 int main(int argc, char* argv[])
 {
   display_logo();
-  lua_Integer error = -1;
-  lua_State* L = luaos_local.lua_state();
+
 #ifndef _MSC_VER
   MallocExtension::instance()->SetMemoryReleaseRate(0);
 #endif
+
   using namespace clipp;
   bool compile = false, fromrom = false, help = false;
   std::string fmain(luaos_fmain), filename;
   std::vector<std::string> extnames;
+
   auto cli = (
     opt_value("filename", fmain),
     option("-h", "/h", "-?", "/?", "--help").set(help),
     option("-i", "/i", "--input").set(fromrom) & value("filename", filename),
     option("-c", "/c", "--compile").set(compile) & value("filename", filename) & repeatable(opt_value("ext", extnames))
   );
+
   extnames.push_back("lua");
-  if (!parse(argc, argv, cli) || help || (compile && fromrom) || fmain[0] == '-') {
+  if (!parse(argc, argv, cli) || help || (compile && fromrom) || fmain[0] == '-')
+  {
     std::string fname(argv[0]);
     const char* pos = strrchr(argv[0], LUA_DIRSEP[0]);
     if (pos) {
@@ -110,7 +112,11 @@ int main(int argc, char* argv[])
     );
     return 0;
   }
-  if (compile) {
+
+  lua_Integer error = -1;
+  lua_State* L = luaos_local.lua_state();
+  if (compile)
+  {
     std::set<std::string> exts;
     for (size_t i = 0; i < extnames.size(); i++) {
       exts.insert(extnames[i]);
@@ -121,7 +127,10 @@ int main(int argc, char* argv[])
     luaos_trace("Successfully compiled %d lua files\n\n", count);
     return 0;
   }
-  if (fromrom) {
+
+  luaos_trace("LuaOS has been started\n");
+  if (fromrom)
+  {
     replace(filename);
     int count = luaos_parse(L, filename.c_str());
     if (count < 0) {
@@ -129,6 +138,7 @@ int main(int argc, char* argv[])
     }
     luaos_trace("Successfully loaded %d lua files\n", count);
   }
+
   lua_pushcfunction(L, &pmain);           /* to call 'pmain' in protected mode */
   lua_pushstring(L, fmain.c_str());       /* 1st argument */
   if (luaos_pcall(L, 1, 1) == LUA_OK) {   /* do the call */
