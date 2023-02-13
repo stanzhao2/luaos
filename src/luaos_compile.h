@@ -15,7 +15,10 @@
 
 #pragma once
 
-int luaos_compile(lua_State* L, const char* filename);
+#include <string>
+#include <set>
+
+int luaos_compile(lua_State* L, const char* filename, const std::set<std::string>& exts);
 
 int luaos_parse(lua_State* L, const char* filename);
 

@@ -1,6 +1,7 @@
 
 
 #include "luaos.h"
+#include "luaos_compile.h"
 
 /*******************************************************************************/
 
@@ -42,7 +43,7 @@ static int luaos_build(const char* filename, FILE* fp)
   return 0;
 }
 
-static int luaos_build(const char* path, const char* output, FILE* fp)
+static int luaos_build(const char* path, const char* output, FILE* fp, const std::set<std::string>& exts)
 {
   int count = 0;
   _tinydir_char_t fdir[_TINYDIR_PATH_MAX];
@@ -59,7 +60,14 @@ static int luaos_build(const char* path, const char* output, FILE* fp)
     tinydir_next(&tdir);
 
     if (file.is_dir == 0) {
-      if (_tinydir_strcmp(file.extension, "lua") == 0) {
+      if (fromname == file.name) {
+        continue;
+      }
+      auto iter = exts.find(file.extension);
+      if (iter == exts.end()) {
+        iter = exts.find("*");
+      }
+      if (iter != exts.end()) {
         count++;
         snprintf(filename, sizeof(filename), "%s/%s", path, file.name);
         luaos_build(filename, fp);
@@ -74,11 +82,62 @@ static int luaos_build(const char* path, const char* output, FILE* fp)
     }
     char newdir[_TINYDIR_PATH_MAX];
     sprintf(newdir, "%s/%s", fdir, file.name);
-    count += luaos_build(newdir, output, fp);
+    count += luaos_build(newdir, output, fp, exts);
   }
 
   tinydir_close(&tdir);
   return count;
+}
+
+static void makefiledir(const char* filename)
+{
+  std::string dirname;
+  while (*filename) {
+    if (*filename == '/') {
+      if (dirname.size() && dirname != ".") {
+        dir::make(dirname.c_str());
+      }
+    }
+    dirname += *filename++;
+  }
+}
+
+static void unpackfile(const char* infile, const char* name, const char* data, size_t size)
+{
+  std::string root;
+  const char* pos = strrchr(infile, '/');
+  if (pos) {
+    root.append(infile, pos - infile + 1);
+  }
+  if (name[0] == '.' && name[1] == '/') {
+    name += 2;
+  }
+  std::string fullname(root + name);
+  makefiledir(fullname.c_str());
+  FILE* fp = fopen(fullname.c_str(), "rb");
+  if (fp)
+  {
+    std::string file;
+    char buffer[8192];
+    while (!feof(fp)) {
+      size_t n = fread(buffer, 1, sizeof(buffer), fp);
+      file.append(buffer, n);
+    }
+    fclose(fp);
+    if (size == file.size()) {
+      if (memcmp(data, file.c_str(), size) == 0) {
+        return;
+      }
+    }
+  }
+  luaos_trace("Unpacking: %s\n", fullname.c_str());
+  fp = fopen(fullname.c_str(), "wb");
+  if (!fp) {
+    luaos_error("Can't create file: %s", fullname.c_str());
+    return;
+  }
+  fwrite(data, 1, size, fp);
+  fclose(fp);
 }
 
 int luaos_parse(lua_State* L, const char* filename)
@@ -91,11 +150,17 @@ int luaos_parse(lua_State* L, const char* filename)
   int count = 0;
   size_t size = decoder.write(data.c_str(), data.size());
   int result = decoder.decode([&](const char* data, size_t size, const eth::decoder::header* head) {
-    count++;
     const char* name = data;
     data = data + strlen(name) + 1;
     size = size - strlen(name) - 1;
-    fluadata[std::string(name)] = std::string(data, size);
+
+    const char* pos = strrchr(name, '.');
+    if (pos && _tinydir_strcmp(pos + 1, "lua") == 0) {
+      count++;
+      fluadata[std::string(name)] = std::string(data, size);
+      return;
+    }
+    unpackfile(filename, name, data, size);
   });
   size = decoder.size();
   if (size || result != 0) {
@@ -126,14 +191,15 @@ int luaos_loadlua(lua_State* L, const char* filename)
   return 2;
 }
 
-int luaos_compile(lua_State* L, const char* filename)
+int luaos_compile(lua_State* L, const char* filename, const std::set<std::string>& exts)
 {
   FILE* fp = fopen(filename, "wb");
   if (!fp) {
     luaos_error("Can't open output file: %s\n", filename);
     return 0;
   }
-  int count = luaos_build(".", filename, fp);
+  fromname = filename;
+  int count = luaos_build(".", fromname.c_str(), fp, exts);
   fclose(fp);
   return count;
 }

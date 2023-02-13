@@ -67,6 +67,15 @@ static int pmain(lua_State* L)
   return 1;
 }
 
+static void replace(std::string& filename)
+{
+  for (size_t i = 0; i < filename.size(); i++) {
+    if (filename[i] == '\\') {
+      filename[i] = '/';
+    }
+  }
+}
+
 int main(int argc, char* argv[])
 {
   display_logo();
@@ -78,13 +87,14 @@ int main(int argc, char* argv[])
   using namespace clipp;
   bool compile = false, fromrom = false;
   std::string fmain(luaos_fmain), filename;
+  std::vector<std::string> extnames;
   auto cli = (
     opt_value("filename", fmain),
     option("-i", "--input").set(fromrom) & value("filename", filename),
-    option("-c", "--compile").set(compile) & value("filename", filename)
+    option("-c", "--compile").set(compile) & value("filename", filename) & repeatable(opt_value("ext", extnames))
   );
-  if (!parse(argc, argv, cli) || (compile && fromrom) || fmain[0] == '-')
-  {
+  extnames.push_back("lua");
+  if (!parse(argc, argv, cli) || (compile && fromrom) || fmain[0] == '-') {
     printf(
       " usage: luaos [module] [options]\n"
       " Available options are:\n"
@@ -94,12 +104,18 @@ int main(int argc, char* argv[])
     return 1;
   }
   if (compile) {
+    std::set<std::string> exts;
+    for (size_t i = 0; i < extnames.size(); i++) {
+      exts.insert(extnames[i]);
+    }
     luaos_trace("Prepare to compile lua files\n");
-    int count = luaos_compile(L, filename.c_str());
+    replace(filename);
+    int count = luaos_compile(L, filename.c_str(), exts);
     luaos_trace("Successfully compiled %d lua files\n\n", count);
     return 0;
   }
   if (fromrom) {
+    replace(filename);
     int count = luaos_parse(L, filename.c_str());
     if (count < 0) {
       return 1;
