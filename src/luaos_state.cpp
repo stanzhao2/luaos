@@ -888,7 +888,9 @@ static int steady_timer(lua_State* L)
   timer->steady.expires_after(
     std::chrono::milliseconds(expires)
   );
-  timer->steady.async_wait([L, index, ref](const asio::error_code& ec) {
+  timer->steady.async_wait([index, ref](const asio::error_code& ec)
+  {
+    lua_State* L = luaos_local.lua_state();
     if (!ec)
     {
       lua_rawgeti(L, LUA_REGISTRYINDEX, index);
