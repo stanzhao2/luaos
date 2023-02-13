@@ -96,10 +96,10 @@ int main(int argc, char* argv[])
   extnames.push_back("lua");
   if (!parse(argc, argv, cli) || (compile && fromrom) || fmain[0] == '-') {
     printf(
-      " usage: luaos [module] [options]\n"
-      " Available options are:\n"
-      "     -c filename  output to file 'filename'\n"
-      "     -i filename  input from file 'filename'\n\n"
+      " > usage: luaos [module] [options]\n"
+      " > Available options are:\n"
+      " >   -c filename [[*] | [filetypes]] output to file 'filename'\n"
+      " >   -i filename input from file 'filename'\n\n"
     );
     return 1;
   }
