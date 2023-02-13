@@ -547,6 +547,10 @@ static int luaos_stopped(lua_State* L)
 
 static int luaos_wait(lua_State* L)
 {
+  lua_State* mainL = luaos_local.lua_state();
+  if (L != mainL) {
+    luaL_error(L, "The wait function cannot be invoke by coroutines");
+  }
   lua_getglobal(L, luaos_waiting_name);
   if (lua_isuserdata(L, -1))
   {
