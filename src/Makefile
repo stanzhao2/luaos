@@ -33,7 +33,7 @@ LIBDIRS := -L$(LUA_LIBDIR) -L$(PREFIX)/lib
 INCDIRS := $(LUA_INCLUDE) -I$(PREFIX)/include -I../include
 
 #precompile macro
-CC_FLAG := $(SSL)
+CC_FLAG := -DTLS_SSL_ENABLE
 
 #compile options
 COMPILEOPTION := -std=c++11 -fPIC -w -Wfatal-errors -O3 -pipe -m64
@@ -55,7 +55,7 @@ $(OUTPUT): $(SOURCE)
 clean: 
 	rm -f $(SOURCE)
 	rm -f $(OUTPUT)
-
+	
 all: clean $(OUTPUT)
 .PRECIOUS:%.cpp %.c %.C
 .SUFFIXES:

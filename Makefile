@@ -8,7 +8,7 @@ subsystem:
 	
 	cd $(SUBDIR1) && $(MAKE) clean && $(MAKE) linux && $(MAKE) install
 
-	cd $(SUBDIR2) && $(MAKE) clean && $(MAKE) $(SSL)
+	cd $(SUBDIR2) && $(MAKE) clean && $(MAKE)
 	
 	@echo "==== Successfully built LuaOS ===="
 	
