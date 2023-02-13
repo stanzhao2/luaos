@@ -16,12 +16,12 @@
 #include <clipp/include/clipp.h>
 #include "luaos.h"
 #include "luaos_logo.h"
+#include "luaos_compile.h"
 
 #ifndef _MSC_VER
 #include <gperftools/malloc_extension.h>
 #include <gperftools/tcmalloc.h>
 #else
-#include "luaos_compile.h"
 #include "dumper/ifdumper.h"
 static CMiniDumper _G_dumper(true);
 #endif
@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
   lua_State* L = luaos_local.lua_state();
 #ifndef _MSC_VER
   MallocExtension::instance()->SetMemoryReleaseRate(0);
-#else
+#endif
   using namespace clipp;
   bool compile = false, fromrom = false;
   std::string fmain(luaos_fmain), filename;
@@ -106,7 +106,6 @@ int main(int argc, char* argv[])
     }
     luaos_trace("Successfully loaded %d lua files\n", count);
   }
-#endif
   lua_pushcfunction(L, &pmain);           /* to call 'pmain' in protected mode */
   lua_pushstring(L, fmain.c_str());       /* 1st argument */
   if (luaos_pcall(L, 1, 1) == LUA_OK) {   /* do the call */

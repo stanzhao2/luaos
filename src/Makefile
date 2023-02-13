@@ -18,6 +18,7 @@ OUTPUT  := ../bin/$(TARGET_NAME)
 
 #source files
 SOURCE  := luaos.o \
+		   luaos_compile.o \
            luaos_logo.o \
 		   luaos_socket.o \
 		   luaos_local.o \
