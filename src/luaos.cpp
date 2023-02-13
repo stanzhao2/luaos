@@ -85,23 +85,30 @@ int main(int argc, char* argv[])
   MallocExtension::instance()->SetMemoryReleaseRate(0);
 #endif
   using namespace clipp;
-  bool compile = false, fromrom = false;
+  bool compile = false, fromrom = false, help = false;
   std::string fmain(luaos_fmain), filename;
   std::vector<std::string> extnames;
   auto cli = (
     opt_value("filename", fmain),
-    option("-i", "--input").set(fromrom) & value("filename", filename),
-    option("-c", "--compile").set(compile) & value("filename", filename) & repeatable(opt_value("ext", extnames))
+    option("-h", "/h", "-?", "/?", "--help").set(help),
+    option("-i", "/i", "--input").set(fromrom) & value("filename", filename),
+    option("-c", "/c", "--compile").set(compile) & value("filename", filename) & repeatable(opt_value("ext", extnames))
   );
   extnames.push_back("lua");
-  if (!parse(argc, argv, cli) || (compile && fromrom) || fmain[0] == '-') {
+  if (!parse(argc, argv, cli) || help || (compile && fromrom) || fmain[0] == '-') {
+    std::string fname(argv[0]);
+    const char* pos = strrchr(argv[0], LUA_DIRSEP[0]);
+    if (pos) {
+      fname = pos + 1;
+    }
     printf(
-      " > usage: luaos [module] [options]\n"
-      " > Available options are:\n"
-      " >   -c filename [[*] | [filetypes]] output to file 'filename'\n"
-      " >   -i filename input from file 'filename'\n\n"
+      "  > usage: %s [module] [options]\n"
+      "  > Available options are:\n"
+      "  >   -c filename [[*] | [extensions]] output to file 'filename'\n"
+      "  >   -i filename input from file 'filename'\n\n",
+      fname.c_str()
     );
-    return 1;
+    return 0;
   }
   if (compile) {
     std::set<std::string> exts;
