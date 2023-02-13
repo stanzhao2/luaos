@@ -14,6 +14,7 @@
 ************************************************************************************/
 
 #include "luaos.h"
+#include "luaos_compile.h"
 
 /***********************************************************************************/
 
@@ -23,7 +24,7 @@ static io_handler main_handler;
 
 static int luaos_loader(lua_State* L)
 {
-  return 0;
+  return luaos_loadlua(L, luaL_checkstring(L, 1));
 }
 
 static void luaos_signal(int code)

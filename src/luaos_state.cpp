@@ -150,6 +150,9 @@ static void chdir_fpath(const char* filename)
       return;
     }
   }
+  if (*(finded - 1) == '.' && is_slash(*(finded - 2))) {
+    finded -= 2;
+  }
   *finded = 0;
   int result = chdir(path);
   luaos_trace("Switch work path to: %s\n", path);
@@ -160,7 +163,6 @@ static int ll_fload(lua_State* L, const char* buff, size_t size, const char* fil
   if (filename[0] == '.' && is_slash(filename[1])) {
     filename += 2;
   }
-  chdir_fpath(filename);
   if (size < 4 || memcmp(buff, LUA_SIGNATURE, 4))
   {
     buff = skipBOM(buff, &size);
@@ -188,21 +190,30 @@ static int ll_fload(lua_State* L, const char* filename)
   }
   lua_remove(L, -2);  /* remove package from stack */
 
+  int top = lua_gettop(L) - 1;
   lua_pushstring(L, filename);
-  int result = lua_pcall(L, 1, 1, 0);
+  int result = lua_pcall(L, 1, LUA_MULTRET, 0);
   if (!is_success(result)) {
     return result;
   }
 
-  if (lua_isnil(L, -1)) {
+  if (lua_gettop(L) == top) {
     lua_pop(L, 1);    /* file not found */
     return LUA_OK;
   }
 
   size_t readlen = 0;
   const char* readed = luaL_checklstring(L, -1, &readlen);
+  const char* romname = luaL_checkstring(L, -2);
   result = ll_fload(L, readed, readlen, filename);
-  lua_remove(L, is_success(result) ? -3 : -1);  /* remove data from stack */
+  if (!is_success(result)) {
+    lua_pop(L, 2);      /* remove data and romname from stack */
+  }
+  else {
+    chdir_fpath(romname);
+    lua_remove(L, -3);  /* remove data from stack */
+    lua_remove(L, -3);  /* remove romname from stack */
+  }
   return result;
 }
 
@@ -236,6 +247,7 @@ static int ll_fread(lua_State* L, const char* filename)
     readed = fread(buffer, 1, filesize, fp);
     fclose(fp);
 
+    chdir_fpath(filename);
     result = ll_fload(L, buffer, readed, filename);
     free(buffer);
   }

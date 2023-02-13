@@ -55,9 +55,7 @@ static const char* normal(const char* name)
 static int pmain(lua_State* L)
 {
   luaL_checkversion(L);
-  int  argc = (int)lua_tointeger(L, 1);
-  auto argv = (const char **)lua_touserdata(L, 2);
-  const char* name = argc > 1 ? argv[1] : luaos_fmain;
+  const char* name = luaL_checkstring(L, 1);
   name = normal(name);
 
   luaos_trace("LuaOS has been started\n");
@@ -78,27 +76,37 @@ int main(int argc, char* argv[])
   MallocExtension::instance()->SetMemoryReleaseRate(0);
 #else
   using namespace clipp;
-  bool compile = false;
-  std::string filename;
+  bool compile = false, fromrom = false;
+  std::string fmain(luaos_fmain), filename;
   auto cli = (
-    opt_value("filename", filename),
+    opt_value("filename", fmain),
+    option("-i", "--input").set(fromrom) & value("filename", filename),
     option("-c", "--compile").set(compile) & value("filename", filename)
   );
-  if (!parse(argc, argv, cli)) {
-    luaos_error("Invalid command line argument\n\n");
+  if (!parse(argc, argv, cli) || (compile && fromrom) || fmain[0] == '-')
+  {
+    printf(
+      " usage: luaos [module] [options]\n"
+      " Available options are:\n"
+      "     -c filename  output to file 'filename'\n"
+      "     -i filename  input from file 'filename'\n\n"
+    );
     return 1;
   }
   if (compile) {
-    luaos_trace("Prepare to compile and copy files\n");
+    luaos_trace("Prepare to compile lua files\n");
     int count = luaos_compile(L, filename.c_str());
     luaos_trace("Successfully compiled %d lua files\n\n", count);
     return 0;
   }
+  if (fromrom) {
+    int count = luaos_parse(L, filename.c_str());
+    luaos_trace("Successfully loaded %d lua files\n", count);
+  }
 #endif
   lua_pushcfunction(L, &pmain);           /* to call 'pmain' in protected mode */
-  lua_pushinteger(L, argc);               /* 1st argument */
-  lua_pushlightuserdata(L, argv);         /* 2nd argument */
-  if (luaos_pcall(L, 2, 1) == LUA_OK) {   /* do the call */
+  lua_pushstring(L, fmain.c_str());       /* 1st argument */
+  if (luaos_pcall(L, 1, 1) == LUA_OK) {   /* do the call */
     error = lua_tointeger(L, -1);         /* get result */
   }
   else {

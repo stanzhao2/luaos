@@ -17,4 +17,8 @@
 
 int luaos_compile(lua_State* L, const char* filename);
 
+int luaos_parse(lua_State* L, const char* filename);
+
+int luaos_loadlua(lua_State* L, const char* filename);
+
 /*******************************************************************************/
