@@ -5,8 +5,8 @@
 
 /*******************************************************************************/
 
-static eth::encoder encoder;
-static eth::decoder decoder;
+static std::shared_ptr<eth::encoder> encoder;
+static std::shared_ptr<eth::decoder> decoder;
 static std::mutex   fmutex;
 static std::string  fromname;
 static std::map<std::string, std::string> fluadata;
@@ -36,7 +36,7 @@ static int luaos_build(const char* filename, FILE* fp)
     luaos_error("Can't open input file: %s\n", filename);
     return 0;
   }
-  encoder.encode(0, data.c_str(), data.size(), true, true, [fp](const char* data, size_t size) {
+  encoder->encode(0, data.c_str(), data.size(), true, true, [fp](const char* data, size_t size) {
     fwrite(data, 1, size, fp);
   });
   luaos_trace("%s compile OK\n", filename);
@@ -140,16 +140,19 @@ static void unpackfile(const char* infile, const char* name, const char* data, s
   fclose(fp);
 }
 
-int luaos_parse(lua_State* L, const char* filename)
+int luaos_import(lua_State* L, const char* filename, const char* key)
 {
+  if (!decoder) {
+    decoder.reset(new eth::decoder(key, key ? strlen(key) : 0));
+  }
   std::string data = readfile(filename);
   if (data.empty()) {
     luaos_error("Cat't open input file: %s\n\n", filename);
     return -1;
   }
   int count = 0;
-  size_t size = decoder.write(data.c_str(), data.size());
-  int result = decoder.decode([&](const char* data, size_t size, const eth::decoder::header* head) {
+  size_t size = decoder->write(data.c_str(), data.size());
+  int result = decoder->decode([&](const char* data, size_t size, const eth::decoder::header* head) {
     const char* name = data;
     data = data + strlen(name) + 1;
     size = size - strlen(name) - 1;
@@ -162,12 +165,39 @@ int luaos_parse(lua_State* L, const char* filename)
     }
     unpackfile(filename, name, data, size);
   });
-  size = decoder.size();
+  size = decoder->size();
   if (size || result != 0) {
-    luaos_error("%s parse error\n\n", filename);
+    luaos_error("%s import error\n\n", filename);
     return -1;
   }
   fromname = filename;
+  return count;
+}
+
+int luaos_export(lua_State* L, const char* filename, const char* key)
+{
+  if (!decoder) {
+    decoder.reset(new eth::decoder(key, key ? strlen(key) : 0));
+  }
+  std::string data = readfile(filename);
+  if (data.empty()) {
+    luaos_error("Cat't open input file: %s\n\n", filename);
+    return -1;
+  }
+  int count = 0;
+  size_t size = decoder->write(data.c_str(), data.size());
+  int result = decoder->decode([&](const char* data, size_t size, const eth::decoder::header* head) {
+    const char* name = data;
+    data = data + strlen(name) + 1;
+    size = size - strlen(name) - 1;
+    count++;
+    unpackfile(filename, name, data, size);
+  });
+  size = decoder->size();
+  if (size || result != 0) {
+    luaos_error("%s export error\n\n", filename);
+    return -1;
+  }
   return count;
 }
 
@@ -191,8 +221,11 @@ int luaos_loadlua(lua_State* L, const char* filename)
   return 2;
 }
 
-int luaos_compile(lua_State* L, const char* filename, const std::set<std::string>& exts)
+int luaos_compile(lua_State* L, const char* filename, const std::set<std::string>& exts, const char* key)
 {
+  if (!encoder) {
+    encoder.reset(new eth::encoder(key, key ? strlen(key) : 0));
+  }
   FILE* fp = fopen(filename, "wb");
   if (!fp) {
     luaos_error("Can't open output file: %s\n", filename);

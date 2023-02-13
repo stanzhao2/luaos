@@ -14,6 +14,7 @@
 ************************************************************************************/
 
 #include <clipp/include/clipp.h>
+#include <md5.h>
 #include "luaos.h"
 #include "luaos_logo.h"
 #include "luaos_compile.h"
@@ -84,19 +85,22 @@ int main(int argc, char* argv[])
 #endif
 
   using namespace clipp;
-  bool compile = false, fromrom = false, help = false;
-  std::string fmain(luaos_fmain), filename;
+  bool compile = false, bimport = false;
+  bool help = false, usekey = false, bexport = false;
+  std::string fmain(luaos_fmain), filename, strkey;
   std::vector<std::string> extnames;
 
   auto cli = (
     opt_value("filename", fmain),
     option("-h", "/h", "-?", "/?", "--help").set(help),
-    option("-i", "/i", "--input").set(fromrom) & value("filename", filename),
-    option("-c", "/c", "--compile").set(compile) & value("filename", filename) & repeatable(opt_value("ext", extnames))
+    option("-i", "/i", "--input").set(bimport) & value("filename", filename),
+    option("-c", "/c", "--compile").set(compile) & value("filename", filename) & repeatable(opt_value("ext", extnames)),
+    option("-e", "/e", "--export").set(bexport) & value("filename", filename),
+    option("-k", "/k", "--key").set(usekey) & value("key", strkey)
   );
 
   extnames.push_back("lua");
-  if (!parse(argc, argv, cli) || help || (compile && fromrom) || fmain[0] == '-')
+  if (!parse(argc, argv, cli) || help || (compile && bimport) || fmain[0] == '-')
   {
     std::string fname(argv[0]);
     const char* pos = strrchr(argv[0], LUA_DIRSEP[0]);
@@ -107,7 +111,9 @@ int main(int argc, char* argv[])
       "  > usage: %s [module] [options]\n"
       "  > Available options are:\n"
       "  >   -c filename [[*] | [extensions]] output to file 'filename'\n"
-      "  >   -i filename input from file 'filename'\n\n",
+      "  >   -i filename import from file 'filename'\n"
+      "  >   -e filename export from file 'filename'\n"
+      "  >   -k key/password for encrypt/decrypt\n\n",
       fname.c_str()
     );
     return 0;
@@ -115,6 +121,12 @@ int main(int argc, char* argv[])
 
   lua_Integer error = -1;
   lua_State* L = luaos_local.lua_state();
+  if (!strkey.empty()) {
+    char hash[16];
+    int n = md5::hash(strkey.c_str(), strkey.size(), hash);
+    strkey.clear();
+    strkey.append(hash, n);
+  }
   if (compile)
   {
     std::set<std::string> exts;
@@ -123,20 +135,29 @@ int main(int argc, char* argv[])
     }
     luaos_trace("Prepare to compile lua files\n");
     replace(filename);
-    int count = luaos_compile(L, filename.c_str(), exts);
+    int count = luaos_compile(L, filename.c_str(), exts, usekey ? strkey.c_str() : 0);
     luaos_trace("Successfully compiled %d lua files\n\n", count);
     return 0;
   }
 
   luaos_trace("LuaOS has been started\n");
-  if (fromrom)
-  {
+  if (bexport) {
     replace(filename);
-    int count = luaos_parse(L, filename.c_str());
+    int count = luaos_export(L, filename.c_str(), usekey ? strkey.c_str() : 0);
     if (count < 0) {
       return 1;
     }
-    luaos_trace("Successfully loaded %d lua files\n", count);
+    luaos_trace("Successfully export %d lua files\n\n", count);
+    return 0;
+  }
+
+  if (bimport) {
+    replace(filename);
+    int count = luaos_import(L, filename.c_str(), usekey ? strkey.c_str() : 0);
+    if (count < 0) {
+      return 1;
+    }
+    luaos_trace("Successfully import %d lua files\n", count);
   }
 
   lua_pushcfunction(L, &pmain);           /* to call 'pmain' in protected mode */

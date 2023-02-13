@@ -18,9 +18,11 @@
 #include <string>
 #include <set>
 
-int luaos_compile(lua_State* L, const char* filename, const std::set<std::string>& exts);
+int luaos_compile(lua_State* L, const char* filename, const std::set<std::string>& exts, const char* key);
 
-int luaos_parse(lua_State* L, const char* filename);
+int luaos_import(lua_State* L, const char* filename, const char* key);
+
+int luaos_export(lua_State* L, const char* filename, const char* key);
 
 int luaos_loadlua(lua_State* L, const char* filename);
 

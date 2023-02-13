@@ -202,9 +202,11 @@ namespace eth
       u32  size;
     };
 
-    inline decoder() {
+    inline decoder(const char* key = 0, size_t size = 0) {
       clear();
-
+      if (key) {
+        _rc4.reset(key, size);
+      }
     }
     inline size_t size() const {
       return _buf.size();
@@ -353,6 +355,11 @@ namespace eth
     qlz_state_compress st;
 
   public:
+    inline encoder(const char* key = 0, size_t size = 0) {
+      if (key) {
+        _rc4.reset(key, size);
+      }
+    }
     template <typename Handler>
     void encode(int opcode, const char* data, size_t size, bool encrypt, bool compress, Handler handler)
     {
