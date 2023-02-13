@@ -85,7 +85,8 @@ int luaos_parse(lua_State* L, const char* filename)
 {
   std::string data = readfile(filename);
   if (data.empty()) {
-    return 0;
+    luaos_error("Cat't open input file: %s\n\n", filename);
+    return -1;
   }
   int count = 0;
   size_t size = decoder.write(data.c_str(), data.size());
@@ -97,9 +98,9 @@ int luaos_parse(lua_State* L, const char* filename)
     fluadata[std::string(name)] = std::string(data, size);
   });
   size = decoder.size();
-  if (size) {
-    luaos_error("%s parse error\n", filename);
-    return 0;
+  if (size || result != 0) {
+    luaos_error("%s parse error\n\n", filename);
+    return -1;
   }
   fromname = filename;
   return count;

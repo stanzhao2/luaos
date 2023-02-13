@@ -101,6 +101,9 @@ int main(int argc, char* argv[])
   }
   if (fromrom) {
     int count = luaos_parse(L, filename.c_str());
+    if (count < 0) {
+      return 1;
+    }
     luaos_trace("Successfully loaded %d lua files\n", count);
   }
 #endif
