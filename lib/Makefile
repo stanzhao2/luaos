@@ -9,7 +9,7 @@ SUBDIR7  = ./src/lua-pack
 SUBDIR8  = ./src/lua-gzip
 SUBDIR9  = ./src/lua-http-parser
 SUBDIR10 = ./src/lua-uuid
-SUBDIR11 = ./src/lua-sql
+SUBDIR11 = ./src/lua-sql/mysql
 
 MAKE = make
 
@@ -32,7 +32,4 @@ subsystem:
 	cd $(SUBDIR10) && $(MAKE) clean && $(MAKE)
 	cd $(SUBDIR11) && $(MAKE) clean && $(MAKE) mysql
 	
-	rm -f ../bin/sys/luasql/mysql.so
-	cp $(SUBDIR11)/src/mysql.so ./lua/5.4/luasql
-		
 	@echo "==== Successfully built extensions ===="
