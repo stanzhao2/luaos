@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
     if (count < 0) {
       return 1;
     }
-    luaos_trace("Successfully export %d lua files\n\n", count);
+    luaos_trace("Successfully export %d files\n\n", count);
     return 0;
   }
 
