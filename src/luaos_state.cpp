@@ -199,7 +199,6 @@ static int ll_fload(lua_State* L, const char* filename)
   }
 
   if (lua_gettop(L) == top) {
-    lua_pop(L, 1);    /* file not found */
     return LUA_OK;
   }
 
@@ -314,6 +313,7 @@ static int ll_require(lua_State* L)
 
 static int ll_dofile(lua_State* L)
 {
+  int top = lua_gettop(L);
   bool replace = false;
   size_t namelen = 0;
   char name[256], original[256];
@@ -975,7 +975,10 @@ static int init_luapath(lua_State* L)
 
   char runpath[4096];
   dir::exedir(runpath, sizeof(runpath));
-  snprintf(buffer, sizeof(buffer), "%s..%sshare%slua%s%s.%s%s?.lua;%s..%sshare%slua%s%s.%s%s?%sinit.lua;.%s?.lua;.%s?%sinit.lua"
+  snprintf(buffer, sizeof(buffer), ".%s?.lua;.%s?%sinit.lua;%s..%sshare%slua%s%s.%s%s?.lua;%s..%sshare%slua%s%s.%s%s?%sinit.lua"
+    , LUA_DIRSEP
+    , LUA_DIRSEP
+    , LUA_DIRSEP
     , runpath
     , LUA_DIRSEP
     , LUA_DIRSEP
@@ -989,9 +992,6 @@ static int init_luapath(lua_State* L)
     , LUA_DIRSEP
     , LUA_VERSION_MAJOR
     , LUA_VERSION_MINOR
-    , LUA_DIRSEP
-    , LUA_DIRSEP
-    , LUA_DIRSEP
     , LUA_DIRSEP
     , LUA_DIRSEP
   );
@@ -1003,8 +1003,7 @@ static int init_luapath(lua_State* L)
 #else
   const char* extname = "so";
 #endif
-  snprintf(buffer, sizeof(buffer), "%s..%slib%slua%s%s.%s%s?.%s;.%slib%slua%s%s.%s%s?.%s"
-    , runpath
+  snprintf(buffer, sizeof(buffer), ".%slib%slua%s%s.%s%s?.%s;%s..%slib%slua%s%s.%s%s?.%s"
     , LUA_DIRSEP
     , LUA_DIRSEP
     , LUA_DIRSEP
@@ -1012,6 +1011,7 @@ static int init_luapath(lua_State* L)
     , LUA_VERSION_MINOR
     , LUA_DIRSEP
     , extname
+    , runpath
     , LUA_DIRSEP
     , LUA_DIRSEP
     , LUA_DIRSEP
@@ -1083,7 +1083,6 @@ int luaos_pexec(lua_State* L, const char* filename, int n)
     lua_pushfstring(L, "module '%s' not found", original);
     return LUA_ERRERR;
   }
-
   result = luaos_pcall(L, 1, 0);
   if (is_success(result))
   {
