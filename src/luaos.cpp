@@ -80,7 +80,9 @@ int main(int argc, char* argv[])
 {
   display_logo();
 
-#ifndef _MSC_VER
+#ifdef _MSC_VER
+  setlocale( LC_ALL, "chs" );
+#else
   MallocExtension::instance()->SetMemoryReleaseRate(0);
 #endif
 

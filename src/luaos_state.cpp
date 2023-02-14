@@ -23,6 +23,7 @@
 #include <conv.h>
 #include "luaos.h"
 #include "luaos_socket.h"
+#include "luaos_compile.h"
 #include "luaos_subscriber.h"
 #include "luaos_traceback.h"
 
@@ -364,7 +365,9 @@ static int ll_install(lua_State* L, lua_CFunction loader)
 static std::string location(lua_State* L)
 {
   std::string data;
-#ifdef _MSC_VER
+  if (!luaos_is_debug(L)) {
+    return data;
+  }
   char filename[1024] = { 0 };
   for (int i = 1; i < 100; i++)
   {
@@ -384,7 +387,6 @@ static std::string location(lua_State* L)
       }
     }
   }
-#endif
   return data;
 }
 
@@ -1242,14 +1244,12 @@ lua_State* luaos_newstate(lua_CFunction loader)
   init_luapath(L);
   ll_install(L, loader);
 
-#if defined LUA_VERSION_NUM && LUA_VERSION_NUM >= 504 
-  lua_gc(L, LUA_GCGEN, 0, 0);
-#endif
-
-#ifdef _MSC_VER
   lua_pushboolean(L, 1);
   lua_setglobal(L, "_DEBUG");
   disable_global(L, throw_error);
+
+#if defined LUA_VERSION_NUM && LUA_VERSION_NUM >= 504 
+  lua_gc(L, LUA_GCGEN, 0, 0);
 #endif
 
   std::unique_lock<std::mutex> lock(alive_mutex);

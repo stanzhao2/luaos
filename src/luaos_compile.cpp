@@ -5,6 +5,7 @@
 
 /*******************************************************************************/
 
+static bool is_debug = true;
 static std::shared_ptr<eth::encoder> encoder;
 static std::shared_ptr<eth::decoder> decoder;
 static std::mutex   fmutex;
@@ -140,6 +141,11 @@ static void unpackfile(const char* infile, const char* name, const char* data, s
   fclose(fp);
 }
 
+int luaos_is_debug(lua_State* L)
+{
+  return is_debug ? 1 : 0;
+}
+
 int luaos_import(lua_State* L, const char* filename, const char* key)
 {
   if (!decoder) {
@@ -163,6 +169,7 @@ int luaos_import(lua_State* L, const char* filename, const char* key)
       fluadata[std::string(name)] = std::string(data, size);
       return;
     }
+    is_debug = false;
     unpackfile(filename, name, data, size);
   });
   size = decoder->size();
