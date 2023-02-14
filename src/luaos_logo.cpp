@@ -54,7 +54,7 @@ void display_logo()
   logo += copyright;
 
   char version[128];
-  sprintf(version, "  > + Depends: %s\n\n", LUA_RELEASE);
+  sprintf(version, "  > + Dependencies: %s\n\n", LUA_RELEASE);
   logo += version;
   logo_print(logo.c_str(), color_type::normal);
 }
