@@ -569,25 +569,43 @@ static int luaos_wait(lua_State* L)
   if (L != mainL) {
     luaL_error(L, "The wait function cannot be invoke by coroutines");
   }
-  lua_getglobal(L, luaos_waiting_name);
-  if (lua_isuserdata(L, -1))
+  static thread_local bool notify_ok = false;
+  if (!notify_ok)
   {
-    /* stop waiting */
-    lua_Service* ios_wait = (lua_Service*)lua_touserdata(L, -1);
-    ios_wait->stop();
-    lua_pushnil(L);
-    lua_setglobal(L, luaos_waiting_name);
+    notify_ok = true;
+    lua_getglobal(L, luaos_waiting_name);
+    if (lua_isuserdata(L, -1))
+    {
+      /* stop waiting */
+      lua_Service* ios_wait = (lua_Service*)lua_touserdata(L, -1);
+      ios_wait->stop();
+      lua_pushnil(L);
+      lua_setglobal(L, luaos_waiting_name);
+    }
+    lua_pop(L, 1);  /* remove userdata from stack */
   }
-  lua_pop(L, 1);  /* remove userdata from stack */
-
   size_t count = 0;
   size_t timeout = -1;
   if (lua_gettop(L) > 0) {
     timeout = (size_t)luaL_checkinteger(L, 1);
   }
+  static bool start_ok = false;
   io_handler ios_local = luaos_local.lua_service();
+  if (start_ok == false)
+  {
+    if (luaos_main_ios()->id() == ios_local->id()) {
+      start_ok = true;
+      luaos_trace("LuaOS started successfully\n");
+    }
+  }
+  static thread_local size_t last_alive = 0;
+  size_t interval = 10000;
+  size_t begin = os::milliseconds();
   if (timeout == 0) {
-    keep_alive(L);
+    if (begin - last_alive > interval) {
+      keep_alive(L);
+      last_alive = begin;
+    }
     count = ios_local->poll();
   }
   else
@@ -596,12 +614,15 @@ static int luaos_wait(lua_State* L)
     if (timeout < 100) {
       expires = timeout;
     }
-    size_t begin = os::milliseconds();
     while (!ios_local->stopped())
     {
-      keep_alive(L);
       count += ios_local->run_for(std::chrono::milliseconds(expires));
-      if (os::milliseconds() - begin > timeout) {
+      size_t now = begin = os::milliseconds();
+      if (now - last_alive > interval) {
+        keep_alive(L);
+        last_alive = now;
+      }
+      if (now - begin > timeout) {
         break;
       }
     }

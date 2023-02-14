@@ -32,6 +32,8 @@ public:
   virtual ~local_values();
 };
 
+io_handler luaos_main_ios();
+
 #define luaos_local local_values::instance()
 
 /***********************************************************************************/

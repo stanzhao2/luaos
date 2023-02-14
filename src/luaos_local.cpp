@@ -40,6 +40,11 @@ static void luaos_signal(int code)
 
 /***********************************************************************************/
 
+io_handler luaos_main_ios()
+{
+  return main_handler;
+}
+
 local_values::local_values()
 {
   _ios = luaos_ionew();
