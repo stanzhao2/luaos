@@ -20,7 +20,7 @@ SOURCE  := src/hiredis.o
 LIBDIRS := -L$(LUA_LIBDIR)
 
 #include path
-INCDIRS := $(LUA_INCLUDE) -I../../../include
+INCDIRS := $(LUA_INCLUDE) -I../../../include -I../../../3rd/hiredis
 
 #precompile macro
 CC_FLAG :=
@@ -29,7 +29,7 @@ CC_FLAG :=
 COMPILEOPTION := -std=c++11 -fPIC -w -Wfatal-errors -O3 -pipe -m64
 
 #link options
-LINKOPTION := -shared -Wl,--retain-symbols-file=./src/symbol/redis.export -Wl,--version-script=./src/symbol/redis.script -o $(OUTPUT)
+LINKOPTION := -shared -Wl,--retain-symbols-file=./src/symbol/hiredis.export -Wl,--version-script=./src/symbol/hiredis.script -o $(OUTPUT)
 
 #dependency librarys
 LIBS := -llua -lhiredis
