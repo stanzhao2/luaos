@@ -390,10 +390,30 @@ static std::string location(lua_State* L)
   return data;
 }
 
+static int ll_savelog(const std::string& str, color_type color)
+{
+  lua_State* L = luaos_local.lua_state();
+  if (luaos_is_debug(L)) {
+    return 0;
+  }
+  if (color != color_type::red) {
+    return 0;
+  }
+  FILE* fp = fopen("~luaos.err.log", "a");
+  if (!fp) {
+    return 0;
+  }
+  fwrite(str.c_str(), 1, str.size(), fp);
+  fclose(fp);
+  return 0;
+}
+
 static int ll_output(const std::string& str, color_type color)
 {
   static std::mutex _mutex;
   std::unique_lock<std::mutex> lock(_mutex);
+  ll_savelog(str, color);
+
 #ifdef _MSC_VER
   console::instance()->print(str, color);
 #else
@@ -455,11 +475,7 @@ static int color_print(lua_State* L) {
 
 static int color_trace(lua_State* L)
 {
-#ifdef _MSC_VER
-  return ll_printf(L, color_type::yellow);  /* lua trace function */
-#else
-  return 0;
-#endif
+  return luaos_is_debug(L) ? ll_printf(L, color_type::yellow) : 0;
 }
 
 static int color_error(lua_State* L) {
