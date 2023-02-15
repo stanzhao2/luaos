@@ -11,7 +11,7 @@ include $(CONFIG)
 
 ######################### OPTIONS BEGIN ###########################
 #target file
-OUTPUT  := ../../lua/5.4/curl.so
+OUTPUT  := ../../lua/$(LUA_VERSION)/curl.so
 
 #source files
 SOURCE  := src/luacurl.o

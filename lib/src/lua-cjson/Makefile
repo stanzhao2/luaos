@@ -11,7 +11,7 @@ include $(CONFIG)
 
 ######################### OPTIONS BEGIN ###########################
 #target file
-OUTPUT  := ../../lua/5.4/cjson.so
+OUTPUT  := ../../lua/$(LUA_VERSION)/cjson.so
 
 #source files
 SOURCE  := src/fpconv.o src/strbuf.o src/lua_cjson.o

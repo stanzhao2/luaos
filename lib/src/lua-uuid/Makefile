@@ -11,7 +11,7 @@ include $(CONFIG)
 
 ######################### OPTIONS BEGIN ###########################
 #target file
-OUTPUT  := ../../lua/5.4/uuid.so
+OUTPUT  := ../../lua/$(LUA_VERSION)/uuid.so
 
 #source files
 SOURCE  := src/uuid.o

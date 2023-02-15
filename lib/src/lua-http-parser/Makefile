@@ -11,7 +11,7 @@ include $(CONFIG)
 
 ######################### OPTIONS BEGIN ###########################
 #target file
-OUTPUT  := ../../lua/5.4/http/parser.so
+OUTPUT  := ../../lua/$(LUA_VERSION)/http/parser.so
 
 #source files
 SOURCE  := src/parser.o src/http-parser/http_parser.o

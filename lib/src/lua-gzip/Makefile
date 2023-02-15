@@ -11,7 +11,7 @@ include $(CONFIG)
 
 ######################### OPTIONS BEGIN ###########################
 #target file
-OUTPUT  := ../../lua/5.4/gzip.so
+OUTPUT  := ../../lua/$(LUA_VERSION)/gzip.so
 
 #source files
 SOURCE  := src/gzip.o

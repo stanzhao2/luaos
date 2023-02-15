@@ -11,7 +11,7 @@ include $(CONFIG)
 
 ######################### OPTIONS BEGIN ###########################
 #target file
-OUTPUT  := ../../lua/5.4/rapidjson.so
+OUTPUT  := ../../lua/$(LUA_VERSION)/rapidjson.so
 
 #source files
 SOURCE  := src/Document.o src/Schema.o src/values.o src/rapidjson.o

@@ -11,7 +11,7 @@ include $(CONFIG)
 
 ######################### OPTIONS BEGIN ###########################
 #target file
-OUTPUT  := ../../lua/5.4/skiplist.so
+OUTPUT  := ../../lua/$(LUA_VERSION)/skiplist.so
 
 #source files
 SOURCE  := src/lua_skiplist.o \

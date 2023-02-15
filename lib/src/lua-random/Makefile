@@ -11,7 +11,7 @@ include $(CONFIG)
 
 ######################### OPTIONS BEGIN ###########################
 #target file
-OUTPUT  := ../../lua/5.4/random.so
+OUTPUT  := ../../lua/$(LUA_VERSION)/random.so
 
 #source files
 SOURCE  := src/random.o src/genrand/genrand32.o src/genrand/genrand64.o

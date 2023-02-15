@@ -11,7 +11,7 @@ include $(CONFIG)
 
 ######################### OPTIONS BEGIN ###########################
 #target file
-OUTPUT  := ../../lua/5.4/pack.so
+OUTPUT  := ../../lua/$(LUA_VERSION)/pack.so
 
 #source files
 SOURCE  := src/luapack.o

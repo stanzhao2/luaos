@@ -11,7 +11,7 @@ include $(CONFIG)
 
 ######################### OPTIONS BEGIN ###########################
 #target file
-OUTPUT  := ../../lua/5.4/conv.so
+OUTPUT  := ../../lua/$(LUA_VERSION)/conv.so
 
 #source files
 SOURCE  := src/conv.o

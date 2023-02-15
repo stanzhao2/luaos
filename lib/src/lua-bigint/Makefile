@@ -11,7 +11,7 @@ include $(CONFIG)
 
 ######################### OPTIONS BEGIN ###########################
 #target file
-OUTPUT  := ../../lua/5.4/bigint.so
+OUTPUT  := ../../lua/$(LUA_VERSION)/bigint.so
 
 #source files
 SOURCE  := src/lua-bigint.o src/bigint/bigint.o src/bigint/bigint-glue.o

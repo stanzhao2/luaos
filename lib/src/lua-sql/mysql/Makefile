@@ -11,7 +11,7 @@ include $(CONFIG)
 
 ######################### OPTIONS BEGIN ###########################
 #target file
-OUTPUT  := ../../../lua/5.4/mysql.so
+OUTPUT  := ../../../lua/$(LUA_VERSION)/luasql/mysql.so
 
 #source files
 SOURCE  := ../luasql.o \

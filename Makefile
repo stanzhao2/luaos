@@ -36,6 +36,8 @@ all:
 	$(MKDIR) ./lib
 	$(MKDIR) ./lib/lua
 	$(MKDIR) ./lib/lua/$(LUA_VERSION)
+	$(MKDIR) ./lib/lua/$(LUA_VERSION)/http
+	$(MKDIR) ./lib/lua/$(LUA_VERSION)/luasql
 	
 	cd $(LUABIGINT) && $(MAKE)
 	cd $(LUACJSON) && $(MAKE)
