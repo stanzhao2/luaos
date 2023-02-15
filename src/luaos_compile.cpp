@@ -81,13 +81,16 @@ static std::string readfile(const char* filename)
 
 static int luaos_build(const char* filename, FILE* fp)
 {
+  int opcode = 0;
   std::string data(filename, strlen(filename) + 1);
 #ifndef _MSC_VER
   const char* permis = permissions(filename);
   if (permis) {
+    opcode = 1;
     data.append(permis, strlen(permis) + 1);
   } else {
-    data.append("\0");
+    luaos_error("Cat't get permissions: %s\n", filename);
+    return 0;
   }
 #endif
   data.append(readfile(filename));
@@ -95,11 +98,11 @@ static int luaos_build(const char* filename, FILE* fp)
     luaos_error("Can't open input file: %s\n", filename);
     return 0;
   }
-  encoder->encode(0, data.c_str(), data.size(), true, true, [fp](const char* data, size_t size) {
+  encoder->encode(opcode, data.c_str(), data.size(), true, true, [fp](const char* data, size_t size) {
     fwrite(data, 1, size, fp);
   });
-  luaos_trace("%s compile OK\n", filename);
-  return 0;
+  luaos_trace("%s build OK\n", filename);
+  return 1;
 }
 
 static int luaos_build(const char* path, const char* output, FILE* fp, const std::set<std::string>& exts)
@@ -127,9 +130,8 @@ static int luaos_build(const char* path, const char* output, FILE* fp, const std
         iter = exts.find("all");
       }
       if (iter != exts.end()) {
-        count++;
         snprintf(filename, sizeof(filename), "%s/%s", path, file.name);
-        luaos_build(filename, fp);
+        count += luaos_build(filename, fp);
       }
       continue;
     }
@@ -161,7 +163,7 @@ static void makefiledir(const char* filename)
   }
 }
 
-static bool unpackfile(const char* infile, const char* name, const char* data, size_t size)
+static int unpackfile(const char* infile, const char* name, const char* data, size_t size)
 {
   std::string root;
   const char* pos = strrchr(infile, '/');
@@ -185,18 +187,18 @@ static bool unpackfile(const char* infile, const char* name, const char* data, s
     fclose(fp);
     if (size == file.size()) {
       if (memcmp(data, file.c_str(), size) == 0) {
-        return false;
+        return 0;
       }
     }
   }
   fp = fopen(fullname.c_str(), "wb");
   if (!fp) {
     luaos_error("Can't create file: %s", fullname.c_str());
-    return false;
+    return 0;
   }
   fwrite(data, 1, size, fp);
   fclose(fp);
-  return true;
+  return 1;
 }
 
 int luaos_is_debug(lua_State* L)
@@ -204,7 +206,7 @@ int luaos_is_debug(lua_State* L)
   return is_debug ? 1 : 0;
 }
 
-int luaos_import(lua_State* L, const char* filename, const char* key)
+int luaos_export(lua_State* L, const char* filename, const char* key, bool all)
 {
   if (!decoder) {
     decoder.reset(new eth::decoder(key, key ? strlen(key) : 0));
@@ -216,67 +218,39 @@ int luaos_import(lua_State* L, const char* filename, const char* key)
   }
   int count = 0;
   size_t size = decoder->write(data.c_str(), data.size());
-  int result = decoder->decode([&](const char* data, size_t size, const eth::decoder::header* head) {
+  int result = decoder->decode([&](const char* data, size_t size, const eth::decoder::header* head)
+  {
     const char* name = data;
     data = data + strlen(name) + 1;
     size = size - strlen(name) - 1;
 
-#ifndef _MSC_VER
-    const char* permis = data;
-    data = data + strlen(permis) + 1;
-    size = size - strlen(permis) - 1;
-#endif
+    const char* permis = nullptr;
+    if (head->opcode) { /* linux */
+      permis = data;
+      data = data + strlen(permis) + 1;
+      size = size - strlen(permis) - 1;
+    }
 
     const char* pos = strrchr(name, '.');
-    printf("%s\n", pos);
-    if (pos && _tinydir_strcmp(pos + 1, "lua") == 0) {
-      count++;
-      fluadata[std::string(name)] = std::string(data, size);
-      return;
+    if (!all && pos) {
+      if (_tinydir_strcmp(pos + 1, "lua") == 0) {
+        count++;
+        fluadata[std::string(name)] = std::string(data, size);
+        is_debug = false;
+        return;
+      }
     }
-    is_debug = false;
-    if (unpackfile(filename, name, data, size)){
-      luaos_trace("Unpacking: %s\n", name);
-    }
-  });
-  size = decoder->size();
-  if (size || result != 0) {
-    luaos_error("%s import error\n\n", filename);
-    return -1;
-  }
-  fromname = filename;
-  return count;
-}
-
-int luaos_export(lua_State* L, const char* filename, const char* key)
-{
-  if (!decoder) {
-    decoder.reset(new eth::decoder(key, key ? strlen(key) : 0));
-  }
-  std::string data = readfile(filename);
-  if (data.empty()) {
-    luaos_error("Cat't open input file: %s\n\n", filename);
-    return -1;
-  }
-  int count = 0;
-  size_t size = decoder->write(data.c_str(), data.size());
-  int result = decoder->decode([&](const char* data, size_t size, const eth::decoder::header* head) {
-    const char* name = data;
-    data = data + strlen(name) + 1;
-    size = size - strlen(name) - 1;
-
-#ifndef _MSC_VER
-    const char* permis = data;
-    data = data + strlen(permis) + 1;
-    size = size - strlen(permis) - 1;
-#endif
-
     if (unpackfile(filename, name, data, size)) {
-      luaos_trace("Unpacking: %s\n", name);
-      count++;
 #ifndef _MSC_VER
-      chmod(name, unpermissions(permis));
+      if (permis && permis[0]) {
+        if (chmod(name, unpermissions(permis))) {
+          luaos_error("Cat't set permissions: %s\n", filename);
+          return;
+        }
+      }
 #endif
+      count++;
+      luaos_trace("%s unpack OK\n", name);
     }
   });
   size = decoder->size();

@@ -135,17 +135,17 @@ int main(int argc, char* argv[])
     for (size_t i = 0; i < extnames.size(); i++) {
       exts.insert(extnames[i]);
     }
-    luaos_trace("Prepare to compile lua files\n");
+    luaos_trace("Prepare to build project files\n");
     replace(filename);
     int count = luaos_compile(L, filename.c_str(), exts, usekey ? strkey.c_str() : 0);
-    luaos_trace("Successfully compiled %d lua files\n\n", count);
+    luaos_trace("Successfully build %d files\n\n", count);
     return 0;
   }
 
   luaos_trace("LuaOS has been started\n");
   if (bexport) {
     replace(filename);
-    int count = luaos_export(L, filename.c_str(), usekey ? strkey.c_str() : 0);
+    int count = luaos_export(L, filename.c_str(), (usekey ? strkey.c_str() : 0), true);
     if (count < 0) {
       return 1;
     }
@@ -155,11 +155,11 @@ int main(int argc, char* argv[])
 
   if (bimport) {
     replace(filename);
-    int count = luaos_import(L, filename.c_str(), usekey ? strkey.c_str() : 0);
+    int count = luaos_export(L, filename.c_str(), (usekey ? strkey.c_str() : 0), false);
     if (count < 0) {
       return 1;
     }
-    luaos_trace("Successfully import %d lua files\n", count);
+    luaos_trace("Successfully import %d files\n", count);
   }
 
   lua_pushcfunction(L, &pmain);           /* to call 'pmain' in protected mode */
