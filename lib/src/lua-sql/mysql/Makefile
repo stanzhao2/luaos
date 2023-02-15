@@ -33,7 +33,7 @@ COMPILEOPTION := -std=c++11 -fPIC -w -Wfatal-errors -O2
 LINKOPTION := -shared -Wl,--retain-symbols-file=./src/symbol/mysql.export -Wl,--version-script=./src/symbol/mysql.script -o $(OUTPUT)
 
 #dependency librarys
-LIBS := -llua -lmysqlclient
+LIBS := -llua -Wl,-Bstatic -lmysqlclient -Wl,-Bdynamic
 
 ########################## OPTIONS END ############################
 
