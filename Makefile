@@ -1,5 +1,7 @@
 
 CONFIG := ./config
+include $(CONFIG)
+
 INSTALLPATH = $(PREFIX)/bin
 THIS_DIR = $(abspath $(dir $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))))
 
