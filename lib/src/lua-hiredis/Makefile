@@ -32,7 +32,7 @@ COMPILEOPTION := -std=c++11 -fPIC -w -Wfatal-errors -O2
 LINKOPTION := -shared -Wl,--retain-symbols-file=./src/symbol/hiredis.export -Wl,--version-script=./src/symbol/hiredis.script -o $(OUTPUT)
 
 #dependency librarys
-LIBS := -llua -lhiredis
+LIBS := -llua -Wl,-Bstatic -lhiredis -Wl,-Bdynamic
 
 ########################## OPTIONS END ############################
 

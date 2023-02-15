@@ -2,6 +2,7 @@
 CONFIG := ./config
 include $(CONFIG)
 
+SRC = ./src
 INSTALLPATH = $(PREFIX)/bin
 THIS_DIR = $(abspath $(dir $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))))
 
@@ -24,14 +25,12 @@ LUASKIPLIST   = $(LUAEXT)/lua-skiplist
 LUAUUID       = $(LUAEXT)/lua-uuid
 LUAMYSQL      = $(LUAEXT)/lua-sql/mysql
 
-SRC    = ./src
 MAKE   = make
 MKDIR  = mkdir -p
 RM     = rm -f
 TARGET = luaos
 
 all:
-	$(MKDIR) ./bin	
 	cd $(LIBLUA) && $(MAKE) linux && $(MAKE) install
 	cd $(LIBHIREDIS) && $(MAKE) && $(MAKE) install
 	
@@ -55,10 +54,12 @@ all:
 	cd $(LUAUUID) && $(MAKE)
 	cd $(LUAMYSQL) && $(MAKE)
 	
-	cd $(SRC) && $(MAKE)	
+	$(MKDIR) ./bin	
+	cd $(SRC) && $(MAKE)
 	@echo "==== Successfully built LuaOS ===="
 	
-clean:	
+clean:
+	cd $(SRC) && $(MAKE) clean
 	cd $(LIBLUA) && $(MAKE) clean
 	cd $(LIBHIREDIS) && $(MAKE) clean
 	cd $(LUABIGINT) && $(MAKE) clean
