@@ -27,10 +27,10 @@ SOURCE  := luaos.o \
 		   luaos_traceback.o
 		   
 #library path
-LIBDIRS := -L$(LUA_LIBDIR) -L$(PREFIX)/lib
+LIBDIRS := -L$(LUA_LIBDIR)
 
 #include path
-INCDIRS := $(LUA_INCLUDE) -I$(PREFIX)/include -I../include
+INCDIRS := $(LUA_INCLUDE) -I../include
 
 #precompile macro
 CC_FLAG := -DTLS_SSL_ENABLE
@@ -39,7 +39,7 @@ CC_FLAG := -DTLS_SSL_ENABLE
 COMPILEOPTION := -std=c++11 -fPIC -w -Wfatal-errors -O3 -pipe -m64
 
 #rpath options
-LIBLOADPATH := -Wl,-rpath=./ -Wl,-rpath=../lib -Wl,-rpath=/usr/local/lib
+LIBLOADPATH := -Wl,-rpath=./ -Wl,-rpath=../lib -Wl,-rpath=L$(LUA_LIBDIR)
 
 #link options
 LINKOPTION := -o $(OUTPUT) $(LIBLOADPATH)
