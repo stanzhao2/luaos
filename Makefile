@@ -3,7 +3,7 @@ CONFIG := ./config
 include $(CONFIG)
 
 SRC = ./src
-INSTALLPATH = $(PREFIX)/bin
+PREFIXPATH = $(PREFIX)/bin
 THIS_DIR = $(abspath $(dir $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))))
 
 LIB3RD        = ./3rd
@@ -25,10 +25,12 @@ LUASKIPLIST   = $(LUAEXT)/lua-skiplist
 LUAUUID       = $(LUAEXT)/lua-uuid
 LUAMYSQL      = $(LUAEXT)/lua-sql/mysql
 
-MAKE   = make
-MKDIR  = mkdir -p
-RM     = rm -f
-TARGET = luaos
+MAKE    = make
+MKDIR   = mkdir -p
+RM      = rm -f
+TARGET  = luaos
+VERSION = 2.0
+INSTALLPATH = $(PREFIXPATH)/$(TARGET).$(VERSION)
 
 all:
 	cd $(LIBLUA) && $(MAKE) linux && $(MAKE) install
@@ -56,7 +58,6 @@ all:
 	
 	$(MKDIR) ./bin	
 	cd $(SRC) && $(MAKE)
-	@echo "==== Successfully built LuaOS ===="
 	
 clean:
 	cd $(SRC) && $(MAKE) clean
@@ -77,7 +78,21 @@ clean:
 	cd $(LUAMYSQL) && $(MAKE) clean
 	
 install:
-	$(RM) $(INSTALLPATH)/$(TARGET)
-	ln -s $(THIS_DIR) $(INSTALLPATH)/$(TARGET)
-	@echo "==== Successfully install LuaOS ===="
+	$(MKDIR) $(INSTALLPATH)
+	$(MKDIR) $(INSTALLPATH)/bin
+	$(MKDIR) $(INSTALLPATH)/lib
+	
+	cp -a ./lib/lua $(INSTALLPATH)/lib
+	cp -a ./share $(INSTALLPATH)/
+	cp ./bin/$(TARGET) $(INSTALLPATH)/bin
+	
+	$(RM) $(PREFIXPATH)/$(TARGET)
+	ln -s $(INSTALLPATH)/bin/$(TARGET) $(PREFIXPATH)/$(TARGET)
+	
+tar:
+	tar zcvf ./$(TARGET).$(VERSION).tar.gz $(INSTALLPATH)
+	
+uninstall:
+	$(RM) -r $(INSTALLPATH)
+	$(RM) $(PREFIXPATH)/$(TARGET)
 	
