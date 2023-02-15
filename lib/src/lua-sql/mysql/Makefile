@@ -27,7 +27,7 @@ INCDIRS := $(LUA_INCLUDE) -I/usr/include/mysql
 CC_FLAG :=
 
 #compile options
-COMPILEOPTION := -std=c++11 -fPIC -w -Wfatal-errors -O3 -pipe -m64
+COMPILEOPTION := -std=c++11 -fPIC -w -Wfatal-errors -O2
 
 #link options
 LINKOPTION := -shared -Wl,--retain-symbols-file=./src/symbol/mysql.export -Wl,--version-script=./src/symbol/mysql.script -o $(OUTPUT)

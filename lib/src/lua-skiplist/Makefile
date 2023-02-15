@@ -27,7 +27,7 @@ INCDIRS := $(LUA_INCLUDE) -I../../../include
 CC_FLAG :=
 
 #compile options
-COMPILEOPTION := -std=c++11 -fPIC -w -Wfatal-errors -O3 -pipe -m64
+COMPILEOPTION := -std=c++11 -fPIC -w -Wfatal-errors -O2
 
 #link options
 LINKOPTION := -shared -Wl,--retain-symbols-file=./src/symbol/skiplist.export -Wl,--version-script=./src/symbol/skiplist.script -o $(OUTPUT)

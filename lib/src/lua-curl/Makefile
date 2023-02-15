@@ -26,7 +26,7 @@ INCDIRS := $(LUA_INCLUDE)
 CC_FLAG :=
 
 #compile options
-COMPILEOPTION := -std=c++11 -fPIC -w -Wfatal-errors -O3 -pipe -m64
+COMPILEOPTION := -std=c++11 -fPIC -w -Wfatal-errors -O2
 
 #link options
 LINKOPTION := -shared -Wl,--retain-symbols-file=./src/symbol/luacurl.export -Wl,--version-script=./src/symbol/luacurl.script -o $(OUTPUT)

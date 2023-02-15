@@ -36,7 +36,7 @@ INCDIRS := $(LUA_INCLUDE) -I../include
 CC_FLAG := -DTLS_SSL_ENABLE
 
 #compile options
-COMPILEOPTION := -std=c++11 -fPIC -w -Wfatal-errors -O3 -pipe -m64
+COMPILEOPTION := -std=c++11 -fPIC -w -Wfatal-errors -O2
 
 #rpath options
 LIBLOADPATH := -Wl,-rpath=./ -Wl,-rpath=../lib -Wl,-rpath=L$(LUA_LIBDIR)
