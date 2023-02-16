@@ -23,12 +23,13 @@
 
 /***********************************************************************************/
 
-static void logo_print(const std::string& str, color_type color)
+static void logo_print(const char* str, color_type color)
 {
 #ifdef _MSC_VER
-  console::instance()->print(str, color);
+  const std::string info(str);
+  console::instance()->print(info, color);
 #else
-  printf("\033[1;36m%s\033[0m", str.c_str());  //缺省色(青色)
+  printf("\033[1;36m%s\033[0m", str);  //缺省色(青色)
 #endif
 }
 
@@ -36,27 +37,20 @@ static void logo_print(const std::string& str, color_type color)
 
 void display_logo()
 {
-  std::string logo = R"(
-  '##:::::::'##::::'##::::'###:::::'#######:::'######::  (R)2.0
-   ##::::::: ##:::: ##:::'## ##:::'##.... ##:'##... ##:
-   ##::::::: ##:::: ##::'##:. ##:: ##:::: ##: ##:::..::
-   ##::::::: ##:::: ##:'##:::. ##: ##:::: ##:. ######::
-   ##::::::: ##:::: ##: #########: ##:::: ##::..... ##:  __   ____________
-   ##::::::: ##:::: ##: ##.... ##: ##:::: ##:'##::: ##:  | \\  |______  | 
-   ########:. #######:: ##:::: ##:. #######::. ######:: .|  \\_|______  | 
-  ........:::.......:::..:::::..:::.......::::......:::....................
-  )";
+  char version[64];
+  snprintf(version, sizeof(version), "LuaOS %d.%d (R)", LOS_VERSION_MAJOR, LOS_VERSION_MINOR);
 
   time_t now = time(0);
   struct tm* ptm = localtime(&now);
   char copyright[128];
-  sprintf(copyright, "Copyright (C) 2021-%d, All right reserved\n\n", ptm->tm_year + 1900);
-  logo += copyright;
+  snprintf(copyright, sizeof(copyright), "Copyright (C) 2021-%d, All right reserved", ptm->tm_year + 1900);
 
-  char version[128];
-  sprintf(version, "  > + Dependencies: %s\n\n", LUA_RELEASE);
-  logo += version;
-  logo_print(logo.c_str(), color_type::normal);
+  char depends[128];
+  snprintf(depends, sizeof(depends), "Dependencies: %s", LUA_RELEASE);
+
+  char buffer[1024];
+  snprintf(buffer, sizeof(buffer), "\n> %s\n> %s\n> %s\n\n", version, copyright, depends);
+  logo_print(buffer, color_type::normal);
 }
 
 /***********************************************************************************/

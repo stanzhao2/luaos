@@ -1,5 +1,4 @@
 ﻿
-
 local luaos = require("luaos");
 
 function main(...)

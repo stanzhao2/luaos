@@ -21,6 +21,9 @@
 #include <tinydir.h>
 #include "luaos_local.h"
 
+#define LOS_VERSION_MAJOR 2
+#define LOS_VERSION_MINOR	0
+
 class stack_rollback final {
   int _topidx = 0;
   lua_State* ls = 0;
