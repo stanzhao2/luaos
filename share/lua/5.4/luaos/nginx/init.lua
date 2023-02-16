@@ -999,7 +999,7 @@ local function on_socket_error(peer, ec)
 end
 
 local function on_socket_receive(peer, data)
-    local session = sessions[peer:id()]    
+    local session = sessions[peer:id()]
     if not session then
         return;
     end

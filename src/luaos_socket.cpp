@@ -986,7 +986,6 @@ LUALIB_API int lua_os_socket_ssl_context(lua_State* L)
       asio::buffer(cert.c_str(), cert.size()), ec
     );
   }
-
   if (ec) {
     delete shared;
     return 0;

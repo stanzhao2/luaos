@@ -1,9 +1,15 @@
 ﻿
 local luaos = require("luaos");
 
+local sslcer = "";
+local sslcer_key = "";
+
 function main(...)
+    local sslctx = luaos.ssl.context(
+        sslcer, sslcer_key
+    );
 	local nginx, result = luaos.nginx.start(
-        "0.0.0.0", 8899, "wwwroot"
+        "0.0.0.0", 8899, "wwwroot", sslctx
     );
 	if not nginx then
 		throw(result);

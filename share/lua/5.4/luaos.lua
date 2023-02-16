@@ -164,15 +164,15 @@ end
 
 luaos.ssl = {
     ---创建一个 SSL context
-    ---@param cert string
-    ---@param key string
-    ---@param pwd string
+    ---@param  certfile string
+    ---@param  keyfile string
+    ---@param  keypwd string
     ---@return userdata
-    context = function(cert, key, pwd)
+    context = function(certfile, keyfile, keypwd)
         if not ssl then
             return nil;
         end
-        return ssl.context(cert, key, pwd);
+        return ssl.context(certfile, keyfile, keypwd);
     end
 };
 

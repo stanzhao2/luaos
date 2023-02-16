@@ -1127,6 +1127,7 @@ int luaos_pexec(lua_State* L, const char* filename, int n)
 static int luaopen_socket(lua_State* L)
 {
   lua_socket::init_metatable(L);
+  lua_socket::init_ssl_metatable(L);
   return 0;
 }
 
