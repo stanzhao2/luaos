@@ -16,6 +16,7 @@
 #include <clipp/include/clipp.h>
 #include <md5.h>
 #include "luaos.h"
+#include "luaos_mc.h"
 #include "luaos_logo.h"
 #include "luaos_compile.h"
 
@@ -94,7 +95,7 @@ int main(int argc, char* argv[])
 
   auto cli = (
     opt_value("filename", fmain),
-    option("-h", "/h", "-?", "/?", "--help").set(help),
+    option("-h", "/h", "--help").set(help),
     option("-i", "/i", "--input").set(bimport) & value("filename", filename),
     option("-c", "/c", "--compile").set(compile) & value("filename", filename) & repeatable(opt_value("ext", extnames)),
     option("-e", "/e", "--export").set(bexport) & value("filename", filename),
@@ -102,8 +103,25 @@ int main(int argc, char* argv[])
   );
 
   extnames.push_back("lua");
-  if (!parse(argc, argv, cli) || help || (compile && bimport) || fmain[0] == '-')
-  {
+  if (!parse(argc, argv, cli) || (compile && bimport) || fmain[0] == '-') {
+    luaos_error("Invalid parameter, use -h to view help\n\n");
+    return 0;
+  }
+
+  luaos_trace("LuaOS has been started\n");
+  lua_Integer error = -1;
+  lua_State* L = luaos_local.lua_state();
+
+  if (strkey.empty()) {
+    code_generate(L);
+    strkey = luaL_checkstring(L, -1);
+    lua_pop(L, 1);
+  }
+  else if (strkey.size() != 32) {
+    luaos_error("Invalid EHC code\n\n");
+    return 1;
+  }
+  if (help) {
     std::string fname(argv[0]);
     const char* pos = strrchr(argv[0], LUA_DIRSEP[0]);
     if (pos) {
@@ -112,51 +130,42 @@ int main(int argc, char* argv[])
     printf(
       "  > usage: %s [module] [options]\n"
       "  > Available options are:\n"
+      "  >   -h show this usage\n"
       "  >   -c filename [[*] | [extensions]] output to file 'filename'\n"
       "  >   -i filename import from file 'filename'\n"
       "  >   -e filename export from file 'filename'\n"
-      "  >   -k key/password for encrypt/decrypt\n\n",
+      "  >   -k EHC code for encrypt/decrypt\n",
       fname.c_str()
     );
+    printf("  > EHC: %s\n\n", strkey.c_str());
     return 0;
   }
-
-  lua_Integer error = -1;
-  lua_State* L = luaos_local.lua_state();
-  if (!strkey.empty()) {
-    char hash[16];
-    int n = md5::hash(strkey.c_str(), strkey.size(), hash);
-    strkey.clear();
-    strkey.append(hash, n);
-  }
-  if (compile)
-  {
+  if (compile) {
     std::set<std::string> exts;
     for (size_t i = 0; i < extnames.size(); i++) {
       exts.insert(extnames[i]);
     }
     luaos_trace("Prepare to build project files\n");
     replace(filename);
-    int count = luaos_compile(L, filename.c_str(), exts, usekey ? strkey.c_str() : 0);
+    int count = luaos_compile(L, filename.c_str(), exts, strkey.c_str());
     luaos_trace("Successfully build %d files\n\n", count);
     return 0;
   }
-
-  luaos_trace("LuaOS has been started\n");
   if (bexport) {
     replace(filename);
-    int count = luaos_export(L, filename.c_str(), (usekey ? strkey.c_str() : 0), true);
+    int count = luaos_export(L, filename.c_str(), strkey.c_str(), true);
     if (count < 0) {
+      luaos_trace("Please check whether the key entered is correct\n\n");
       return 1;
     }
     luaos_trace("Successfully export %d files\n\n", count);
     return 0;
   }
-
   if (bimport) {
     replace(filename);
-    int count = luaos_export(L, filename.c_str(), (usekey ? strkey.c_str() : 0), false);
+    int count = luaos_export(L, filename.c_str(), strkey.c_str(), false);
     if (count < 0) {
+      luaos_trace("Please check whether the key entered is correct\n\n");
       return 1;
     }
     luaos_trace("Successfully import %d files\n", count);

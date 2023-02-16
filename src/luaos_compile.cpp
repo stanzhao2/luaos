@@ -193,7 +193,7 @@ static int unpackfile(const char* infile, const char* name, const char* data, si
   }
   fp = fopen(fullname.c_str(), "wb");
   if (!fp) {
-    luaos_error("Can't create file: %s", fullname.c_str());
+    luaos_error("Can't create file: %s\n", fullname.c_str());
     return 0;
   }
   fwrite(data, 1, size, fp);
@@ -213,7 +213,7 @@ int luaos_export(lua_State* L, const char* filename, const char* key, bool all)
   }
   std::string data = readfile(filename);
   if (data.empty()) {
-    luaos_error("Cat't open input file: %s\n\n", filename);
+    luaos_error("Cat't open input file: %s\n", filename);
     return -1;
   }
   int count = 0;
@@ -255,7 +255,7 @@ int luaos_export(lua_State* L, const char* filename, const char* key, bool all)
   });
   size = decoder->size();
   if (size || result != 0) {
-    luaos_error("%s export error\n\n", filename);
+    luaos_error("%s export error\n", filename);
     return -1;
   }
   return count;

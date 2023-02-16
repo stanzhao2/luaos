@@ -5,9 +5,8 @@
 #include <stdint.h>
 #include <md5.h>
 
-#ifdef _MSC_VER
-
 #include "luaos_mc.h"
+#ifdef _MSC_VER
 #include "bios/bios.h"
 
 static bool run_wmi_service()
