@@ -16,6 +16,9 @@
     <Filter Include="源文件\dumper">
       <UniqueIdentifier>{2a78f6d1-8637-4c05-bc61-de7247314d1d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="源文件\bios">
+      <UniqueIdentifier>{51965d3c-9fe9-4c60-a0e2-419ecdbf60af}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\luaos.cpp">
@@ -43,6 +46,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\luaos_compile.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\bios\bios.cpp">
+      <Filter>源文件\bios</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\luaos_mc.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -81,6 +90,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\luaos_compile.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\bios\bios.h">
+      <Filter>源文件\bios</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\luaos_mc.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -55,6 +55,12 @@ local luaos = {
         return os.typename();
     end,
     
+    ---获取当前系统硬件唯一码
+    ---@return string
+    uniqueid = function()
+        return os.uniqueid();
+    end,
+    
     ---遍历目录下所有文件
     ---@param handler fun(filename:string, ext:string):void
     ---@param path string

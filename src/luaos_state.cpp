@@ -24,6 +24,7 @@
 #include "luaos.h"
 #include "luaos_socket.h"
 #include "luaos_compile.h"
+#include "luaos_mc.h"
 #include "luaos_subscriber.h"
 #include "luaos_traceback.h"
 
@@ -1173,6 +1174,7 @@ static int luaopen_los(lua_State* L)
   luaL_Reg methods[] = {
     {"typename",      os_typename   },
     {"files",         enum_files    },
+    {"uniqueid",      code_generate },
     {"wait",          luaos_wait    },
     {"stopped",       luaos_stopped },
     {"exit",          luaos_exit    },
