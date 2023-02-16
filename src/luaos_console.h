@@ -45,10 +45,7 @@ public:
   }
   void print(const std::string& str, color_type color)
   {
-    std::string data(str);
-    if (is_utf8(str.c_str(), str.size())) {
-      data = utf8_to_mbs(str);
-    }
+    std::string data = utf8_to_mbs(str);
     WORD print_color = FOREGROUND_INTENSITY;
     switch (color) {
     case color_type::red:
