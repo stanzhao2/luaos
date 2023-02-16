@@ -26,7 +26,7 @@ class console final
 {
   inline console()
   {
-    SetConsoleOutputCP(65001);
+    //SetConsoleOutputCP(65001);
     CONSOLE_SCREEN_BUFFER_INFO si;
     _handle = GetStdHandle(STD_OUTPUT_HANDLE);
     GetConsoleScreenBufferInfo(_handle, &si);
@@ -43,8 +43,12 @@ public:
     static console _console;
     return &_console;
   }
-  void print(const std::string& data, color_type color)
+  void print(const std::string& str, color_type color)
   {
+    std::string data(str);
+    if (is_utf8(str.c_str(), str.size())) {
+      data = utf8_to_mbs(str);
+    }
     WORD print_color = FOREGROUND_INTENSITY;
     switch (color) {
     case color_type::red:
