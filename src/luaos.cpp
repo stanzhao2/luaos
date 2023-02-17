@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
   display_logo();
 
 #ifdef _MSC_VER
-  setlocale( LC_ALL, "chs" );
+  setlocale(LC_ALL, "");
 #else
   MallocExtension::instance()->SetMemoryReleaseRate(0);
 #endif

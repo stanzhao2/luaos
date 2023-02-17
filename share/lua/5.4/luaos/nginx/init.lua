@@ -460,6 +460,10 @@ local function on_http_request(peer, request)
         end
     end
 
+    function headers:id()
+        return peer:id();
+    end
+    
     local ok = pcall(script.on_request, request, headers, params)
     if not ok then
         on_http_error(peer, headers, _STATE_ERROR)
