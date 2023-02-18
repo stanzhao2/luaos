@@ -933,9 +933,6 @@ static int lua_os_socket(lua_State* L)
 
 static bool verify_cert(bool preverified, ssl::verify_context& ctx, std::shared_ptr<std::string> last)
 {
-  if (preverified) {
-    return true;
-  }
   char subject_name[1024];
   X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
   X509_NAME_oneline(X509_get_subject_name(cert), subject_name, sizeof(subject_name));
@@ -944,7 +941,7 @@ static bool verify_cert(bool preverified, ssl::verify_context& ctx, std::shared_
     *last = subject_name;
     return true;
   }
-  return (*last != subject_name);
+  return preverified && (*last != subject_name);
 }
 
 static int lua_os_socket_ssl_context(lua_State* L)
