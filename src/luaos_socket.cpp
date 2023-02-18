@@ -384,7 +384,7 @@ static void on_handshake(const error_code& ec, int index, socket_type peer)
   }
 }
 
-LUALIB_API int lua_os_socket_bind(lua_State* L)
+static int lua_os_socket_bind(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
@@ -419,7 +419,7 @@ LUALIB_API int lua_os_socket_bind(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_socket_listen(lua_State* L)
+static int lua_os_socket_listen(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
@@ -453,7 +453,7 @@ LUALIB_API int lua_os_socket_listen(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_socket_connect(lua_State* L)
+static int lua_os_socket_connect(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
@@ -511,7 +511,7 @@ LUALIB_API int lua_os_socket_connect(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_socket_select(lua_State* L)
+static int lua_os_socket_select(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
@@ -549,7 +549,7 @@ LUALIB_API int lua_os_socket_select(lua_State* L)
   return 0;
 }
 
-LUALIB_API int lua_os_socket_endpoint(lua_State* L)
+static int lua_os_socket_endpoint(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
@@ -570,7 +570,7 @@ LUALIB_API int lua_os_socket_endpoint(lua_State* L)
   return 2;
 }
 
-LUALIB_API int lua_os_socket_encode(lua_State* L)
+static int lua_os_socket_encode(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
@@ -599,7 +599,7 @@ LUALIB_API int lua_os_socket_encode(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_socket_send(lua_State* L)
+static int lua_os_socket_send(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
@@ -629,7 +629,7 @@ LUALIB_API int lua_os_socket_send(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_socket_send_to(lua_State* L)
+static int lua_os_socket_send_to(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
@@ -673,7 +673,7 @@ LUALIB_API int lua_os_socket_send_to(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_socket_available(lua_State* L)
+static int lua_os_socket_available(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
@@ -687,7 +687,7 @@ LUALIB_API int lua_os_socket_available(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_socket_nodelay(lua_State* L)
+static int lua_os_socket_nodelay(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
@@ -707,7 +707,7 @@ LUALIB_API int lua_os_socket_nodelay(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_socket_decode(lua_State* L)
+static int lua_os_socket_decode(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
@@ -755,7 +755,7 @@ LUALIB_API int lua_os_socket_decode(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_socket_receive(lua_State* L)
+static int lua_os_socket_receive(lua_State* L)
 {
   static thread_local std::string data;
   lua_socket** mt = lua_socket::check_metatable(L);
@@ -786,7 +786,7 @@ LUALIB_API int lua_os_socket_receive(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_socket_receive_from(lua_State* L)
+static int lua_os_socket_receive_from(lua_State* L)
 {
   static thread_local std::string data;
   lua_socket** mt = lua_socket::check_metatable(L);
@@ -824,7 +824,7 @@ LUALIB_API int lua_os_socket_receive_from(lua_State* L)
   return 3;
 }
 
-LUALIB_API int lua_os_socket_timeout(lua_State* L)
+static int lua_os_socket_timeout(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
@@ -843,7 +843,7 @@ LUALIB_API int lua_os_socket_timeout(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_socket_id(lua_State* L)
+static int lua_os_socket_id(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
@@ -856,7 +856,7 @@ LUALIB_API int lua_os_socket_id(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_socket_is_open(lua_State* L)
+static int lua_os_socket_is_open(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
@@ -869,7 +869,7 @@ LUALIB_API int lua_os_socket_is_open(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_socket_gc(lua_State* L)
+static int lua_os_socket_gc(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (mt)
@@ -881,7 +881,7 @@ LUALIB_API int lua_os_socket_gc(lua_State* L)
   return 0;
 }
 
-LUALIB_API int lua_os_socket_close(lua_State* L)
+static int lua_os_socket_close(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
@@ -893,7 +893,7 @@ LUALIB_API int lua_os_socket_close(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_socket(lua_State* L)
+static int lua_os_socket(lua_State* L)
 {
   socket::ref sock;
   auto ios = luaos_local.lua_service();
@@ -931,7 +931,23 @@ LUALIB_API int lua_os_socket(lua_State* L)
 
 /*******************************************************************************/
 
-LUALIB_API int lua_os_socket_ssl_context(lua_State* L)
+static bool verify_cert(bool preverified, ssl::verify_context& ctx, std::shared_ptr<std::string> last)
+{
+  if (preverified) {
+    return true;
+  }
+  char subject_name[1024];
+  X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
+  X509_NAME_oneline(X509_get_subject_name(cert), subject_name, sizeof(subject_name));
+
+  if (last->empty()) {
+    *last = subject_name;
+    return true;
+  }
+  return (*last != subject_name);
+}
+
+static int lua_os_socket_ssl_context(lua_State* L)
 {
 #ifdef TLS_SSL_ENABLE
   shared_ctx* shared = new shared_ctx(ssl::context_base::sslv23);
@@ -979,8 +995,14 @@ LUALIB_API int lua_os_socket_ssl_context(lua_State* L)
     | ssl::context::no_sslv2
     | ssl::context::single_dh_use
   );
-
   error_code ec;
+  ctx->set_default_verify_paths(ec);
+  if (ckey.empty()) {
+    ctx->set_verify_mode(ssl::verify_peer);
+    ctx->set_verify_mode(ssl::verify_fail_if_no_peer_cert);
+    std::shared_ptr<std::string> context(new std::string());
+    ctx->set_verify_callback(std::bind(&verify_cert, std::placeholders::_1, std::placeholders::_2, context));
+  }
   if (certfile) {
     ctx->use_certificate_chain(
       asio::buffer(cert.c_str(), cert.size()), ec
@@ -1025,7 +1047,7 @@ LUALIB_API int lua_os_socket_ssl_context(lua_State* L)
 #endif
 }
 
-LUALIB_API int lua_os_socket_ssl_gc(lua_State* L)
+static int lua_os_socket_ssl_gc(lua_State* L)
 {
 #ifdef TLS_SSL_ENABLE
   shared_ctx** userdata = lua_socket::check_ssl_metatable(L);
@@ -1038,12 +1060,12 @@ LUALIB_API int lua_os_socket_ssl_gc(lua_State* L)
   return 0;
 }
 
-LUALIB_API int lua_os_socket_ssl_close(lua_State* L)
+static int lua_os_socket_ssl_close(lua_State* L)
 {
   return lua_os_socket_ssl_gc(L);
 }
 
-LUALIB_API int lua_os_socket_ssl_enable(lua_State* L)
+static int lua_os_socket_ssl_enable(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
@@ -1065,7 +1087,7 @@ LUALIB_API int lua_os_socket_ssl_enable(lua_State* L)
   return 1;
 }
 
-LUALIB_API int lua_os_socket_ssl_handshake(lua_State* L)
+static int lua_os_socket_ssl_handshake(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
   if (!mt) {
