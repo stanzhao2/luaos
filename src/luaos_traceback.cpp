@@ -50,7 +50,7 @@ static int findfield(lua_State *L, int objidx, int level)
 /*
 ** Search for a name for a function in all loaded modules
 */
-static int pushglobalfuncname (lua_State *L, lua_Debug *ar)
+static int pushglobalfuncname(lua_State *L, lua_Debug *ar)
 {
   int top = lua_gettop(L);
   lua_getinfo(L, "f", ar);  /* push function */
@@ -91,7 +91,7 @@ static void pushfuncname(lua_State *L, lua_Debug *ar)
     lua_pushliteral(L, "?");
 }
 
-static int lastlevel (lua_State *L)
+static int lastlevel(lua_State *L)
 {
   lua_Debug ar;
   int li = 1, le = 1;
@@ -106,13 +106,11 @@ static int lastlevel (lua_State *L)
   return le - 1;
 }
 
-int luaos_traceback(lua_State *L)
+static void traceback(lua_State *L, lua_State *L1, const char *msg, int level)
 {
-  int level = 1;
   luaL_Buffer b;
   lua_Debug ar;
-  int last = lastlevel(L);
-  const char* msg = luaL_checkstring(L, -1);
+  int last = lastlevel(L1);
   int limit2show = (last - level > LEVELS1 + LEVELS2) ? LEVELS1 : -1;
   luaL_buffinit(L, &b);
   if (msg) {
@@ -120,8 +118,7 @@ int luaos_traceback(lua_State *L)
     luaL_addchar(&b, '\n');
   }
   luaL_addstring(&b, "stack traceback:");
-  while (lua_getstack(L, level++, &ar))
-  {
+  while (lua_getstack(L1, level++, &ar)) {
     if (limit2show-- == 0) {  /* too many levels? */
       int n = last - level - LEVELS2 + 1;  /* number of levels to skip */
       lua_pushfstring(L, "\n\t...\t(skipping %d levels)", n);
@@ -129,7 +126,7 @@ int luaos_traceback(lua_State *L)
       level += n;  /* and skip to last levels */
     }
     else {
-      lua_getinfo(L, "Slnt", &ar);
+      lua_getinfo(L1, "Slnt", &ar);
       if (ar.source[0] == '@' || ar.source[0] == '=') {
         ar.source += 1;
       }
@@ -145,6 +142,37 @@ int luaos_traceback(lua_State *L)
     }
   }
   luaL_pushresult(&b);
+}
+
+/*
+** Auxiliary function used by several library functions: check for
+** an optional thread as function's first argument and set 'arg' with
+** 1 if this argument is present (so that functions can skip it to
+** access their other arguments)
+*/
+static lua_State *getthread(lua_State *L, int *arg)
+{
+  if (lua_isthread(L, 1)) {
+    *arg = 1;
+    return lua_tothread(L, 1);
+  }
+  else {
+    *arg = 0;
+    return L;  /* function will operate over current thread */
+  }
+}
+
+int luaos_traceback(lua_State *L)
+{
+  int arg;
+  lua_State *L1 = getthread(L, &arg);
+  const char *msg = lua_tostring(L, arg + 1);
+  if (msg == NULL && !lua_isnoneornil(L, arg + 1))  /* non-string 'msg'? */
+    lua_pushvalue(L, arg + 1);  /* return it untouched */
+  else {
+    int level = (int)luaL_optinteger(L, arg + 2, (L == L1) ? 1 : 0);
+    traceback(L, L1, msg, level);
+  }
   return 1;
 }
 

@@ -36,27 +36,64 @@
 //common functions
 /***********************************************************************************/
 
-inline static int is_success(int result) {
-  return result == LUA_OK;
+inline static int is_success(int status) {
+  return status == LUA_OK || status == LUA_YIELD;
+}
+
+/*
+** Continuation function for 'pcall' and 'xpcall'. Both functions
+** already pushed a 'true' before doing the call, so in case of success
+** 'finishpcall' only has to return everything in the stack minus
+** 'extra' values (where 'extra' is exactly the number of items to be
+** ignored).
+*/
+static int finishpcall(lua_State *L, int status, lua_KContext extra)
+{
+  if (!is_success(status)) {  /* error? */
+    if (extra == 2) {
+      lua_pushboolean(L, 0);  /* first result (false) */
+      lua_pushvalue(L, -2);   /* error message */
+      return 2;  /* return false, msg */
+    }
+    lua_error(L);
+  }
+  return lua_gettop(L) - (int)extra;  /* return all results */
+}
+
+/*
+** Do a protected call with error handling. After 'lua_rotate', the
+** stack will have <f, err, true, f, [args...]>; so, the function passes
+** 2 to 'finishpcall' to skip the 2 first values when returning results.
+*/
+static int xpcall(lua_State *L)
+{
+  int status;
+  int n = lua_gettop(L);
+  luaL_checktype(L, 2, LUA_TFUNCTION);  /* check error function */
+  lua_pushboolean(L, 1);  /* first result */
+  lua_pushvalue(L, 1);    /* function */
+  lua_rotate(L, 3, 2);    /* move them below function's arguments */
+  status = lua_pcallk(L, n - 2, LUA_MULTRET, 2, 2, finishpcall);
+  return finishpcall(L, status, 2);
 }
 
 static int pcall(lua_State* L)
 {
-  luaL_argcheck(L, lua_isfunction(L, 1), 1, "value expected");
-  int result = luaos_pcall(L, lua_gettop(L) - 1, LUA_MULTRET);
-  lua_pushboolean(L, is_success(result) ? 1 : 0);
-  lua_insert(L, 1);
-  return lua_gettop(L);
+  luaL_checktype(L, 1, LUA_TFUNCTION);  /* check pcall function */
+  lua_pushcfunction(L, luaos_traceback);
+  lua_insert(L, 2);
+  return xpcall(L);
 }
 
 int luaos_pcall(lua_State* L, int n, int r)
 {
   int index = lua_gettop(L) - n;
+  luaL_checktype(L, index, LUA_TFUNCTION);  /* check pcall function */
   lua_pushcfunction(L, luaos_traceback);
   lua_insert(L, index);
-  int result = lua_pcall(L, n, r, index);
+  int status = lua_pcallk(L, n, r, index, 1, finishpcall);
   lua_remove(L, index); /* remove traceback from stack */
-  return result;
+  return status;
 }
 
 /***********************************************************************************/
@@ -723,7 +760,7 @@ static int string_split(lua_State *L)
 }
 
 template <typename Handler>
-void dir_eachof(const char* dir, const char* ext, Handler handler)
+bool dir_eachof(const char* dir, const char* ext, Handler handler)
 {
   _tinydir_char_t fdir[_TINYDIR_PATH_MAX];
   _tinydir_strcpy(fdir, dir);
@@ -744,7 +781,9 @@ void dir_eachof(const char* dir, const char* ext, Handler handler)
     if (file.is_dir == 0)
     {
       if (!ext || _tinydir_strcmp(file.extension, ext) == 0) {
-        handler(fdir, file);
+        if (!handler(fdir, file)) {
+          return false;
+        }
       }
       continue;
     }
@@ -760,9 +799,12 @@ void dir_eachof(const char* dir, const char* ext, Handler handler)
     handler(fdir, file);
     char newdir[_TINYDIR_PATH_MAX];
     sprintf(newdir, "%s%s%s", fdir, LUA_DIRSEP, file.name);
-    dir_eachof(newdir, ext, handler);
+    if (!dir_eachof(newdir, ext, handler)) {
+      break;
+    }
   }
   tinydir_close(&tdir);
+  return true;
 }
 
 static int enum_files(lua_State* L)
@@ -782,11 +824,11 @@ static int enum_files(lua_State* L)
     [L, ext](const char* path, const tinydir_file& file)
     {
       if (file.is_dir) {
-        return;
+        return true;
       }
       if (_tinydir_stricmp(ext, "*")) {
         if (_tinydir_stricmp(file.extension, ext)) {
-          return;
+          return true;
         }
       }
       while (*path) {
@@ -810,10 +852,13 @@ static int enum_files(lua_State* L)
       else {
         lua_pushstring(L, file.extension);
       }
-      if (luaos_pcall(L, 2, 0) != LUA_OK) {
+      int result = luaos_pcall(L, 2, 0);
+      if (!is_success(result)) {
         luaos_error("%s\n", lua_tostring(L, -1));
         lua_pop(L, 1); //pop error from stack
+        return false;
       }
+      return true;
     }
   );
   return 0;
