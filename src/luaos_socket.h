@@ -140,30 +140,31 @@ public:
 
 /*******************************************************************************/
 
-LUALIB_API int lua_os_socket              (lua_State* L);
-LUALIB_API int lua_os_socket_close        (lua_State* L);
-LUALIB_API int lua_os_socket_gc           (lua_State* L);
-LUALIB_API int lua_os_socket_id           (lua_State* L);
-LUALIB_API int lua_os_socket_is_open      (lua_State* L);
-LUALIB_API int lua_os_socket_timeout      (lua_State* L);
-LUALIB_API int lua_os_socket_bind         (lua_State* L);
-LUALIB_API int lua_os_socket_listen       (lua_State* L);
-LUALIB_API int lua_os_socket_connect      (lua_State* L);
-LUALIB_API int lua_os_socket_endpoint     (lua_State* L);
-LUALIB_API int lua_os_socket_nodelay      (lua_State* L);
-LUALIB_API int lua_os_socket_select       (lua_State* L);
-LUALIB_API int lua_os_socket_encode       (lua_State* L);
-LUALIB_API int lua_os_socket_send         (lua_State* L);
-LUALIB_API int lua_os_socket_send_to      (lua_State* L);
-LUALIB_API int lua_os_socket_available    (lua_State* L);
-LUALIB_API int lua_os_socket_decode       (lua_State* L);
-LUALIB_API int lua_os_socket_receive      (lua_State* L);
-LUALIB_API int lua_os_socket_receive_from (lua_State* L);
-
-LUALIB_API int lua_os_socket_ssl_context  (lua_State* L);
-LUALIB_API int lua_os_socket_ssl_enable   (lua_State* L);
-LUALIB_API int lua_os_socket_ssl_gc       (lua_State* L);
-LUALIB_API int lua_os_socket_ssl_close    (lua_State* L);
-LUALIB_API int lua_os_socket_ssl_handshake(lua_State* L);
+int lua_os_socket                (lua_State* L);
+int lua_os_socket_close          (lua_State* L);
+int lua_os_socket_gc             (lua_State* L);
+int lua_os_socket_id             (lua_State* L);
+int lua_os_socket_is_open        (lua_State* L);
+int lua_os_socket_timeout        (lua_State* L);
+int lua_os_socket_bind           (lua_State* L);
+int lua_os_socket_listen         (lua_State* L);
+int lua_os_socket_connect        (lua_State* L);
+int lua_os_socket_endpoint       (lua_State* L);
+int lua_os_socket_nodelay        (lua_State* L);
+int lua_os_socket_select         (lua_State* L);
+int lua_os_socket_encode         (lua_State* L);
+int lua_os_socket_send           (lua_State* L);
+int lua_os_socket_send_to        (lua_State* L);
+int lua_os_socket_available      (lua_State* L);
+int lua_os_socket_decode         (lua_State* L);
+int lua_os_socket_receive        (lua_State* L);
+int lua_os_socket_receive_from   (lua_State* L);
+                                 
+int lua_os_socket_ssl_context    (lua_State* L);
+int lua_os_socket_ssl_enable     (lua_State* L);
+int lua_os_socket_ssl_gc         (lua_State* L);
+int lua_os_socket_ssl_close      (lua_State* L);
+int lua_os_socket_ssl_handshake  (lua_State* L);
+int lua_os_socket_ssl_verify_peer(lua_State* L);
 
 /*******************************************************************************/
