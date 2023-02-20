@@ -31,8 +31,10 @@ enum struct family_type {
 #ifdef TLS_SSL_ENABLE
 struct shared_ctx {
   shared_ctx(ssl::context_base::method method)
-    : ctx(new tls::ssl_context(method)) {
+    : ctx(new tls::ssl_context(method))
+    , funcref(0) {
   }
+  int funcref;
   std::shared_ptr<tls::ssl_context> ctx;
 };
 #endif
@@ -165,6 +167,5 @@ int lua_os_socket_ssl_enable     (lua_State* L);
 int lua_os_socket_ssl_gc         (lua_State* L);
 int lua_os_socket_ssl_close      (lua_State* L);
 int lua_os_socket_ssl_handshake  (lua_State* L);
-int lua_os_socket_ssl_verify_peer(lua_State* L);
 
 /*******************************************************************************/

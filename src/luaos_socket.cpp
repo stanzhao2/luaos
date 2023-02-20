@@ -170,7 +170,6 @@ void lua_socket::init_ssl_metatable(lua_State* L)
   struct luaL_Reg methods[] = {
     { "__gc",         lua_os_socket_ssl_gc       },
     { "close",        lua_os_socket_ssl_close    },
-    { "verify_peer",  lua_os_socket_ssl_verify_peer },
     { NULL,           NULL },
   };
   lexnew_metatable(L, ssl_metatable_name(), methods);
@@ -1026,6 +1025,10 @@ static int lua_os_socket_ssl_gc(lua_State* L)
   if (!userdata) {
     return 0;
   }
+  int funcref = (*userdata)->funcref;
+  if (funcref) {
+    luaL_unref(L, LUA_REGISTRYINDEX, funcref);
+  }
   delete *userdata;
   *userdata = nullptr;
 #endif
@@ -1052,8 +1055,9 @@ static bool verify_cert(bool preverified, ssl::verify_context& ctx, int funcref)
   stack_rollback rollback(L);
 
   lua_rawgeti(L, LUA_REGISTRYINDEX, funcref);
-  luaL_unref(L, LUA_REGISTRYINDEX, funcref);
-
+  if (!lua_isfunction(L, -1)) {
+    return preverified;
+  }
   lua_pushboolean(L, preverified ? 1 : 0);
   lua_pushstring(L, subject_name);
   int result = luaos_pcall(L, 2, 1);
@@ -1068,24 +1072,6 @@ static bool verify_cert(bool preverified, ssl::verify_context& ctx, int funcref)
 }
 #endif
 
-static int lua_os_socket_ssl_verify_peer(lua_State* L)
-{
-#ifdef TLS_SSL_ENABLE
-  shared_ctx** userdata = lua_socket::check_ssl_metatable(L);
-  if (!userdata) {
-    return 0;
-  }
-  int funcref = 0;
-  if (lua_isfunction(L, -1)) {
-    funcref = luaL_ref(L, LUA_REGISTRYINDEX);
-  }
-  auto ctx = (*userdata)->ctx;
-  ctx->set_verify_mode(ssl::verify_peer);
-  ctx->set_verify_callback(std::bind(&verify_cert, std::placeholders::_1, std::placeholders::_2, funcref));
-#endif
-  return 0;
-}
-
 static int lua_os_socket_ssl_enable(lua_State* L)
 {
   lua_socket** mt = lua_socket::check_metatable(L);
@@ -1098,6 +1084,21 @@ static int lua_os_socket_ssl_enable(lua_State* L)
   shared_ctx** userdata = lua_socket::check_ssl_metatable(L, 2);
   if (!userdata) {
     return 0;
+  }
+  if (lua_isfunction(L, 3))
+  {
+    lua_pushvalue(L, 3);
+    (*userdata)->funcref  = luaL_ref(L, LUA_REGISTRYINDEX);
+    auto ctx = (*userdata)->ctx;
+
+    ctx->set_verify_mode(ssl::verify_peer);
+    ctx->set_verify_mode(ssl::verify_fail_if_no_peer_cert);
+
+    const char* certfile = luaL_optstring(L, 4, nullptr);
+    if (certfile) {
+      ctx->load_verify_file(certfile);
+    }
+    ctx->set_verify_callback(std::bind(&verify_cert, std::placeholders::_1, std::placeholders::_2, (*userdata)->funcref));
   }
   lua_socket* lua_sock = *mt;
   lua_sock->ssl_enable((*userdata)->ctx);
