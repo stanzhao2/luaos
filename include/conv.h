@@ -1,8 +1,9 @@
 
 #pragma once
 
-#include <locale.h>
+#include <locale>
 #include <string>
+#include <memory>
 #include <codecvt>
 
 inline static bool is_utf8(const char* p, size_t n = 0)

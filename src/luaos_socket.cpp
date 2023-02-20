@@ -105,90 +105,6 @@ size_t lua_socket::send_to(const char* data, size_t size, const ip::udp::endpoin
 
 /*******************************************************************************/
 
-const char* lua_socket::metatable_name()
-{
-  return "luaos-socket";
-}
-
-void lua_socket::init_metatable(lua_State* L)
-{
-  lua_getglobal(L, "io");
-  lua_pushcfunction(L, lua_os_socket);
-  lua_setfield(L, -2, "socket");
-  lua_pop(L, 1); //pop os from stack
-
-  struct luaL_Reg methods[] = {
-    { "__gc",         lua_os_socket_gc            },
-    { "listen",       lua_os_socket_listen        },
-    { "bind",         lua_os_socket_bind          },
-    { "connect",      lua_os_socket_connect       },
-    { "close",        lua_os_socket_close         },
-    { "is_open",      lua_os_socket_is_open       },
-    { "id",           lua_os_socket_id            },
-    { "nodelay",      lua_os_socket_nodelay       },
-    { "available",    lua_os_socket_available     },
-    { "timeout",      lua_os_socket_timeout       },
-    { "endpoint",     lua_os_socket_endpoint      },
-    { "select",       lua_os_socket_select        },
-    { "encode",       lua_os_socket_encode        },
-    { "send",         lua_os_socket_send          },
-    { "send_to",      lua_os_socket_send_to       },
-    { "decode",       lua_os_socket_decode        },
-    { "receive",      lua_os_socket_receive       },
-    { "receive_from", lua_os_socket_receive_from  },
-    { "sslv23",       lua_os_socket_ssl_enable    },
-    { "handshake",    lua_os_socket_ssl_handshake },
-    { NULL,           NULL },
-  };
-  lexnew_metatable(L, metatable_name(), methods);
-  lua_pop(L, 1);
-}
-
-lua_socket** lua_socket::check_metatable(lua_State* L)
-{
-  lua_socket** self = lexget_userdata<lua_socket*>(L, 1, metatable_name());
-  if (!self || !(*self)) {
-    return nullptr;
-  }
-  return self;
-}
-
-/*******************************************************************************/
-
-const char* lua_socket::ssl_metatable_name()
-{
-  return "luaos-ssl-context";
-}
-
-void lua_socket::init_ssl_metatable(lua_State* L)
-{
-  lua_newtable(L);
-  lua_pushcfunction(L, lua_os_socket_ssl_context);
-  lua_setfield(L, -2, "context");
-  lua_setglobal(L, "ssl");
-
-  struct luaL_Reg methods[] = {
-    { "__gc",         lua_os_socket_ssl_gc       },
-    { "close",        lua_os_socket_ssl_close    },
-    { NULL,           NULL },
-  };
-  lexnew_metatable(L, ssl_metatable_name(), methods);
-  lua_pop(L, 1);
-}
-
-#ifdef TLS_SSL_ENABLE
-shared_ctx** lua_socket::check_ssl_metatable(lua_State* L, int index)
-{
-  shared_ctx** self = lexget_userdata<shared_ctx*>(L, index, ssl_metatable_name());
-  if (!self || !(*self)) {
-    return nullptr;
-  }
-  return self;
-}
-#endif
-
-/*******************************************************************************/
-
 static void on_error(const error_code& ec, int index, socket_type peer)
 {
   lua_State* L = luaos_local.lua_state();
@@ -1110,5 +1026,89 @@ static int lua_os_socket_ssl_handshake(lua_State* L)
   lua_pushboolean(L, 1);
   return 1;
 }
+
+/*******************************************************************************/
+
+const char* lua_socket::metatable_name()
+{
+  return "luaos-socket";
+}
+
+void lua_socket::init_metatable(lua_State* L)
+{
+  lua_getglobal(L, "io");
+  lua_pushcfunction(L, lua_os_socket);
+  lua_setfield(L, -2, "socket");
+  lua_pop(L, 1); //pop os from stack
+
+  struct luaL_Reg methods[] = {
+    { "__gc",         lua_os_socket_gc            },
+    { "listen",       lua_os_socket_listen        },
+    { "bind",         lua_os_socket_bind          },
+    { "connect",      lua_os_socket_connect       },
+    { "close",        lua_os_socket_close         },
+    { "is_open",      lua_os_socket_is_open       },
+    { "id",           lua_os_socket_id            },
+    { "nodelay",      lua_os_socket_nodelay       },
+    { "available",    lua_os_socket_available     },
+    { "timeout",      lua_os_socket_timeout       },
+    { "endpoint",     lua_os_socket_endpoint      },
+    { "select",       lua_os_socket_select        },
+    { "encode",       lua_os_socket_encode        },
+    { "send",         lua_os_socket_send          },
+    { "send_to",      lua_os_socket_send_to       },
+    { "decode",       lua_os_socket_decode        },
+    { "receive",      lua_os_socket_receive       },
+    { "receive_from", lua_os_socket_receive_from  },
+    { "sslv23",       lua_os_socket_ssl_enable    },
+    { "handshake",    lua_os_socket_ssl_handshake },
+    { NULL,           NULL },
+  };
+  lexnew_metatable(L, metatable_name(), methods);
+  lua_pop(L, 1);
+}
+
+lua_socket** lua_socket::check_metatable(lua_State* L)
+{
+  lua_socket** self = lexget_userdata<lua_socket*>(L, 1, metatable_name());
+  if (!self || !(*self)) {
+    return nullptr;
+  }
+  return self;
+}
+
+/*******************************************************************************/
+
+const char* lua_socket::ssl_metatable_name()
+{
+  return "luaos-ssl-context";
+}
+
+void lua_socket::init_ssl_metatable(lua_State* L)
+{
+  lua_newtable(L);
+  lua_pushcfunction(L, lua_os_socket_ssl_context);
+  lua_setfield(L, -2, "context");
+  lua_setglobal(L, "ssl");
+
+  struct luaL_Reg methods[] = {
+    { "__gc",         lua_os_socket_ssl_gc       },
+    { "close",        lua_os_socket_ssl_close    },
+    { NULL,           NULL },
+  };
+  lexnew_metatable(L, ssl_metatable_name(), methods);
+  lua_pop(L, 1);
+}
+
+#ifdef TLS_SSL_ENABLE
+shared_ctx** lua_socket::check_ssl_metatable(lua_State* L, int index)
+{
+  shared_ctx** self = lexget_userdata<shared_ctx*>(L, index, ssl_metatable_name());
+  if (!self || !(*self)) {
+    return nullptr;
+  }
+  return self;
+}
+#endif
 
 /*******************************************************************************/
