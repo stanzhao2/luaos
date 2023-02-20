@@ -116,10 +116,9 @@ function i_socket:receive_from(size) end;
 
 ---开启 socket SSL 功能
 ---@param  ctx ssl-context
----@param  callback fun(status:boolean, subject:string)|nil
 ---@param  certfile string|nil
 ---@return boolean
-function i_socket:sslv23(ctx, callback, certfile) end;
+function i_socket:sslv23(ctx, certfile) end;
 
 ---SSL 握手
 ---@overload fun(handler:fun(ec:integer):void):boolean

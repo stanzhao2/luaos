@@ -31,10 +31,8 @@ enum struct family_type {
 #ifdef TLS_SSL_ENABLE
 struct shared_ctx {
   shared_ctx(ssl::context_base::method method)
-    : ctx(new tls::ssl_context(method))
-    , funcref(0) {
+    : ctx(new tls::ssl_context(method)) {
   }
-  int funcref;
   std::shared_ptr<tls::ssl_context> ctx;
 };
 #endif
