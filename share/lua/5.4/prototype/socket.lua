@@ -118,7 +118,7 @@ function i_socket:receive_from(size) end;
 ---@param  ctx ssl-context
 ---@param  certfile string|nil
 ---@return boolean
-function i_socket:sslv23(ctx, certfile) end;
+function i_socket:cainfo(ctx, certfile) end;
 
 ---SSL 握手
 ---@overload fun(handler:fun(ec:integer):void):boolean
