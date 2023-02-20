@@ -850,7 +850,7 @@ static int lua_os_socket(lua_State* L)
 static int lua_os_socket_ssl_context(lua_State* L)
 {
 #ifdef TLS_SSL_ENABLE
-  shared_ctx* shared = new shared_ctx(ssl::context_base::sslv23);
+  shared_ctx* shared = new shared_ctx(ssl::context_base::tlsv12);
   if (!shared) {
     return 0;
   }
@@ -1060,7 +1060,7 @@ void lua_socket::init_metatable(lua_State* L)
     { "decode",       lua_os_socket_decode        },
     { "receive",      lua_os_socket_receive       },
     { "receive_from", lua_os_socket_receive_from  },
-    { "sslv23",       lua_os_socket_ssl_enable    },
+    { "cainfo",       lua_os_socket_ssl_enable    },
     { "handshake",    lua_os_socket_ssl_handshake },
     { NULL,           NULL },
   };

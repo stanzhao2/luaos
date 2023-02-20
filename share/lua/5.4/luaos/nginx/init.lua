@@ -1060,7 +1060,7 @@ end
 
 local function on_socket_accept(ctx, peer)
     if ctx then
-        peer:sslv23(ctx);
+        peer:cainfo(ctx);
     end
     peer:timeout(_WS_UNTRUST_TIMEOUT);
     peer:handshake(bind(on_ssl_handshake, peer));
