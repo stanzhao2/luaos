@@ -1039,7 +1039,7 @@ local function on_receive_handler(peer, ec, data)
     end
 end
 
-local function on_ssl_handshake(peer, ec)
+local function on_tls_handshake(peer, ec)
     if ec > 0 then
         peer:close();
         return;
@@ -1060,10 +1060,10 @@ end
 
 local function on_socket_accept(ctx, peer)
     if ctx then
-        peer:cainfo(ctx);
+        peer:tls_enable(ctx);
     end
     peer:timeout(_WS_UNTRUST_TIMEOUT);
-    peer:handshake(bind(on_ssl_handshake, peer));
+    peer:handshake(bind(on_tls_handshake, peer));
 end
 
 ----------------------------------------------------------------------------

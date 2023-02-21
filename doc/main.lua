@@ -8,9 +8,12 @@ local https = {
 }
 
 local function ssl_context()
-    local context = nil;    
+    local context = nil;
     if https.cert then
-        context = luaos.ssl.context(https.cert, https.key, https.password);
+        context = luaos.tls.context();
+        if not context:load(https.cert, https.key, https.password) then
+            context = nil;
+        end
         assert(context, "certificate loading failed");
     end
     return context;

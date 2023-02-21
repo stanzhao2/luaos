@@ -26,7 +26,7 @@ dofile("luaos.global");
 local ok;
 local io    = io;
 local os    = os;
-local ssl   = ssl;
+local tls   = tls;
 
 ---@class luaos
 local luaos = {
@@ -165,20 +165,20 @@ if not ok then
 end
 
 ----------------------------------------------------------------------------
----封装 SSL/TLS 子模块
+---封装 TLS 子模块
 ----------------------------------------------------------------------------
 
-luaos.ssl = {
-    ---创建一个 SSL context
+luaos.tls = {
+    ---创建一个 TLS context
     ---@param  certfile string
     ---@param  keyfile string
     ---@param  keypwd string
     ---@return userdata
     context = function(certfile, keyfile, keypwd)
-        if not ssl then
+        if not tls then
             return nil;
         end
-        return ssl.context(certfile, keyfile, keypwd);
+        return tls.context(certfile, keyfile, keypwd);
     end
 };
 

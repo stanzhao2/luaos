@@ -521,6 +521,10 @@ namespace eth
         delete _stream;
       }
 
+      inline SSL* ssl_handle() const {
+        return _stream ? _stream->native_handle() : nullptr;
+      }
+
       inline void ssl_enable(ssl_context& sslctx) {
         _stream = new ssl_stream(*this, sslctx);
       }
@@ -1257,7 +1261,10 @@ namespace eth
       assert(_tcp);
       _tcp->ssl_enable(ctx);
     }
-
+    inline SSL* ssl_handle() const
+    {
+      return _tcp ? _tcp->ssl_handle() : nullptr;
+    }
 #endif
 
     inline void handshake(error_code& ec)

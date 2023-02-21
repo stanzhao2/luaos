@@ -85,6 +85,12 @@ public:
     _ctx = ctx;
     _socket->ssl_enable(*ctx);
   }
+  inline SSL* ssl_handle()  {
+    return _socket->ssl_handle();
+  }
+  inline std::shared_ptr<tls::ssl_context> getctx() const {
+    return _ctx;
+  }
 #endif
   inline error_code handshake() {
     error_code ec;
