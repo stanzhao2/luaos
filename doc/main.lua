@@ -1,41 +1,34 @@
 ﻿
-local luaos = require("luaos");
 
---Certificate corresponding to host name
-local certificates = {
-    ["www.luaos.net"] = {
-        cert = "luaos.net.crt",
-        key  = "luaos.net.key",
-    }
-}
+local luaos     = require("luaos");
+local ws_socket = require("luaos.websocket");
+local ws_event  = ws_socket.event;
+local format    = string.format;
 
---Create a TLS context for the specified hostname
-local function tls_context(hostname)
-    local hostcert = certificates[hostname];
-    if not hostcert then
-        return nil;
-    end
-    local context = tls.context();
-    context:load(hostcert.cert, hostcert.key, hostcert.passwd);
-    return context;
+local function on_receive(fd, data, opcode)
+    ws_socket.send(fd, data, opcode);
+end
+
+local function on_error(fd, ec)
+    trace(format("Websocket connection error, id=%d code=%d", fd, ec));
+end
+
+local function on_accept(fd, from, port)
+    trace(format("Websocket accepted, id=%d from %s:%d", fd, from, port));
 end
 
 function main(...)
-    local master, result = luaos.start("master", 7890);
-    assert(master, result);
-    
-    local proto_https = false;
-	local nginx, result = luaos.nginx.start("0.0.0.0", 8899, "wwwroot");
-    assert(nginx, result);
-    nginx:upgrade(); --websocket enabled
-      
+    ws_socket.on(ws_event.accept, on_accept)
+        .on(ws_event.error, on_error)
+        .on(ws_event.receive, on_receive)
+        .listen("0.0.0.0", 8899)
+
 	while not luaos.stopped() do
-		local success, result = pcall(luaos.wait);
+		local success, err = pcall(luaos.wait);
         if not success then
-            error(result);
+            error(err);
         end
 	end	
     
-    master:stop();
-	nginx:stop();
+	ws_socket.close();
 end
