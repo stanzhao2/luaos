@@ -1,21 +1,22 @@
 ﻿
 local luaos = require("luaos");
 
-local https = {
-    cert     = nil,  --Certificate file name
-    key      = nil,  --Certificate key file
-    password = nil,  --Certificate key file password
+--Certificate corresponding to host name
+local certificates = {
+    ["www.luaos.net"] = {
+        cert = "luaos.net.crt",
+        key  = "luaos.net.key",
+    }
 }
 
-local function ssl_context()
-    local context = nil;
-    if https.cert then
-        context = luaos.tls.context();
-        if not context:load(https.cert, https.key, https.password) then
-            context = nil;
-        end
-        assert(context, "certificate loading failed");
+--Create a TLS context for the specified hostname
+local function tls_context(hostname)
+    local hostcert = certificates[hostname];
+    if not hostcert then
+        return nil;
     end
+    local context = tls.context();
+    context:load(hostcert.cert, hostcert.key, hostcert.passwd);
     return context;
 end
 
@@ -23,7 +24,8 @@ function main(...)
     local master, result = luaos.start("master", 7890);
     assert(master, result);
     
-	local nginx, result = luaos.nginx.start("0.0.0.0", 8899, "wwwroot", ssl_context());
+    local proto_https = false;
+	local nginx, result = luaos.nginx.start("0.0.0.0", 8899, "wwwroot");
     assert(nginx, result);
     nginx:upgrade(); --websocket enabled
       

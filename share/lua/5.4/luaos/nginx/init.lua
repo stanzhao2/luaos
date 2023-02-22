@@ -27,6 +27,7 @@ end
 
 local bind     = luaos.bind;
 local try      = luaos.try;
+local tls      = luaos.tls;
 local conv     = luaos.conv;
 local socket   = luaos.socket;
 local base64   = conv.base64.encode;
@@ -951,7 +952,7 @@ end
 
 ----------------------------------------------------------------------------
 
-local sessions = {}
+local sessions = {};
 
 local _ws_upgrade = false;
 
@@ -1058,9 +1059,27 @@ local function on_tls_handshake(peer, ec)
     end
 end
 
-local function on_socket_accept(ctx, peer)
-    if ctx then
-        peer:tls_enable(ctx);
+local function on_sni_callback(peer, sslctx, hostname)
+    if not hostname then
+        peer:close();
+        return;
+    end
+    local ok, context = pcall(sslctx, hostname);
+    if not ok or not context then
+        peer:close();
+        return;
+    end
+    --Replace the old context
+    peer:tls_enable(context);
+end
+
+local function on_socket_accept(sslctx, peer)
+    if type(sslctx) == "function" then
+        --Create temporary context
+        local context = tls.context();
+        context:sni_callback(bind(on_sni_callback, peer, sslctx));
+        --enable ssl/tls for socket
+        peer:tls_enable(context);
     end
     peer:timeout(_WS_UNTRUST_TIMEOUT);
     peer:handshake(bind(on_tls_handshake, peer));
@@ -1087,7 +1106,7 @@ function nginx.stop()
     sessions = {};
 end
 
-function nginx.start(host, port, wwwroot, ctx)
+function nginx.start(host, port, wwwroot, sslctx)
     if nginx.acceptor then
         return false
     end
@@ -1106,10 +1125,10 @@ function nginx.start(host, port, wwwroot, ctx)
         return false;
     end
     
-    if ctx == nil then
-        ctx = false;
+    if sslctx == nil then
+        sslctx = false;
     end
-    return nginx.acceptor:listen(host, port, bind(on_socket_accept, ctx));
+    return nginx.acceptor:listen(host, port, bind(on_socket_accept, sslctx));
 end
 
 return nginx;

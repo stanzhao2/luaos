@@ -113,12 +113,16 @@ function i_socket:receive(size) end;
 ---@param size integer
 ---@return string,string,integer|nil
 function i_socket:receive_from(size) end;
+    
+---设置ca验证证书
+---@param  cafile ca filename
+---@return boolean
+function i_socket:tls_sni(cafile) end;
 
 ---开启 socket SSL 功能
 ---@param  ctx ssl-context
----@param  certfile string|nil
 ---@return boolean
-function i_socket:cainfo(ctx, certfile) end;
+function i_socket:tls_enable(ctx) end;
 
 ---SSL 握手
 ---@overload fun(handler:fun(ec:integer):void):boolean

@@ -847,8 +847,25 @@ static int lua_os_socket(lua_State* L)
 
 /*******************************************************************************/
 
+static bool ssl_read_file(const char* filename, std::string& data)
+{
+  data.clear();
+  FILE* fp = fopen(filename, "r");
+  if (!fp) {
+    return false;
+  }
+  char buffer[8192];
+  while (!feof(fp)) {
+    size_t n = fread(buffer, 1, sizeof(buffer), fp);
+    data.append(buffer, n);
+  }
+  fclose(fp);
+  return true;
+}
+
 static int ssl_sni_callback(SSL* ssl, int* al, void* arg)
 {
+#ifdef TLS_SSL_ENABLE
   int ref = (int)(size_t)arg;
   const char* servername = nullptr;
   servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
@@ -869,80 +886,9 @@ static int ssl_sni_callback(SSL* ssl, int* al, void* arg)
     }
   }
   return SSL_TLSEXT_ERR_OK;
-}
-
-static int lua_os_socket_ssl_load(lua_State* L)
-{
-#ifdef TLS_SSL_ENABLE
-  shared_ctx** userdata = lua_socket::check_ssl_metatable(L);
-  if (!userdata) {
-    return 0;
-  }
-  auto ctx = (*userdata)->ctx;
-  const char* certfile = luaL_optstring(L, 1, nullptr);
-  const char* key = luaL_optstring(L, 2, nullptr);
-  const char* pwd = luaL_optstring(L, 3, nullptr);
-
-  error_code ec;
-  FILE* fp = nullptr;
-  char buffer[1024];
-  if (certfile) {
-    fp = fopen(certfile, "r");
-    if (!fp) {
-      lua_pushboolean(L, 0);
-      return 1;
-    }
-    std::string cert;
-    while (!feof(fp)) {
-      size_t n = fread(buffer, 1, sizeof(buffer), fp);
-      cert.append(buffer, n);
-    }
-    fclose(fp);
-    ctx->use_certificate_chain(
-      asio::buffer(cert.c_str(), cert.size()), ec
-    );
-    if (ec) {
-      lua_pushboolean(L, 0);
-      return 1;
-    }
-  }
-  if (key) {
-    fp = fopen(key, "r");
-    if (!fp) {
-      lua_pushboolean(L, 0);
-      return 1;
-    }
-    std::string ckey;
-    while (!feof(fp)) {
-      size_t n = fread(buffer, 1, sizeof(buffer), fp);
-      ckey.append(buffer, n);
-    }
-    fclose(fp);
-    ctx->use_private_key(
-      asio::buffer(ckey.c_str(), ckey.size()), ssl::context::pem, ec
-    );
-    if (ec) {
-      lua_pushboolean(L, 0);
-      return 1;
-    }
-  }
-  if (pwd) {
-    std::string cpwd(pwd);
-    ctx->set_password_callback(
-      std::bind([cpwd](size_t, ssl::context::password_purpose) {
-        return cpwd.c_str();
-      }, placeholders1, placeholders2), ec
-    );
-    if (ec) {
-      lua_pushboolean(L, 0);
-      return 1;
-    }
-  }
-  lua_pushboolean(L, 1);
 #else
-  lua_pushboolean(L, 0);
+  return 0;
 #endif
-  return 1;
 }
 
 static int lua_os_socket_ssl_sni_callback(lua_State* L)
@@ -964,6 +910,105 @@ static int lua_os_socket_ssl_sni_callback(lua_State* L)
   lua_pushboolean(L, 0);
 #endif
   return 1;
+}
+
+static int lua_os_socket_ssl_load_ca(lua_State* L)
+{
+#ifdef TLS_SSL_ENABLE
+  shared_ctx** userdata = lua_socket::check_ssl_metatable(L);
+  if (!userdata) {
+    return 0;
+  }
+  error_code ec;
+  const char* certfile = luaL_checkstring(L, 2);
+  auto ctx = (*(userdata))->ctx;
+  ctx->load_verify_file(certfile, ec);
+  if (ec) {
+    lua_pushboolean(L, 0);
+    return 1;
+  }
+  else {
+    ctx->set_verify_mode(ssl::verify_peer);
+    ctx->set_verify_mode(ssl::verify_fail_if_no_peer_cert);
+  }
+  lua_pushboolean(L, 1);
+#else
+  lua_pushboolean(L, 0);
+#endif
+  return 1;
+}
+
+static int lua_os_socket_ssl_assign(lua_State* L)
+{
+#ifdef TLS_SSL_ENABLE
+  shared_ctx** userdata = lua_socket::check_ssl_metatable(L);
+  if (!userdata) {
+    return 0;
+  }
+  auto ctx = (*userdata)->ctx;
+  size_t certsize = 0, keysize = 0;
+  const char* certfile = luaL_checklstring(L, 2, &certsize);
+  const char* key      = luaL_checklstring(L, 3, &keysize);
+  const char* pwd      = luaL_optstring(L, 4, nullptr);
+
+  error_code ec;
+  ctx->use_certificate_chain(buffer(certfile, certsize), ec);
+  if (ec) {
+    lua_pushboolean(L, 0);
+    return 1;
+  }
+  ctx->use_private_key(buffer(key, keysize), ssl::context::pem, ec);
+  if (ec) {
+    lua_pushboolean(L, 0);
+    return 1;
+  }
+  if (pwd) {
+    std::string cpwd(pwd);
+    ctx->set_password_callback(std::bind([cpwd](size_t, ssl::context::password_purpose) {
+      return cpwd.c_str();
+    }, placeholders1, placeholders2), ec);
+    if (ec) {
+      lua_pushboolean(L, 0);
+      return 1;
+    }
+  }
+  lua_pushboolean(L, 1);
+#else
+  lua_pushboolean(L, 0);
+#endif
+  return 1;
+}
+
+static int lua_os_socket_ssl_load(lua_State* L)
+{
+#ifdef TLS_SSL_ENABLE
+  shared_ctx** userdata = lua_socket::check_ssl_metatable(L);
+  if (!userdata) {
+    return 0;
+  }
+  std::string certdata;
+  if (!ssl_read_file(luaL_checkstring(L, 2), certdata)) {
+    lua_pushboolean(L, 0);
+    return 1;
+  }
+  std::string keydata;
+  if (!ssl_read_file(luaL_checkstring(L, 3), keydata)) {
+    lua_pushboolean(L, 0);
+    return 1;
+  }
+  const char* password = luaL_optstring(L, 4, nullptr);
+  std::string keypwd(password ? password : "");
+  lua_pop(L, lua_gettop(L) - 1);
+
+  lua_pushlstring(L, certdata.c_str(), certdata.size());
+  lua_pushlstring(L, keydata.c_str(), keydata.size());
+  if (password) {
+    lua_pushlstring(L, keypwd.c_str(), keypwd.size());
+  }
+  return lua_os_socket_ssl_assign(L);
+#else
+  return 0;
+#endif
 }
 
 static int lua_os_socket_ssl_context(lua_State* L)
@@ -1043,21 +1088,6 @@ static int lua_os_socket_ssl_enable(lua_State* L)
   shared_ctx** userdata = lua_socket::check_ssl_metatable(L, 2);
   if (!userdata) {
     return 0;
-  }
-  const char* certfile = luaL_optstring(L, 3, nullptr);
-  if (certfile)
-  {
-    error_code ec;
-    auto ctx = (*(userdata))->ctx;
-    ctx->load_verify_file(certfile, ec);
-    if (ec) {
-      lua_pushboolean(L, 0);
-      return 1;
-    }
-    else {
-      ctx->set_verify_mode(ssl::verify_peer);
-      ctx->set_verify_mode(ssl::verify_fail_if_no_peer_cert);
-    }
   }
   lua_socket* lua_sock = *mt;
   lua_sock->ssl_enable((*userdata)->ctx);
@@ -1170,6 +1200,8 @@ void lua_socket::init_ssl_metatable(lua_State* L)
 
   struct luaL_Reg methods[] = {
     { "__gc",         lua_os_socket_ssl_gc            },
+    { "assign",       lua_os_socket_ssl_assign        },
+    { "ca",           lua_os_socket_ssl_load_ca       },
     { "load",         lua_os_socket_ssl_load          },
     { "sni_callback", lua_os_socket_ssl_sni_callback  },
     { "close",        lua_os_socket_ssl_close         },

@@ -173,7 +173,7 @@ luaos.tls = {
     ---@param  certfile string
     ---@param  keyfile string
     ---@param  keypwd string
-    ---@return userdata
+    ---@return tls_context
     context = function(certfile, keyfile, keypwd)
         if not tls then
             return nil;
@@ -191,9 +191,9 @@ luaos.nginx = {
     ---@param host string
     ---@param port integer
     ---@param wwwroot string
-    ---@param ctx userdata
+    ---@param sslctx fun(hostname:string)
     ---@return table
-    start = function(host, port, wwwroot, ctx)
+    start = function(host, port, wwwroot, sslctx)
         local ok, server = pcall(
             require, "luaos.nginx"
         );
@@ -202,7 +202,7 @@ luaos.nginx = {
             throw(server);
         end
         
-        local ok, reason = server.start(host, port, wwwroot, ctx);
+        local ok, reason = server.start(host, port, wwwroot, sslctx);
         if not ok then
             return nil, reason;
         end

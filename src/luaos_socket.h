@@ -82,8 +82,12 @@ public:
   }
 #ifdef TLS_SSL_ENABLE
   inline void ssl_enable(std::shared_ptr<tls::ssl_context> ctx) {
+    if (!_ctx) {
+      _socket->ssl_enable(*ctx);
+    } else {
+      SSL_set_SSL_CTX(ssl_handle(), ctx->native_handle());
+    }
     _ctx = ctx;
-    _socket->ssl_enable(*ctx);
   }
   inline SSL* ssl_handle()  {
     return _socket->ssl_handle();
