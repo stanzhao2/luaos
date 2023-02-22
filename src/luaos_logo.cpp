@@ -45,11 +45,14 @@ void display_logo()
   char copyright[128];
   snprintf(copyright, sizeof(copyright), "Copyright (C) 2021-%d, All right reserved", ptm->tm_year + 1900);
 
+  char tlsver[128];
+  snprintf(tlsver, sizeof(tlsver), "TLS version: 1.2 (openssl %s)", SHLIB_VERSION_NUMBER);
+
   char depends[128];
   snprintf(depends, sizeof(depends), "Dependencies: %s", LUA_RELEASE);
 
   char buffer[1024];
-  snprintf(buffer, sizeof(buffer), "\n> %s\n> %s\n> %s\n\n", version, copyright, depends);
+  snprintf(buffer, sizeof(buffer), "\n> %s\n> %s\n> %s\n> %s\n\n", version, copyright, tlsver, depends);
   logo_print(buffer, color_type::normal);
 }
 

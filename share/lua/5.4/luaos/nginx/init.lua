@@ -1074,7 +1074,8 @@ local function on_sni_callback(peer, sslctx, hostname)
 end
 
 local function on_socket_accept(sslctx, peer)
-    if type(sslctx) == "function" then
+    local type_of_ctx = type(sslctx);
+    if type_of_ctx == "function" then
         --Create temporary context
         local context = tls.context();
         context:sni_callback(bind(on_sni_callback, peer, sslctx));
