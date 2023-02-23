@@ -29,8 +29,11 @@ local function on_error(fd, ec)
     trace(format("Websocket connection error, id=%d code=%d", fd, ec));
 end
 
-local function on_accept(fd, from, port)
+local function on_accept(fd, headers, from, port)
     trace(format("Websocket accepted, id=%d from %s:%d", fd, from, port));
+    for k, v in pairs(headers) do
+        trace(k, v);
+    end
 end
 
 function main(...)

@@ -20,7 +20,7 @@ local luaos    = require("luaos");
 local hash     = luaos.conv.hash;
 local format   = string.format;
 local sessions = {};
-local event_base = hash.crc32("Websocket 3.0");
+local event_base = hash.crc32("Websocket.v13");
 
 local nginx = {
     event = {
@@ -44,9 +44,10 @@ local function on_ws_accept(ws_peer, request, params)
         port = port,
         peer = ws_peer,
     };
-    local url = request:url();
-    local pid = luaos.pid();
-    ws_publish(nginx.event.accept, pid, fd, from, port);
+    local url     = request:url();
+    local headers = request:headers();
+    local pid     = luaos.pid();
+    ws_publish(nginx.event.accept, pid, fd, headers, from, port);
 end
 
 local function on_ws_error(ws_peer, ec)
