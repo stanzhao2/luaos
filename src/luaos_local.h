@@ -22,11 +22,14 @@
 
 class local_values final {
   local_values();
+  int _pid;
   lua_State* _L;
   io_handler _ios;
 
 public:
   static local_values& instance();
+  inline int  get_pid() const { return _pid; }
+  inline void set_pid(int id) { _pid = id; }
   inline lua_State*  lua_state() const { return _L; }
   inline io_handler  lua_service() const { return _ios; }
   virtual ~local_values();

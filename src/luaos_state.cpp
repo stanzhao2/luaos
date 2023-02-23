@@ -690,6 +690,7 @@ inline _Ty* check_type(lua_State* L, const char* name)
 
 struct luaos_job final {
   std::string name;
+  int pid;
   io_handler ios;
   std::shared_ptr<std::thread> thread;
 };
@@ -727,6 +728,20 @@ static int os_typename(lua_State* L)
 #elif defined(os_macx) || defined(os_mac9)
   lua_pushstring(L, "apple");
 #endif
+  return 1;
+}
+
+static int os_id(lua_State* L)
+{
+  int id = luaos_local.lua_service()->id();
+  lua_pushinteger(L, id);
+  return 1;
+}
+
+static int os_pid(lua_State* L)
+{
+  int id = luaos_local.get_pid();
+  lua_pushinteger(L, id);
   return 1;
 }
 
@@ -876,6 +891,7 @@ static int local_thread(luaos_job* job, const std::vector<std::any>& argv, io_ha
 {
   lua_State* L = luaos_local.lua_state();
   job->ios = luaos_local.lua_service();
+  luaos_local.set_pid(job->pid);
 
   lua_pushlightuserdata(L, ios.get());
   lua_setglobal(L, luaos_waiting_name);
@@ -913,6 +929,18 @@ static int load_stop(lua_State* L)
   return 0;
 }
 
+static int load_id(lua_State* L)
+{
+  luaos_job* luaself = check_jobself(L);
+  if (luaself)
+  {
+    int id = luaself->ios->id();
+    lua_pushinteger(L, id);
+    return 1;
+  }
+  return 0;
+}
+
 static int load_stop_gc(lua_State* L)
 {
   luaos_job* luaself = check_jobself(L);
@@ -925,18 +953,21 @@ static int load_stop_gc(lua_State* L)
 
 static int load_execute(lua_State* L)
 {
+  auto ios = luaos_local.lua_service();
   std::vector<std::any> argv;
   const char* name = luaL_checkstring(L, 1);
   for (int i = 2; i <= lua_gettop(L); i++) {
     argv.push_back(lexget_any(L, i));
   }
 
-  io_handler ios_wait = luaos_ionew();
+  int result = LUA_OK;
   auto userdata = lexnew_userdata<luaos_job>(L, luaos_job_name);
   luaos_job* newjob = new (userdata) luaos_job();
 
-  int result = LUA_OK;
+  newjob->pid  = ios->id();
   newjob->name = name;
+  io_handler ios_wait = luaos_ionew();
+
   newjob->thread.reset(new std::thread(std::bind(&local_thread, newjob, argv, ios_wait, &result)));
   ios_wait->run();
   return is_success(result) ? 1 : 0;
@@ -1222,6 +1253,8 @@ static int luaopen_los(lua_State* L)
   lua_getglobal(L, "os");
   luaL_Reg methods[] = {
     {"typename",      os_typename   },
+    {"id",            os_id         },
+    {"pid",           os_pid        },
     {"files",         enum_files    },
     {"uniqueid",      code_generate },
     {"wait",          luaos_wait    },
@@ -1271,6 +1304,7 @@ static int luaopen_job(lua_State* L)
 {
   struct luaL_Reg methods[] = {
     { "__gc",         load_stop_gc  },
+    { "id",           load_id       },
     { "stop",         load_stop     },
     { NULL,           NULL          },
   };

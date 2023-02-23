@@ -47,6 +47,7 @@ io_handler luaos_main_ios()
 
 local_values::local_values()
 {
+  _pid = 0;
   _ios = luaos_ionew();
   if (main_handler == nullptr)
   {

@@ -1,7 +1,7 @@
 ﻿
 
 local luaos     = require("luaos")
-local websocket = require("luaos.websocket");
+local nginx = require("luaos.nginx");
 local format    = string.format;
 
 local html = [[
@@ -41,7 +41,7 @@ SOFTWARE.
 ]]
 
 ---Internal function, do not call
-function websocket.on_request(request, response, params)
+function nginx.on_request(request, response, params)
 	local data = format(html, luaos.typename());
 	response:write(data);
 	response:finish();
@@ -49,4 +49,4 @@ end
 
 ----------------------------------------------------------------------------
 
-return websocket;
+return nginx;

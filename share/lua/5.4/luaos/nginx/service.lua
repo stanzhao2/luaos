@@ -1,4 +1,4 @@
-﻿
+
 
 --[[
 *********************************************************************************
@@ -16,28 +16,31 @@
 *********************************************************************************
 ]]--
 
-local luaos  = require("luaos");
-local nginx  = require("luaos.nginx");
-local event  = nginx.event;
-local format = string.format;
+local luaos = require("luaos");
+local nginx = require("luaos.nginx");
+local certificates = {};
 
-local function on_receive(fd, data, opcode)
-    nginx.send(fd, data, opcode);
+--Create a TLS context for the specified hostname
+local function tls_context(hostname)
+    local hostcert = certificates[hostname];
+    if not hostcert then
+        return nil;
+    end
+    local context = tls.context();
+    assert(context:load(hostcert.cert, hostcert.key, hostcert.passwd));
+    return context;
 end
 
-local function on_error(fd, ec)
-    trace(format("Websocket connection error, id=%d code=%d", fd, ec));
-end
-
-local function on_accept(fd, from, port)
-    trace(format("Websocket accepted, id=%d from %s:%d", fd, from, port));
-end
-
-function main(...)
-    nginx.on(event.accept,  on_accept)
-         .on(event.error,   on_error)
-         .on(event.receive, on_receive)
-         .listen("0.0.0.0", 8899)
+function main(host, port, certs)
+    if not certs then
+        tls_context = nil;
+    else
+        certificates = certs;
+    end
+    
+	local nginx, result = luaos.nginx.start(host, port, "wwwroot", tls_context);
+    assert(nginx, result);    
+    nginx:upgrade(); --websocket enabled
 
 	while not luaos.stopped() do
 		local success, err = pcall(luaos.wait);
@@ -46,5 +49,5 @@ function main(...)
         end
 	end	
     
-	nginx.close();
+	nginx:stop();
 end

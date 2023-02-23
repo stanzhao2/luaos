@@ -1,2 +1,2 @@
 ﻿
-return require("luaos.websocket");
+return require("luaos.nginx");

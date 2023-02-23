@@ -55,6 +55,18 @@ local luaos = {
         return os.typename();
     end,
     
+    ---获取当前模块 ID
+    ---@return integer
+    id = function()
+        return os.id();
+    end,
+    
+    ---获取当前模块父 ID
+    ---@return integer
+    pid = function()
+        return os.pid();
+    end,
+    
     ---获取当前系统硬件唯一码
     ---@return string
     uniqueid = function()
@@ -195,7 +207,7 @@ luaos.nginx = {
     ---@return table
     start = function(host, port, wwwroot, sslctx)
         local ok, server = pcall(
-            require, "luaos.nginx"
+            require, "luaos.nginx.httpd"
         );
         
         if not ok then
