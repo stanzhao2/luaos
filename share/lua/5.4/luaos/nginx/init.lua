@@ -23,7 +23,7 @@ local sessions = {};
 local filename = {...};
 local event_base = hash.crc32("Websocket 3.0");
 
-local websocket = {
+local nginx = {
     event = {
         accept  = event_base + 1,
         receive = event_base + 2,
@@ -47,14 +47,14 @@ local function on_ws_accept(ws_peer, request, params)
     };
     local url = request:url();
     local pid = luaos.pid();
-    ws_publish(websocket.event.accept, pid, fd, from, port);
+    ws_publish(nginx.event.accept, pid, fd, from, port);
 end
 
 local function on_ws_error(ws_peer, ec)
     local fd = ws_peer:id();
     sessions[fd] = nil;
     local pid = luaos.pid();
-    ws_publish(websocket.event.error, pid, fd, ec);
+    ws_publish(nginx.event.error, pid, fd, ec);
 end
 
 local function on_ws_request(ws_peer, ec, data, opcode)
@@ -66,7 +66,7 @@ local function on_ws_request(ws_peer, ec, data, opcode)
     local session = sessions[fd];
     if session then
         local pid = luaos.pid();
-        ws_publish(websocket.event.receive, pid, fd, data, opcode);
+        ws_publish(nginx.event.receive, pid, fd, data, opcode);
     end
 end
 
@@ -87,74 +87,74 @@ end
 ----------------------------------------------------------------------------
 
 local switch = {
-    [websocket.event.accept]  = function(callback, publisher, mask, ...)
+    [nginx.event.accept]  = function(callback, publisher, mask, ...)
         callback(...);
     end,
-    [websocket.event.error]   = function(callback, publisher, mask, ...)
+    [nginx.event.error]   = function(callback, publisher, mask, ...)
         callback(...);
     end,
-    [websocket.event.receive] = function(callback, publisher, mask, ...)
+    [nginx.event.receive] = function(callback, publisher, mask, ...)
         callback(...);
     end,
 };
 
-function websocket.listen(host, port, certs)
-    if websocket.server then
+function nginx.listen(host, port, certs)
+    if nginx.server then
         return;
     end
     local server, err = luaos.start("luaos.nginx.service", host, port, certs);
     if not server then
         throw(err);
     end
-    websocket.server = server;
-    websocket.childid = server:id();
-    return websocket;
+    nginx.server = server;
+    nginx.childid = server:id();
+    return nginx;
 end
 
-function websocket.close(fd)
+function nginx.close(fd)
     if fd then
-        ws_publish(websocket.event.close, websocket.childid, fd);
+        ws_publish(nginx.event.close, nginx.childid, fd);
         return;
     end
-    if not websocket.server then
+    if not nginx.server then
         return;
     end
     for k, v in pairs(switch) do
         luaos.cancel(k);
     end
     luaos.cancel(
-        websocket.event.close
+        nginx.event.close
     );
     luaos.cancel(
-        websocket.event.send
+        nginx.event.send
     );
-    websocket.server:stop();
-    websocket.server = nil;
+    nginx.server:stop();
+    nginx.server = nil;
 end
 
-function websocket.send(fd, data, opcode)
-    ws_publish(websocket.event.send, websocket.childid, fd, data, opcode);
+function nginx.send(fd, data, opcode)
+    ws_publish(nginx.event.send, nginx.childid, fd, data, opcode);
 end
 
-function websocket.on(event, callback)
+function nginx.on(event, callback)
     luaos.subscribe(event, luaos.bind(switch[event], callback));
-    return websocket;
+    return nginx;
 end
 
 ----------------------------------------------------------------------------
 --以下代码为标准接口, 不要修改
 
 local function initialize()
-    luaos.subscribe(websocket.event.close, function(publisher, mask, ...)
+    luaos.subscribe(nginx.event.close, function(publisher, mask, ...)
         on_ws_close(...);
     end);        
-    luaos.subscribe(websocket.event.send, function(publisher, mask, ...)
+    luaos.subscribe(nginx.event.send, function(publisher, mask, ...)
         on_ws_send(...);
     end);
 end
 
 ---Internal function, do not call
-function websocket.on_handshake(ws_peer, request, params)
+function nginx.on_handshake(ws_peer, request, params)
     if initialize then
         initialize = initialize();
     end
@@ -162,15 +162,15 @@ function websocket.on_handshake(ws_peer, request, params)
 end
 
 ---Internal function, do not call
-function websocket.on_accept(ws_peer, request, params)
+function nginx.on_accept(ws_peer, request, params)
 	on_ws_accept(ws_peer, request, params);
 end
 
 ---Internal function, do not call
-function websocket.on_receive(ws_peer, ec, data, opcode)
+function nginx.on_receive(ws_peer, ec, data, opcode)
 	on_ws_request(ws_peer, ec, data, opcode);
 end
 
 ----------------------------------------------------------------------------
 
-return websocket;
+return nginx;
