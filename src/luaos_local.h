@@ -28,6 +28,7 @@ class local_values final {
 
 public:
   static local_values& instance();
+  inline int  get_id()  const { return _ios->id(); }
   inline int  get_pid() const { return _pid; }
   inline void set_pid(int id) { _pid = id; }
   inline lua_State*  lua_state() const { return _L; }

@@ -733,15 +733,13 @@ static int os_typename(lua_State* L)
 
 static int os_id(lua_State* L)
 {
-  int id = luaos_local.lua_service()->id();
-  lua_pushinteger(L, id);
+  lua_pushinteger(L, luaos_local.get_id());
   return 1;
 }
 
 static int os_pid(lua_State* L)
 {
-  int id = luaos_local.get_pid();
-  lua_pushinteger(L, id);
+  lua_pushinteger(L, luaos_local.get_pid());
   return 1;
 }
 
@@ -953,7 +951,6 @@ static int load_stop_gc(lua_State* L)
 
 static int load_execute(lua_State* L)
 {
-  auto ios = luaos_local.lua_service();
   std::vector<std::any> argv;
   const char* name = luaL_checkstring(L, 1);
   for (int i = 2; i <= lua_gettop(L); i++) {
@@ -964,7 +961,7 @@ static int load_execute(lua_State* L)
   auto userdata = lexnew_userdata<luaos_job>(L, luaos_job_name);
   luaos_job* newjob = new (userdata) luaos_job();
 
-  newjob->pid  = ios->id();
+  newjob->pid  = luaos_local.get_id();
   newjob->name = name;
   io_handler ios_wait = luaos_ionew();
 
