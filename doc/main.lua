@@ -21,6 +21,19 @@ local nginx  = require("luaos.nginx");
 local event  = nginx.event;
 local format = string.format;
 
+--[[
+--If you need https/wss communication, you need to cancel the comment
+local certificates = {
+    ["hostname"] = {
+        cert   = "",  --Certificate file name
+        key    = "",  --Certificate key file name
+        passwd = nil, --Password of key file
+    },
+};
+]]--
+
+----------------------------------------------------------------------------
+
 local function on_receive(fd, data, opcode)
     nginx.send(fd, data, opcode);
 end
@@ -36,11 +49,13 @@ local function on_accept(fd, headers, from, port)
     end
 end
 
+----------------------------------------------------------------------------
+
 function main(...)
     nginx.on(event.accept,  on_accept)
          .on(event.error,   on_error)
          .on(event.receive, on_receive)
-         .listen("0.0.0.0", 8899)
+         .listen("0.0.0.0", 8899, certificates);
 
 	while not luaos.stopped() do
 		local success, err = pcall(luaos.wait);
@@ -51,3 +66,5 @@ function main(...)
     
 	nginx.close();
 end
+
+----------------------------------------------------------------------------
