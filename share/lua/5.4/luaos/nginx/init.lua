@@ -20,7 +20,6 @@ local luaos    = require("luaos");
 local hash     = luaos.conv.hash;
 local format   = string.format;
 local sessions = {};
-local filename = {...};
 local event_base = hash.crc32("Websocket 3.0");
 
 local nginx = {
