@@ -87,13 +87,22 @@ end
 
 local switch = {
     [nginx.event.accept]  = function(callback, publisher, mask, ...)
-        callback(...);
+        local ok, err = pcall(callback, ...);
+        if not ok then
+            error(err);
+        end
     end,
     [nginx.event.error]   = function(callback, publisher, mask, ...)
-        callback(...);
+        local ok, err = pcall(callback, ...);
+        if not ok then
+            error(err);
+        end
     end,
     [nginx.event.receive] = function(callback, publisher, mask, ...)
-        callback(...);
+        local ok, err = pcall(callback, ...);
+        if not ok then
+            error(err);
+        end
     end,
 };
 
