@@ -47,7 +47,7 @@ public:
   void print(const std::string& str, color_type color)
   {
     std::string data(str);
-    if (_codepage != 65001) { /* not utf8 */
+    if (_codepage == 936) { /* Simplified Chinese */
       data = utf8_to_mbs(str);
     }
     WORD print_color = FOREGROUND_INTENSITY;

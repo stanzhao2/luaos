@@ -83,6 +83,7 @@ int main(int argc, char* argv[])
 
 #ifdef _MSC_VER
   setlocale(LC_ALL, "");
+  SetConsoleOutputCP(936);
 #else
   MallocExtension::instance()->SetMemoryReleaseRate(0);
 #endif
