@@ -632,7 +632,7 @@ local function ws_close(peer, code)
     end
     
     if code ~= 1000 and reason then
-        error(reason);
+        trace(reason);
     end
     
     send_message(peer, table_concat(message));

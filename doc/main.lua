@@ -38,9 +38,13 @@ local function on_receive(fd, data, opcode)
     nginx.send(fd, data, opcode);
 end
 
+----------------------------------------------------------------------------
+
 local function on_error(fd, ec)
     trace(format("Websocket connection error, id=%d code=%d", fd, ec));
 end
+
+----------------------------------------------------------------------------
 
 local function on_accept(fd, headers, from, port)
     trace(format("Websocket accepted, id=%d from %s:%d", fd, from, port));
