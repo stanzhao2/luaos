@@ -189,7 +189,6 @@ static int lua_rpc_invoke(lua_State* L)
 
   lua_pushvalue(L, 2);
   int callback = luaL_ref(L, LUA_REGISTRYINDEX);
-  lua_pop(L, 1);
 
   int index = 0;
   io_handler regios;
