@@ -117,7 +117,7 @@ namespace dir
   inline const char* current(char* path, int count)
   {
     GetCurrentDirectoryA(count, path);
-	return path;
+	  return path;
   }
 
   inline const std::string& current()

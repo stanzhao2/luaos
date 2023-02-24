@@ -380,7 +380,7 @@ global = nil;  --disable original global
 
 luaos.global = {
     ---设置一个 key-value 对
-    ---@overload fun(key:string, handler:fun(old_value:any):any):any
+    ---@overload fun(key:string, handler:fun(original:any):any):any
     ---@param key string
     ---@param value any
     ---@retrun any

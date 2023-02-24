@@ -115,9 +115,23 @@ typedef struct {
   size_t size;      /* data length */
 } file_buffer;
 
-static bool is_slash(char c)
+inline static bool is_slash(char c)
 {
   return c == '/' || c == '\\';
+}
+
+inline static const char* skip_pathroot(const char* p)
+{
+  while (p && *p)
+  {
+    const char c = *p;
+    if (c == '.' || is_slash(c)) {
+      p++;
+      continue;
+    }
+    break;
+  }
+  return p;
 }
 
 static int is_fullname(const char* filename)
@@ -182,7 +196,7 @@ static void chdir_fpath(const char* filename)
     if (path[strlen(path) - 1] != LUA_DIRSEP[0]) {
       strcat(path, LUA_DIRSEP);
     }
-    strcat(path, filename);
+    strcat(path, skip_pathroot(filename));
   }
   char* finded = strrchr(path, '/');
   if (!finded) {
@@ -311,6 +325,9 @@ static int ll_require(lua_State* L)
     }
     return result;
   }
+  name = skip_pathroot(name);
+  namelen = strlen(name);
+
   std::string temp(name);
   for (size_t i = 0; i < temp.size(); i++) {
     if (temp[i] == '.') {
@@ -846,21 +863,13 @@ static int enum_files(lua_State* L)
           return true;
         }
       }
-      while (*path) {
-        if (*path == '.' || *path == LUA_DIRSEP[0]) {
-          path++;
-          continue;
-        }
-        else {
-          break;
-        }
-      }
-      std::string fullpath(path);
-      fullpath += LUA_DIRSEP;
-      fullpath += file.name;
+      path = skip_pathroot(path);
+      std::string filename(path);
+      if (!filename.empty()) filename += LUA_DIRSEP;
+      filename += file.name;
 
       lua_pushvalue(L, 1);
-      lua_pushlstring(L, fullpath.c_str(), fullpath.size());
+      lua_pushlstring(L, filename.c_str(), filename.size());
       if (!file.extension) {
         lua_pushnil(L);
       }
@@ -1074,8 +1083,9 @@ static int init_luapath(lua_State* L)
   char buffer[4096];
   lua_getglobal(L, LUA_LOADLIBNAME);
 
-  char runpath[4096];
-  dir::exedir(runpath, sizeof(runpath));
+  char runpath[1024];
+  dir::exedir(runpath, (int)sizeof(runpath));
+
   snprintf(buffer, sizeof(buffer), ".%s?.lua;.%s?%sinit.lua;%s..%sshare%slua%s%s.%s%s?.lua;%s..%sshare%slua%s%s.%s%s?%sinit.lua"
     , LUA_DIRSEP
     , LUA_DIRSEP

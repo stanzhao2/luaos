@@ -35,8 +35,8 @@ static int lua_storage_set(lua_State* L)
   }
   if (lua_isfunction(L, 2))
   {
-    lua_pushvalue(L, 2);
-    lexpush_any(L, value);
+    lua_pushvalue(L, 2);    /* push function to stack */
+    lexpush_any(L, value);  /* push old value to stack */
     if (luaos_pcall(L, 1, 1) != LUA_OK) {
       luaos_error("%s\n", lua_tostring(L, -1));
       lua_pop(L, 1); /* pop error from stack */
