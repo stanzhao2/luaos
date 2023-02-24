@@ -316,7 +316,18 @@ static int ll_require(lua_State* L)
   char filename[256];
   size_t namelen = 0;
   const char* name = luaL_checklstring(L, 1, &namelen);
-  if (is_fullname(name)) {
+  name = skip_pathroot(name);
+  namelen = strlen(name);
+
+  std::string temp(name, namelen);
+  for (size_t i = 0; i < temp.size(); i++) {
+    if (is_slash(temp[i])) {
+      temp[i] = LUA_DIRSEP[0];
+    }
+  }
+  name = temp.c_str();
+  if (is_fullname(name))
+  {
     strcpy(filename, name);
     int result = ll_fread(L, filename);
     if (result < 2) {
@@ -325,10 +336,6 @@ static int ll_require(lua_State* L)
     }
     return result;
   }
-  name = skip_pathroot(name);
-  namelen = strlen(name);
-
-  std::string temp(name);
   for (size_t i = 0; i < temp.size(); i++) {
     if (temp[i] == '.') {
       temp[i] = LUA_DIRSEP[0];
