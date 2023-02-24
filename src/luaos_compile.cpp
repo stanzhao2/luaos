@@ -209,7 +209,7 @@ int luaos_is_debug(lua_State* L)
 int luaos_export(lua_State* L, const char* filename, const char* key, bool all)
 {
   if (!decoder) {
-    decoder.reset(new eth::decoder(key, (key && key[0]) ? strlen(key) : 0));
+    decoder.reset(new eth::decoder(key, key ? strlen(key) : 0));
   }
   std::string data = readfile(filename);
   if (data.empty()) {
@@ -284,7 +284,7 @@ int luaos_loadlua(lua_State* L, const char* filename)
 int luaos_compile(lua_State* L, const char* filename, const std::set<std::string>& exts, const char* key)
 {
   if (!encoder) {
-    encoder.reset(new eth::encoder(key, (key && key[0]) ? strlen(key) : 0));
+    encoder.reset(new eth::encoder(key, key ? strlen(key) : 0));
   }
   FILE* fp = fopen(filename, "wb");
   if (!fp) {

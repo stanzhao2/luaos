@@ -131,6 +131,18 @@ int main(int argc, char* argv[])
     );
     return 0;
   }
+  if (strkey.empty()) {
+    strkey = "11852234-3e57-484d-b128-cd99a6b76204";
+  }
+  unsigned char hash[16];
+  int size = md5::hash(strkey.c_str(), strkey.size(), hash);
+  strkey.clear();
+
+  for (int i = 0; i < size; i++) {
+    char hex[3];
+    sprintf(hex, "%02x", hash[i]);
+    strkey.append(hex);
+  }
   if (compile) {
     std::set<std::string> exts;
     for (size_t i = 0; i < extnames.size(); i++) {
