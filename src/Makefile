@@ -21,7 +21,7 @@ SOURCE  := luaos.o \
 		   luaos_compile.o \
            luaos_logo.o \
 		   luaos_socket.o \
-		   luaos_rpc.o \
+		   luaos_rpcall.o \
 		   luaos_mc.o \
 		   luaos_local.o \
 		   luaos_state.o \

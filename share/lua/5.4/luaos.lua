@@ -180,8 +180,8 @@ end
 ---封装 rpcall 子模块
 ----------------------------------------------------------------------------
 
-local rpc_call = rpc;
-rpc = nil;  --disable original rpc
+local r_pcall = rpcall;
+rpcall = nil;  --disable original rpcall
 
 luaos.rpcall = setmetatable({
     ---注册一个 RPC 函数(当前进程有效)
@@ -189,14 +189,14 @@ luaos.rpcall = setmetatable({
     ---@param func function
     ---@return boolean
     register = function(name, func)
-        return rpc_call.register(name, func);
+        return r_pcall.register(name, func);
     end,
     
     ---取消一个 RPC 函数(当前进程有效)
     ---@param name string
     ---@return boolean
     unregister = function(name)
-        return rpc_call.cancel(name);
+        return r_pcall.cancel(name);
     end,
     }, {
     ---执行一个 RPC 函数(当前进程有效)
@@ -204,7 +204,7 @@ luaos.rpcall = setmetatable({
     ---@param callback [function]
     ---@return boolean,...
     __call = function(_, name, callback, ...)
-        return rpc_call.call(name, callback, ...);
+        return r_pcall.call(name, callback, ...);
     end
 });
 

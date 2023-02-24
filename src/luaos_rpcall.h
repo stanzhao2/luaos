@@ -17,7 +17,7 @@
 
 #include "luaos.h"
 
-namespace rpc
+namespace rpcall
 {
   void init_metatable(lua_State* L);
 }

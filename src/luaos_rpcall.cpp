@@ -5,7 +5,7 @@
 #include <vector>
 #include <mutex>
 
-#include "luaos_rpc.h"
+#include "luaos_rpcall.h"
 
 /*******************************************************************************/
 
@@ -81,7 +81,7 @@ static void call(int index, const params_type& params, std::shared_ptr<params_ty
 
 /*******************************************************************************/
 
-static int lua_rpc_register(lua_State* L)
+static int lua_rpcall_register(lua_State* L)
 {
   const char* name = luaL_checkstring(L, 1);
   if (!lua_isfunction(L, 2)) {
@@ -105,7 +105,7 @@ static int lua_rpc_register(lua_State* L)
 
 /*******************************************************************************/
 
-static int lua_rpc_cancel(lua_State* L)
+static int lua_rpcall_cancel(lua_State* L)
 {
   const char* name = luaL_checkstring(L, 1);
   std::unique_lock<std::mutex> lock(_mutex);
@@ -128,7 +128,7 @@ static int lua_rpc_cancel(lua_State* L)
 
 /*******************************************************************************/
 
-static int lua_rpc_call(lua_State* L)
+static int lua_rpcall_call(lua_State* L)
 {
   int argc = lua_gettop(L);
   const char* name = luaL_checkstring(L, 1);
@@ -174,11 +174,11 @@ static int lua_rpc_call(lua_State* L)
 
 /*******************************************************************************/
 
-static int lua_rpc_invoke(lua_State* L)
+static int lua_rpcall_invoke(lua_State* L)
 {
   int argc = lua_gettop(L);
   if (argc == 1 || !lua_isfunction(L, 2)) {
-    return lua_rpc_call(L);
+    return lua_rpcall_call(L);
   }
 
   params_type params;
@@ -213,19 +213,19 @@ static int lua_rpc_invoke(lua_State* L)
 
 /*******************************************************************************/
 
-namespace rpc
+namespace rpcall
 {
   void init_metatable(lua_State* L)
   {
-    struct luaL_Reg rpc[] = {
-      { "register",      lua_rpc_register  },
-      { "call",          lua_rpc_invoke    },
-      { "cancel",        lua_rpc_cancel    },
+    struct luaL_Reg methods[] = {
+      { "register",      lua_rpcall_register  },
+      { "call",          lua_rpcall_invoke    },
+      { "cancel",        lua_rpcall_cancel    },
       { NULL,            NULL              },
     };
     lua_newtable(L);
-    luaL_setfuncs(L, rpc, 0);
-    lua_setglobal(L, "rpc");
+    luaL_setfuncs(L, methods, 0);
+    lua_setglobal(L, "rpcall");
   }
 }
 

@@ -57,7 +57,7 @@
     <ClCompile Include="..\src\luaos_storage.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\luaos_rpc.cpp">
+    <ClCompile Include="..\src\luaos_rpcall.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -107,7 +107,7 @@
     <ClInclude Include="..\src\luaos_storage.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\luaos_rpc.h">
+    <ClInclude Include="..\src\luaos_rpcall.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
