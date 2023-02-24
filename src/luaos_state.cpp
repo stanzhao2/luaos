@@ -25,6 +25,7 @@
 #include "luaos_socket.h"
 #include "luaos_compile.h"
 #include "luaos_mc.h"
+#include "luaos_rpc.h"
 #include "luaos_storage.h"
 #include "luaos_subscriber.h"
 #include "luaos_traceback.h"
@@ -1212,6 +1213,7 @@ static int luaopen_socket(lua_State* L)
 
 static int luaopen_others(lua_State* L)
 {
+  rpc::init_metatable(L);
   storage::init_metatable(L);
   subscriber::init_metatable(L);
   return 0;

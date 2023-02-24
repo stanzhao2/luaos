@@ -177,6 +177,38 @@ if not ok then
 end
 
 ----------------------------------------------------------------------------
+---封装 rpcall 子模块
+----------------------------------------------------------------------------
+
+local rpc_call = rpc;
+rpc = nil;  --disable original rpc
+
+luaos.rpcall = setmetatable({
+    ---注册一个 RPC 函数(当前进程有效)
+    ---@param name string
+    ---@param func function
+    ---@return boolean
+    register = function(name, func)
+        return rpc_call.register(name, func);
+    end,
+    
+    ---取消一个 RPC 函数(当前进程有效)
+    ---@param name string
+    ---@return boolean
+    unregister = function(name)
+        return rpc_call.cancel(name);
+    end,
+    }, {
+    ---执行一个 RPC 函数(当前进程有效)
+    ---@param name string
+    ---@param callback [function]
+    ---@return boolean,...
+    __call = function(_, name, callback, ...)
+        return rpc_call.call(name, callback, ...);
+    end
+});
+
+----------------------------------------------------------------------------
 ---封装 TLS 子模块
 ----------------------------------------------------------------------------
 
