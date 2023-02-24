@@ -113,15 +113,6 @@ int main(int argc, char* argv[])
   lua_Integer error = -1;
   lua_State* L = luaos_local.lua_state();
 
-  if (strkey.empty()) {
-    code_generate(L);
-    strkey = luaL_checkstring(L, -1);
-    lua_pop(L, 1);
-  }
-  else if (strkey.size() != 32) {
-    luaos_error("Invalid EHC code\n\n");
-    return 1;
-  }
   if (help) {
     std::string fname(argv[0]);
     const char* pos = strrchr(argv[0], LUA_DIRSEP[0]);
@@ -135,10 +126,9 @@ int main(int argc, char* argv[])
       "  >   -c filename [[*] | [extensions]] output to file 'filename'\n"
       "  >   -i filename import from file 'filename'\n"
       "  >   -e filename export from file 'filename'\n"
-      "  >   -k EHC code for encrypt/decrypt\n",
+      "  >   -k key for import/export\n",
       fname.c_str()
     );
-    printf("  > EHC: %s\n\n", strkey.c_str());
     return 0;
   }
   if (compile) {
