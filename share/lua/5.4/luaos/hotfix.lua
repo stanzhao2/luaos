@@ -38,6 +38,41 @@ string.split = function(str, delimiter)
 end
 
 ----------------------------------------------------------------------------
+---为 math 添加功能
+----------------------------------------------------------------------------
+
+local ok, bigint = pcall(require, "bigint");
+if not ok then
+    throw(bigint);
+end
+
+---创建一个大整数
+---@param v integer
+math.bigint = function(v)
+    return bigint.new(v);
+end
+
+local ok, random = pcall(require, "luaos.random");
+if not ok then
+    throw(random);
+end
+
+local random32 = random.random32_create();
+local random64 = random.random64_create();
+
+---创建一个 32 位随机数
+---@retrun integer
+math.random32 = function(...)
+    return random32:random(...);
+end
+
+---创建一个 64 位随机数
+---@retrun integer
+math.random64 = function(...)
+    return random64:random(...);
+end
+
+----------------------------------------------------------------------------
 ---为 table 添加功能
 ----------------------------------------------------------------------------
 

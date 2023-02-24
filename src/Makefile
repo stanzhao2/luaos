@@ -24,6 +24,7 @@ SOURCE  := luaos.o \
 		   luaos_mc.o \
 		   luaos_local.o \
 		   luaos_state.o \
+		   luaos_storage.o \
 		   luaos_subscriber.o \
 		   luaos_traceback.o
 		   

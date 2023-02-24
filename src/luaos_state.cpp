@@ -25,6 +25,7 @@
 #include "luaos_socket.h"
 #include "luaos_compile.h"
 #include "luaos_mc.h"
+#include "luaos_storage.h"
 #include "luaos_subscriber.h"
 #include "luaos_traceback.h"
 
@@ -1209,8 +1210,9 @@ static int luaopen_socket(lua_State* L)
   return 0;
 }
 
-static int luaopen_subscriber(lua_State* L)
+static int luaopen_others(lua_State* L)
 {
+  storage::init_metatable(L);
   subscriber::init_metatable(L);
   return 0;
 }
@@ -1347,7 +1349,7 @@ int luaos_openlibs(lua_State* L)
     {"job",         luaopen_job        },
     {"socket",      luaopen_socket     },
     {"timer",       luaopen_timer      },
-    {"subscriber",  luaopen_subscriber },
+    {"others",      luaopen_others     },
     { NULL,         NULL               }
   };
   for (const luaL_Reg* libs = modules; libs->func; libs++) {

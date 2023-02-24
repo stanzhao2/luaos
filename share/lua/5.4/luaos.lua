@@ -20,7 +20,7 @@
 ---封装 luaos 主模块
 ----------------------------------------------------------------------------
 
-dofile("luaos.global");
+dofile("luaos.hotfix");
 
 ---Save to local variables for efficiency
 local ok;
@@ -299,52 +299,12 @@ luaos.cluster = {
 };
 
 ----------------------------------------------------------------------------
----封装 bigint 子模块
-----------------------------------------------------------------------------
-
-local bigint;
-ok, bigint = pcall(require, "bigint");
-if not ok then
-    throw(bigint);
-end
-
----创建一个大整数
----@param v integer
-math.bigint = function(v)
-    return bigint.new(v);
-end
-
-----------------------------------------------------------------------------
----封装 random 子模块
-----------------------------------------------------------------------------
-
-local random;
-ok, random = pcall(require, "luaos.random");
-if not ok then
-    throw(random);
-end
-
-local random32 = random.random32_create();
-local random64 = random.random64_create();
-
----创建一个 32 位随机数
----@retrun integer
-math.random32 = function(...)
-    return random32:random(...);
-end
-
----创建一个 64 位随机数
----@retrun integer
-math.random64 = function(...)
-    return random64:random(...);
-end
-
-----------------------------------------------------------------------------
 ---封装 pump_message 子模块
 ----------------------------------------------------------------------------
 
 local class_pump, private_pump;
 ok, class_pump = pcall(require, "luaos.pump");
+
 if not ok then
     throw(class_pump);
 else
@@ -377,6 +337,72 @@ end
 luaos.dispatch = function(name, ...)
     return private_pump:dispatch(name, ...);
 end
+
+----------------------------------------------------------------------------
+---封装 global 子模块
+----------------------------------------------------------------------------
+
+local storage = global;
+local pack = luaos.conv.pack;
+global = nil;  --disable original global
+
+luaos.global = {
+    ---设置一个 key-value 对
+    ---@overload fun(key:string, handler:fun(old_value:any):any):any
+    ---@param key string
+    ---@param value any
+    ---@retrun any
+    set = function(key, value)
+        key = tostring(key);
+        local ty = type(value)
+        if ty ~= "function" then
+            value = pack.encode(value);
+            value = storage.set(key, value);
+            if value then
+                value = pack.decode(value);
+            end
+            return value;
+        end        
+        local luaold;
+        storage.set(key, function(old)
+            if old then
+                old = pack.decode(old);
+            end
+            luaold = old;
+            return pack.encode(value(old))
+        end);        
+        return luaold;
+    end,
+    
+    ---获取一个 key-value 值
+    ---@param key string
+    ---@return any
+    get = function(key)
+        key = tostring(key);        
+        local value = storage.get(key);        
+        if value then
+            value = pack.decode(value)
+        end        
+        return value;
+    end,
+    
+    ---清除所有 key-value 值
+    clear = function()
+        return storage.clear();
+    end,
+    
+    ---擦除指定的 key-value 值
+    ---@param key string
+    ---@return any
+    erase = function(key)
+        key = tostring(key);        
+        local value = storage.erase(key);        
+        if value then
+            value = pack.decode(value)
+        end        
+        return value;
+    end,
+};
 
 ----------------------------------------------------------------------------
 ---设置元表，禁止添加新元素
