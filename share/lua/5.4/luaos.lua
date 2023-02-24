@@ -20,7 +20,7 @@
 ---封装 luaos 主模块
 ----------------------------------------------------------------------------
 
-dofile("luaos.hotfix");
+dofile("luaos.update");
 
 ---Save to local variables for efficiency
 local ok;
