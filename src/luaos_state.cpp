@@ -120,20 +120,6 @@ inline static bool is_slash(char c)
   return c == '/' || c == '\\';
 }
 
-inline static const char* skip_pathroot(const char* p)
-{
-  while (p && *p)
-  {
-    const char c = *p;
-    if (c == '.' || is_slash(c)) {
-      p++;
-      continue;
-    }
-    break;
-  }
-  return p;
-}
-
 static int is_fullname(const char* filename)
 {
   char c1, c2, c3;
@@ -151,6 +137,23 @@ static int is_fullname(const char* filename)
     return 0;
   }
   return (c1 >= 'a' && c1 <= 'z') || (c1 >= 'A' && c1 <= 'Z');
+}
+
+static const char* skip_pathroot(const char* p)
+{
+  if (is_fullname(p)) {
+    return p;
+  }
+  while (p && *p)
+  {
+    const char c = *p;
+    if ((c == '.' && *(p + 1) != '.') || is_slash(c)) {
+      p++;
+      continue;
+    }
+    break;
+  }
+  return p;
 }
 
 static const char* skipBOM(const char* buff, size_t* size)
@@ -210,14 +213,12 @@ static void chdir_fpath(const char* filename)
   }
   *finded = 0;
   int result = chdir(path);
+  dir::current(path, (int)sizeof(path));
   luaos_trace("Switch work path to: %s\n", path);
 }
 
 static int ll_fload(lua_State* L, const char* buff, size_t size, const char* filename)
 {
-  if (filename[0] == '.' && is_slash(filename[1])) {
-    filename += 2;
-  }
   if (size < 4 || memcmp(buff, LUA_SIGNATURE, 4))
   {
     buff = skipBOM(buff, &size);
@@ -273,6 +274,7 @@ static int ll_fload(lua_State* L, const char* filename)
 
 static int ll_fread(lua_State* L, const char* filename)
 {
+  filename = skip_pathroot(filename);
   int result, topidx = lua_gettop(L);
   FILE* fp = fopen(filename, "r");
   if (fp == nullptr) {
@@ -1167,13 +1169,9 @@ int luaos_close(lua_State* L)
 int luaos_pexec(lua_State* L, const char* filename, int n)
 {
   char name[256], original[256];
+  filename = skip_pathroot(filename);
   size_t namelen = strlen(filename);
-  if (filename[0] == '.') {
-    if (filename[1] == LUA_DIRSEP[0]) {
-      namelen  -= 2;
-      filename += 2;
-    }
-  }
+
   strcpy(name, filename);
   strcpy(original, name);
   luaos_trace("Start module '%s' in protected mode\n", original);

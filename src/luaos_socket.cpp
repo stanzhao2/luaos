@@ -437,7 +437,7 @@ static int lua_os_socket_select(lua_State* L)
   }
 
   size_t type = luaL_checkinteger(L, 2);
-  if (type < 1 || type > 2) {
+  if (type != 1 && type != 2) {
     luaL_argerror(L, 2, "type error, must be 1 or 2");
   }
   if (!lua_isfunction(L, 3)) {
