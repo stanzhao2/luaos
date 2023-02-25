@@ -29,6 +29,8 @@ class console final
     CONSOLE_SCREEN_BUFFER_INFO si;
     _handle = GetStdHandle(STD_OUTPUT_HANDLE);
     GetConsoleScreenBufferInfo(_handle, &si);
+
+    SetConsoleOutputCP(936);
     _color    = si.wAttributes;
     _codepage = GetConsoleOutputCP();
   }

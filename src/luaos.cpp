@@ -80,11 +80,7 @@ static void replace(std::string& filename)
 int main(int argc, char* argv[])
 {
   display_logo();
-
-#ifdef _MSC_VER
-  setlocale(LC_ALL, "");
-  SetConsoleOutputCP(936);
-#else
+#ifndef _MSC_VER
   MallocExtension::instance()->SetMemoryReleaseRate(0);
 #endif
 
