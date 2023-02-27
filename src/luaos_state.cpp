@@ -226,6 +226,14 @@ static int ll_fload(lua_State* L, const char* buff, size_t size, const char* fil
       lua_pushfstring(L, "'%s' is not utf8 encoded", filename);
       return LUA_ERRERR;
     }
+    if (*buff == '#') {
+      while (*buff) {
+        size--;
+        if (*buff++ == '\n') {
+          break;
+        }
+      }
+    }
   }
   char luaname[1024];
   snprintf(luaname, sizeof(luaname), "@%s", filename);
