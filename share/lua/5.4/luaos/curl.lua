@@ -55,11 +55,10 @@ function curl.wget(url, ...)
         --c:setopt(curl.OPT_HEADER,  true) --设置为true将响应头信息同响应体一起传给WRITEFUNCTION
     local ok, err = c:perform()
     c:close()
-    c = nil
-    if (ok == false) then
-        trace("curl perform failed: " .. err)
+    if not ok then
+        return false, err
     end
-    return ok, table.concat(result)
+    return true, table.concat(result)
 end
 
 ----------------------------------------------------------------------------
@@ -92,11 +91,10 @@ function curl.wpost(url, data, ...)
         --c:setopt(curl.OPT_HEADER,  true) --设置为true将响应头信息同响应体一起传给WRITEFUNCTION
     local ok, err = c:perform()
     c:close()
-    c = nil
-    if (ok == false) then
-        trace("curl perform failed: " .. err)
+    if not ok then
+        return false, err
     end
-    return ok, table.concat(result)
+    return true, table.concat(result)
 end
 
 ----------------------------------------------------------------------------

@@ -23,6 +23,7 @@ LUARANDOM     = $(LUAEXT)/lua-random
 LUARAPIDJSON  = $(LUAEXT)/lua-rapidjson
 LUASKIPLIST   = $(LUAEXT)/lua-skiplist
 LUAUUID       = $(LUAEXT)/lua-uuid
+LUAXSTRING    = $(LUAEXT)/lua-xstring
 LUAMYSQL      = $(LUAEXT)/lua-sql/mysql
 
 MAKE    = make
@@ -54,6 +55,7 @@ all:
 	cd $(LUARAPIDJSON) && $(MAKE)
 	cd $(LUASKIPLIST) && $(MAKE)
 	cd $(LUAUUID) && $(MAKE)
+	cd $(LUAXSTRING) && $(MAKE)
 	cd $(LUAMYSQL) && $(MAKE)
 	
 	$(MKDIR) ./bin	
@@ -75,6 +77,7 @@ clean:
 	cd $(LUARAPIDJSON) && $(MAKE) clean
 	cd $(LUASKIPLIST) && $(MAKE) clean
 	cd $(LUAUUID) && $(MAKE) clean
+	cd $(LUAXSTRING) && $(MAKE) clean
 	cd $(LUAMYSQL) && $(MAKE) clean
 	
 install:
