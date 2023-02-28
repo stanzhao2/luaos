@@ -23,10 +23,9 @@ dofile("luaos.update");
 ----------------------------------------------------------------------------
 
 ---Save to local variables for efficiency
-local ok;
-local io    = io;
-local os    = os;
-local tls   = tls;
+local io  = io;
+local os  = os;
+local tls = tls;
 
 ----------------------------------------------------------------------------
 ---替换系统 pairs 函数
@@ -194,41 +193,32 @@ local luaos = {
     end,
 };
 
-ok, luaos.bind  = pcall(require, "luaos.bind");
-if not ok then
-    throw(luaos.bind);
-end
+----------------------------------------------------------------------------
+---加载 general 模块
+----------------------------------------------------------------------------
 
-ok, luaos.try   = pcall(require, "luaos.try");
-if not ok then
-    throw(luaos.try);
-end
+local modules = {
+    bind    =   "bind",     --lua bind
+    try     =   "try",      --lua try
+    conv    =   "conv",     --lua conv
+    curl    =   "curl",     --lua curl
+    odbc    =   "odbc",     --lua odbc
+    class   =   "classy",   --lua classy
+}
 
-ok, luaos.conv  = pcall(require, "luaos.conv");
-if not ok then
-    throw(luaos.conv);
-end
-
-ok, luaos.curl  = pcall(require, "luaos.curl");
-if not ok then
-    throw(luaos.curl);
-end
-
-ok, luaos.odbc  = pcall(require, "luaos.odbc");
-if not ok then
-    throw(luaos.odbc);
-end
-
-ok, luaos.class = pcall(require, "luaos.classy");
-if not ok then
-    throw(luaos.class);
+for k, v in pairs(modules) do
+    local ok, result = pcall(require, "luaos." .. v);
+    if not ok then
+        throw(result);
+    end
+    luaos[k] = result;
 end
 
 ----------------------------------------------------------------------------
 ---封装 rpcall 子模块
 ----------------------------------------------------------------------------
 
-local r_pcall = rpcall;
+local __rpcall = rpcall;
 rpcall = nil;  --disable original rpcall
 
 luaos.rpcall = setmetatable({
@@ -237,14 +227,14 @@ luaos.rpcall = setmetatable({
     ---@param func function
     ---@return boolean
     register = function(name, func)
-        return r_pcall.register(name, func);
+        return __rpcall.register(name, func);
     end,
     
     ---取消一个 RPC 函数(当前进程有效)
     ---@param name string
     ---@return boolean
     unregister = function(name)
-        return r_pcall.cancel(name);
+        return __rpcall.cancel(name);
     end,
     }, {
     ---执行一个 RPC 函数(当前进程有效)
@@ -252,7 +242,7 @@ luaos.rpcall = setmetatable({
     ---@param callback [function]
     ---@return boolean,...
     __call = function(_, name, callback, ...)
-        return r_pcall.call(name, callback, ...);
+        return __rpcall.call(name, callback, ...);
     end
 });
 
@@ -382,18 +372,18 @@ luaos.cluster = {
 ---封装 pump_message 子模块
 ----------------------------------------------------------------------------
 
-local class_pump, private_pump;
-ok, class_pump = pcall(require, "luaos.pump");
+local global_pump;
+local ok, pump = pcall(require, "luaos.pump");
 
 if not ok then
-    throw(class_pump);
+    throw(pump);
 else
-    private_pump = class_pump();
+    global_pump = pump();
 end
 
 ---创建一个消息反应堆
 luaos.pump_message = function()
-    return class_pump();
+    return pump();
 end
 
 ---注册一个消息回调(仅当前模块)
@@ -401,21 +391,21 @@ end
 ---@param handler fun(...):void
 ---@return function
 luaos.register = function(name, handler, priority)
-    return private_pump:register(name, handler, priority);
+    return global_pump:register(name, handler, priority);
 end
 
 ---取消一个消息回调(仅当前模块)
 ---@param name integer|string
 ---@param handler fun(...):void
 luaos.unregister = function(name, handler)
-    return private_pump:unregister(name, handler);
+    return global_pump:unregister(name, handler);
 end
 
 ---派发一个回调消息(仅当前模块)
 ---@param name integer|string
 ---@return integer
 luaos.dispatch = function(name, ...)
-    return private_pump:dispatch(name, ...);
+    return global_pump:dispatch(name, ...);
 end
 
 ----------------------------------------------------------------------------
