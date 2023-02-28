@@ -34,12 +34,31 @@ local tls   = tls;
 
 local __pairs = pairs;
 
+local function lt(a, b)
+    if tostring(a) < tostring(b) then 
+        return true
+    end
+end
+
+local function gt(a, b)
+    if tostring(a) > tostring(b) then 
+        return true
+    end
+end
+
 pairs = function(t, f)
-    if not f then
+    if f == nil then
         return __pairs(t);
     end
     local a = {}
     for k in __pairs(t) do table.insert(a, k) end
+    if type(f) == "boolean" then
+        if f then
+            f = lt
+        else
+            f = gt
+        end
+    end
     table.sort(a, f)
     local i = 0                 -- iterator variable
     local iter = function ()    -- iterator function
