@@ -813,7 +813,7 @@ static int lua_os_socket(lua_State* L)
 {
   socket::ref sock;
   auto ios = luaos_local.lua_service();
-  const char* family = luaL_optstring(L, 1, "tcp");
+  const char* family = luaL_optstring(L, -1, "tcp");
 
   lua_socket* lua_sock = 0;
   if (_tinydir_stricmp(family, "tcp") == 0)
@@ -1142,10 +1142,24 @@ const char* lua_socket::metatable_name()
 
 void lua_socket::init_metatable(lua_State* L)
 {
-  lua_getglobal(L, "io");
-  lua_pushcfunction(L, lua_os_socket);
+  struct luaL_Reg __call[] = {
+    { "__call",       lua_os_socket },
+    { NULL,           NULL          },
+  };
+  lua_getglobal(L, "io"); /* push os to stack */
+  lua_newtable(L);        /* push table to stack */
+
+  lua_pushinteger(L, 1);
+  lua_setfield(L, -2, "read");
+
+  lua_pushinteger(L, 2);
+  lua_setfield(L, -2, "write");
+
+  lexnew_metatable(L, "io.socket", __call);
+  lua_setmetatable(L, -2);
+
   lua_setfield(L, -2, "socket");
-  lua_pop(L, 1); //pop os from stack
+  lua_pop(L, 1); //pop io from stack
 
   struct luaL_Reg methods[] = {
     { "__gc",         lua_os_socket_gc            },
@@ -1169,7 +1183,7 @@ void lua_socket::init_metatable(lua_State* L)
     { "tls_sni",      lua_os_socket_ssl_sni       },
     { "tls_enable",   lua_os_socket_ssl_enable    },
     { "handshake",    lua_os_socket_ssl_handshake },
-    { NULL,           NULL },
+    { NULL,           NULL                        },
   };
   lexnew_metatable(L, metatable_name(), methods);
   lua_pop(L, 1);

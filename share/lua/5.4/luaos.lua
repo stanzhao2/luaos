@@ -76,7 +76,9 @@ end
 
 ---@class luaos
 local luaos = {
-    read = 1, write = 2,
+    read  = io.socket.read,
+
+    write = io.socket.write,
     
     ---创建一个 socket
     ---@param family string
