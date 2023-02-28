@@ -227,12 +227,9 @@ static int ll_fload(lua_State* L, const char* buff, size_t size, const char* fil
       return LUA_ERRERR;
     }
     if (*buff == '#') {
-      while (*buff) {
+      do {
         size--;
-        if (*buff++ == '\n') {
-          break;
-        }
-      }
+      } while (*(++buff) != '\n');
     }
   }
   char luaname[1024];
@@ -1176,6 +1173,9 @@ int luaos_close(lua_State* L)
 
 int luaos_pexec(lua_State* L, const char* filename, int n)
 {
+  lua_pushboolean(L, luaos_is_debug(L) ? 1 : 0);
+  lua_setglobal(L, "_DEBUG");
+
   char name[256], original[256];
   filename = skip_pathroot(filename);
   size_t namelen = strlen(filename);
@@ -1389,9 +1389,6 @@ lua_State* luaos_newstate(lua_CFunction loader)
   luaL_openlibs(L);
   init_luapath(L);
   ll_install(L, loader);
-
-  lua_pushboolean(L, 1);
-  lua_setglobal(L, "_DEBUG");
   disable_global(L, throw_error);
 
 #if defined LUA_VERSION_NUM && LUA_VERSION_NUM >= 504 
