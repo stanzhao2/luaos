@@ -16,17 +16,44 @@
 *********************************************************************************
 ]]--
 
+dofile("luaos.update");
+
 ----------------------------------------------------------------------------
 ---封装 luaos 主模块
 ----------------------------------------------------------------------------
-
-dofile("luaos.update");
 
 ---Save to local variables for efficiency
 local ok;
 local io    = io;
 local os    = os;
 local tls   = tls;
+
+----------------------------------------------------------------------------
+---替换系统 pairs 函数
+----------------------------------------------------------------------------
+
+local __pairs = pairs;
+
+pairs = function(t, f)
+    if not f then
+        return __pairs(t);
+    end
+    local a = {}
+    for k in __pairs(t) do table.insert(a, k) end
+    table.sort(a, f)
+    local i = 0                 -- iterator variable
+    local iter = function ()    -- iterator function
+       i = i + 1
+       if a[i] == nil then return nil
+       else return a[i], t[a[i]]
+       end
+    end
+    return iter
+end
+
+----------------------------------------------------------------------------
+---封装 luaos 模块
+----------------------------------------------------------------------------
 
 ---@class luaos
 local luaos = {
