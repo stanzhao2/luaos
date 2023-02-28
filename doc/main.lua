@@ -23,7 +23,7 @@ local format = string.format;
 
 ----------------------------------------------------------------------------
 
---[[
+--[=[
 --If you need https/wss communication, you need to cancel the comment
 local certificates = {
     ["hostname"] = {
@@ -32,7 +32,7 @@ local certificates = {
         passwd = nil, --Password of key file
     },
 };
-]]--
+--]=]
 
 ----------------------------------------------------------------------------
 
