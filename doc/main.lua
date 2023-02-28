@@ -61,7 +61,7 @@ function main(...)
     nginx.on(event.accept,  on_accept)
          .on(event.error,   on_error)
          .on(event.receive, on_receive)
-         .listen("0.0.0.0", 8899, certificates);
+         .listen("0.0.0.0", 8899, "wwwroot", certificates);
 
 	while not luaos.stopped() do
 		local success, err = pcall(luaos.wait);

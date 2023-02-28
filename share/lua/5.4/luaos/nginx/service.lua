@@ -31,14 +31,14 @@ local function tls_context(hostname)
     return context;
 end
 
-function main(host, port, certs)
+function main(host, port, root, certs)
     if not certs then
         tls_context = nil;
     else
         certificates = certs;
     end
     
-	local nginx, result = luaos.nginx.start(host, port, "wwwroot", tls_context);
+	local nginx, result = luaos.nginx.start(host, port, root, tls_context);
     assert(nginx, result);    
     nginx:upgrade(); --websocket enabled
 

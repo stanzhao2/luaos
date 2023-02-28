@@ -107,11 +107,20 @@ local switch = {
     end,
 };
 
-function nginx.listen(host, port, certs)
+function nginx.listen(host, port, root, certs)
+    if type(host) ~= "string" then
+        throw("invalid host");
+    end
+    if type(port) ~= "number" then
+        throw("invalid port");
+    end
+    if type(root) ~= "string" then
+        throw("web root invalid");
+    end
     if nginx.server then
         return;
     end
-    local server, err = luaos.start("luaos.nginx.service", host, port, certs);
+    local server, err = luaos.start("luaos.nginx.service", host, port, root, certs);
     if not server then
         throw(err);
     end
