@@ -138,14 +138,14 @@ local function sort_pairs(t, f)
     return iter
 end
 
-local function sort(a, b)
+local function compare(a, b)
     if tostring(a) < tostring(b) then 
         return true
     end
 end
 
 local function depth_pairs(t, r)
-    for k, v in sort_pairs(t , sort) do
+    for k, v in sort_pairs(t , compare) do
         if type(v) == "table" then
             depth_pairs(v, r);
         else
