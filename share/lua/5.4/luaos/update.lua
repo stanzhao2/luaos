@@ -78,6 +78,7 @@ end
 
 local insert   = table.insert;
 local concat   = table.concat;
+local sort     = table.sort;
 local format   = string.format;
 local tostring = tostring;
 local indents  = "    ";
@@ -119,6 +120,68 @@ end
 table.format = function(data)
     assert(type(data) == "table");
     return format_table(data, 0);
+end
+
+----------------------------------------------------------------------------
+
+local function sort_pairs(t, f)
+    local a = {}
+    for n in pairs(t) do insert(a, n) end
+    sort(a, f)
+    local i = 0                 -- iterator variable
+    local iter = function ()    -- iterator function
+       i = i + 1
+       if a[i] == nil then return nil
+       else return a[i], t[a[i]]
+       end
+    end
+    return iter
+end
+
+local function sort(a, b)
+    if tostring(a) < tostring(b) then 
+        return true
+    end
+end
+
+local function depth_pairs(t, r)
+    for k, v in sort_pairs(t , sort) do
+        if type(v) == "table" then
+            depth_pairs(v, r);
+        else
+            insert(r, tostring(k) .. tostring(v));
+        end
+    end
+end
+
+---对table数据进行签名
+---@param data table
+---@param algo function 签名算法
+---@param key string 密钥
+---@return string
+table.sign = function(data, algo, key)
+    assert(type(data) == "table")
+    assert(type(algo) == "function")
+    
+    local result = {};
+    depth_pairs(data, result);
+    return algo(concat(result), key);
+end
+
+---对table数据进行签名验证
+---@param sign string
+---@param data table
+---@param algo function 签名算法
+---@param key string 密钥
+---@return string
+table.verify = function(sign, data, algo, key)
+    assert(type(sign) == "string")
+    assert(type(data) == "table")
+    assert(type(algo) == "function")
+    
+    local result = {};
+    depth_pairs(data, result);
+    return algo(sign, concat(result), key);
 end
 
 ----------------------------------------------------------------------------
