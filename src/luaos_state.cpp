@@ -1191,6 +1191,10 @@ int luaos_pexec(lua_State* L, const char* filename, int n)
       }
     }
   }
+
+  lua_pushstring(L, name);
+  lua_setglobal(L, "__name__");
+
   int stack_top = lua_gettop(L);
   lua_pushcfunction(L, ll_require);
   lua_pushstring(L, name);
