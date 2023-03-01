@@ -832,3 +832,865 @@ inline void lex_pcall(lua_State* L, const char* funcname, const char* modname, c
 }
 
 /***********************************************************************************/
+
+template<typename T>
+struct reference_traits_t {
+  typedef T arg_type_t;
+};
+
+template<>
+struct reference_traits_t<const std::string&> {
+  typedef std::string arg_type_t;
+};
+
+template<>
+struct reference_traits_t<std::string&> {
+  typedef std::string arg_type_t;
+};
+
+template<typename T>
+struct reference_traits_t<const T*> {
+  typedef T* arg_type_t;
+};
+template<typename T>
+struct reference_traits_t<const T&> {
+  typedef T arg_type_t;
+};
+
+template <typename T>
+struct init_value_traits_t {
+  inline static T value(){ return T(); }
+};
+
+template <typename T>
+struct init_value_traits_t<const T*> {
+  inline static T* value(){ return NULL; }
+};
+
+template <typename T>
+struct init_value_traits_t<const T&> {
+  inline static T value(){ return T(); }
+};
+
+template <>
+struct init_value_traits_t<std::string> {
+  inline static const char* value(){ return ""; }
+};
+
+template <>
+struct init_value_traits_t<const std::string&> {
+  inline static const char* value(){ return ""; }
+};
+
+/***********************************************************************************/
+
+template <typename T> struct lua_CFunction_param {};
+
+template<>
+struct lua_CFunction_param<bool> {
+  static bool get(lua_State* L, int i) {
+    return lua_toboolean(L, i) ? true : false;
+  }
+  static bool get(lua_State* L, int i, bool def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, bool v) {
+    lua_pushboolean(L, v ? 1 : 0);
+  }
+};
+
+template<>
+struct lua_CFunction_param<char> {
+  static char get(lua_State* L, int i) {
+    return (char)luaL_checkinteger(L, i);
+  }
+  static char get(lua_State* L, int i, char def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, char v) {
+    lua_pushinteger(L, (lua_Integer)v);
+  }
+};
+
+template<>
+struct lua_CFunction_param<unsigned char> {
+  static unsigned char get(lua_State* L, int i) {
+    return (unsigned char)luaL_checkinteger(L, i);
+  }
+  static unsigned char get(lua_State* L, int i, unsigned char def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, unsigned char v) {
+    lua_pushinteger(L, (lua_Integer)v);
+  }
+};
+
+template<>
+struct lua_CFunction_param<short> {
+  static short get(lua_State* L, int i) {
+    return (short)luaL_checkinteger(L, i);
+  }
+  static short get(lua_State* L, int i, short def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, short v) {
+    lua_pushinteger(L, (lua_Integer)v);
+  }
+};
+
+template<>
+struct lua_CFunction_param<unsigned short> {
+  static unsigned short get(lua_State* L, int i) {
+    return (unsigned short)luaL_checkinteger(L, i);
+  }
+  static unsigned short get(lua_State* L, int i, unsigned short def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, unsigned short v) {
+    lua_pushinteger(L, (lua_Integer)v);
+  }
+};
+
+template<>
+struct lua_CFunction_param<int> {
+  static int get(lua_State* L, int i) {
+    return (int)luaL_checkinteger(L, i);
+  }
+  static int get(lua_State* L, int i, int def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, int v) {
+    lua_pushinteger(L, (lua_Integer)v);
+  }
+};
+
+template<>
+struct lua_CFunction_param<unsigned int> {
+  static unsigned int get(lua_State* L, int i) {
+    return (unsigned int)luaL_checkinteger(L, i);
+  }
+  static unsigned int get(lua_State* L, int i, unsigned int def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, unsigned int v) {
+    lua_pushinteger(L, (lua_Integer)v);
+  }
+};
+
+template<>
+struct lua_CFunction_param<long> {
+  static long get(lua_State* L, int i) {
+    return (long)luaL_checkinteger(L, i);
+  }
+  static long get(lua_State* L, int i, long def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, long v) {
+    lua_pushinteger(L, (lua_Integer)v);
+  }
+};
+
+template<>
+struct lua_CFunction_param<unsigned long> {
+  static unsigned long get(lua_State* L, int i) {
+    return (unsigned long)luaL_checkinteger(L, i);
+  }
+  static unsigned long get(lua_State* L, int i, unsigned long def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, unsigned long v) {
+    lua_pushinteger(L, (lua_Integer)v);
+  }
+};
+
+template<>
+struct lua_CFunction_param<size_t> {
+  static size_t get(lua_State* L, int i) {
+    return (size_t)luaL_checkinteger(L, i);
+  }
+  static size_t get(lua_State* L, int i, size_t def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, size_t v) {
+    lua_pushinteger(L, (lua_Integer)v);
+  }
+};
+
+template<>
+struct lua_CFunction_param<long long> {
+  static long long get(lua_State* L, int i) {
+    return (long long)luaL_checkinteger(L, i);
+  }
+  static long long get(lua_State* L, int i, long long def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, long long v) {
+    lua_pushinteger(L, (lua_Integer)v);
+  }
+};
+
+template<>
+struct lua_CFunction_param<float> {
+  static float get(lua_State* L, int i) {
+    return (float)luaL_checknumber(L, i);
+  }
+  static float get(lua_State* L, int i, float def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, float v) {
+    lua_pushnumber(L, (lua_Number)v);
+  }
+};
+
+template<>
+struct lua_CFunction_param<double> {
+  static double get(lua_State* L, int i) {
+    return (double)luaL_checknumber(L, i);
+  }
+  static double get(lua_State* L, int i, double def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, double v) {
+    lua_pushnumber(L, (lua_Number)v);
+  }
+};
+
+template<>
+struct lua_CFunction_param<char*> {
+  static char* get(lua_State* L, int i) {
+    return (char*)luaL_checkstring(L, i);
+  }
+  static char* get(lua_State* L, int i, char* def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, char* v) {
+    if (!v) {
+      lua_pushnil(L);
+    } else {
+      lua_pushstring(L, v);
+    }
+  }
+};
+
+template<>
+struct lua_CFunction_param<const char*> {
+  static const char* get(lua_State* L, int i) {
+    return (const char*)luaL_checkstring(L, i);
+  }
+  static const char* get(lua_State* L, int i, const char* def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, const char* v) {
+    if (!v) {
+      lua_pushnil(L);
+    } else {
+      lua_pushstring(L, v);
+    }
+  }
+};
+
+template<>
+struct lua_CFunction_param<void*> {
+  static void* get(lua_State* L, int i) {
+    return (void*)lua_touserdata(L, i);
+  }
+  static void* get(lua_State* L, int i, void* def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, void* v) {
+    if (!v) {
+      lua_pushnil(L);
+    } else {
+      lua_pushlightuserdata(L, v);
+    }
+  }
+};
+
+template<>
+struct lua_CFunction_param<const void*> {
+  static const void* get(lua_State* L, int i) {
+    return (const void*)lua_touserdata(L, i);
+  }
+  static const void* get(lua_State* L, int i, const void* def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, const void* v) {
+    if (!v) {
+      lua_pushnil(L);
+    } else {
+      lua_pushlightuserdata(L, (void*)v);
+    }
+  }
+};
+
+template<>
+struct lua_CFunction_param<std::string> {
+  static std::string get(lua_State* L, int i) {
+    return std::string(luaL_checkstring(L, i));
+  }
+  static std::string get(lua_State* L, int i, const std::string& def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, const std::string& v) {
+    lua_pushlstring(L, v.c_str(), v.size());
+  }
+};
+
+template<>
+struct lua_CFunction_param<std::string&> {
+  static std::string get(lua_State* L, int i) {
+    return luaL_checkstring(L, i);
+  }
+  static std::string get(lua_State* L, int i, const std::string& def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, const std::string& v) {
+    lua_pushlstring(L, v.c_str(), v.size());
+  }
+};
+
+template<>
+struct lua_CFunction_param<const std::string&> {
+  static std::string get(lua_State* L, int i) {
+    return luaL_checkstring(L, i);
+  }
+  static std::string get(lua_State* L, int i, const std::string& def) {
+    return lua_isnoneornil(L, i) ? def : get(L, i);
+  }
+  static void set(lua_State* L, const std::string& v) {
+    lua_pushlstring(L, v.c_str(), v.size());
+  }
+};
+
+template<>
+struct lua_CFunction_param<lua_table<>> {
+  static lua_table<> get(lua_State* L, int i) {
+    luaL_argcheck(L, lua_type(L, i) == LUA_TTABLE, i, "value expected");
+    return std::any_cast<lua_table<>>(lexget_any(L, i));
+  }
+  static lua_table<> get(lua_State* L, int i, const lua_table<>& def) {
+    return lua_isnoneornil(L, i) ? std::any_cast<lua_table<>>(def) : get(L, i);
+  }
+  static void set(lua_State* L, const lua_table<>& v) {
+    lexpush_any(L, v);
+  }
+};
+
+/***********************************************************************************/
+
+template <typename Handler>
+struct lua_CFunction_userdata {
+  lua_CFunction_userdata(Handler fn) : cfunction(fn) { }
+  Handler cfunction;
+};
+
+template <typename Handler>
+struct lua_CFunction_wrapper
+{
+  typedef void (*dest_func_t)();
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    fn();
+    return 0;
+  }
+};
+
+template <typename RET>
+struct lua_CFunction_wrapper<RET (*)()>
+{
+  typedef RET (*dest_func_t)();
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    lua_CFunction_param<RET>::set(L, fn());
+    return 1;
+  }
+};
+
+template <typename Arg1>
+struct lua_CFunction_wrapper<void(*)(Arg1)>
+{
+  typedef void (*dest_func_t)(Arg1);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, def1);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    fn(arg1);
+    return 0;
+  }
+};
+
+template <typename RET, typename Arg1>
+struct lua_CFunction_wrapper<RET (*)(Arg1)>
+{
+  typedef RET (*dest_func_t)(Arg1);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, def1);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    lua_CFunction_param<RET>::set(L, fn(arg1));
+    return 1;
+  }
+};
+
+template <typename Arg1, typename Arg2>
+struct lua_CFunction_wrapper<void(*)(Arg1, Arg2)>
+{
+  typedef void (*dest_func_t)(Arg1, Arg2);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto def2 = init_value_traits_t<Arg2>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, def1);
+    auto arg2 = lua_CFunction_param<Arg2>::get(L, i++, def2);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    fn(arg1, arg2);
+    return 0;
+  }
+};
+
+template <typename RET, typename Arg1, typename Arg2>
+struct lua_CFunction_wrapper<RET(*)(Arg1, Arg2)>
+{
+  typedef RET (*dest_func_t)(Arg1, Arg2);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto def2 = init_value_traits_t<Arg2>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, def1);
+    auto arg2 = lua_CFunction_param<Arg2>::get(L, i++, def2);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    lua_CFunction_param<RET>::set(L, fn(arg1, arg2));
+    return 1;
+  }
+};
+
+template <typename Arg1, typename Arg2, typename Arg3>
+struct lua_CFunction_wrapper<void(*)(Arg1, Arg2, Arg3)>
+{
+  typedef void (*dest_func_t)(Arg1, Arg2, Arg3);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  typedef typename reference_traits_t<Arg1>::arg_type_t arg_type_t;
+
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    arg_type_t def1 = init_value_traits_t<Arg1>::value();
+    arg_type_t def2 = init_value_traits_t<Arg2>::value();
+    arg_type_t def3 = init_value_traits_t<Arg3>::value();
+    Arg1 arg1 = lua_CFunction_param<Arg1>::get(L, i++, def1);
+    Arg2 arg2 = lua_CFunction_param<Arg2>::get(L, i++, def2);
+    Arg2 arg3 = lua_CFunction_param<Arg2>::get(L, i++, def3);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    fn(arg1, arg2, arg3);
+    return 0;
+  }
+};
+
+template <typename RET, typename Arg1, typename Arg2, typename Arg3>
+struct lua_CFunction_wrapper<RET(*)(Arg1, Arg2, Arg3)>
+{
+  typedef RET (*dest_func_t)(Arg1, Arg2, Arg3);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto def2 = init_value_traits_t<Arg2>::value();
+    auto def3 = init_value_traits_t<Arg3>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, def1);
+    auto arg2 = lua_CFunction_param<Arg2>::get(L, i++, def2);
+    auto arg3 = lua_CFunction_param<Arg2>::get(L, i++, def3);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    lua_CFunction_param<RET>::set(L, fn(arg1, arg2, arg3));
+    return 1;
+  }
+};
+
+template <typename Arg1, typename Arg2, typename Arg3, typename Arg4>
+struct lua_CFunction_wrapper<void(*)(Arg1, Arg2, Arg3, Arg4)>
+{
+  typedef void (*dest_func_t)(Arg1, Arg2, Arg3, Arg4);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto def2 = init_value_traits_t<Arg2>::value();
+    auto def3 = init_value_traits_t<Arg3>::value();
+    auto def4 = init_value_traits_t<Arg4>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, arg1);
+    auto arg2 = lua_CFunction_param<Arg2>::get(L, i++, arg2);
+    auto arg3 = lua_CFunction_param<Arg3>::get(L, i++, arg3);
+    auto arg4 = lua_CFunction_param<Arg4>::get(L, i++, arg4);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    fn(arg1, arg2, arg3, arg4);
+    return 0;
+  }
+};
+
+template <typename RET, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
+struct lua_CFunction_wrapper<RET(*)(Arg1, Arg2, Arg3, Arg4)>
+{
+  typedef RET (*dest_func_t)(Arg1, Arg2, Arg3, Arg4);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto def2 = init_value_traits_t<Arg2>::value();
+    auto def3 = init_value_traits_t<Arg3>::value();
+    auto def4 = init_value_traits_t<Arg4>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, arg1);
+    auto arg2 = lua_CFunction_param<Arg2>::get(L, i++, arg2);
+    auto arg3 = lua_CFunction_param<Arg3>::get(L, i++, arg3);
+    auto arg4 = lua_CFunction_param<Arg4>::get(L, i++, arg4);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    lua_CFunction_param<RET>::set(L, fn(arg1, arg2, arg3, arg4));
+    return 1;
+  }
+};
+
+template <typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
+struct lua_CFunction_wrapper<void(*)(Arg1, Arg2, Arg3, Arg4, Arg5)>
+{
+  typedef void (*dest_func_t)(Arg1, Arg2, Arg3, Arg4, Arg5);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto def2 = init_value_traits_t<Arg2>::value();
+    auto def3 = init_value_traits_t<Arg3>::value();
+    auto def4 = init_value_traits_t<Arg4>::value();
+    auto def5 = init_value_traits_t<Arg5>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, def1);
+    auto arg2 = lua_CFunction_param<Arg2>::get(L, i++, def2);
+    auto arg3 = lua_CFunction_param<Arg3>::get(L, i++, def3);
+    auto arg4 = lua_CFunction_param<Arg4>::get(L, i++, def4);
+    auto arg5 = lua_CFunction_param<Arg5>::get(L, i++, def5);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    fn(arg1, arg2, arg3, arg4, arg5);
+    return 0;
+  }
+};
+
+template <typename RET, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
+struct lua_CFunction_wrapper<RET(*)(Arg1, Arg2, Arg3, Arg4, Arg5)>
+{
+  typedef RET (*dest_func_t)(Arg1, Arg2, Arg3, Arg4, Arg5);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto def2 = init_value_traits_t<Arg2>::value();
+    auto def3 = init_value_traits_t<Arg3>::value();
+    auto def4 = init_value_traits_t<Arg4>::value();
+    auto def5 = init_value_traits_t<Arg5>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, def1);
+    auto arg2 = lua_CFunction_param<Arg2>::get(L, i++, def2);
+    auto arg3 = lua_CFunction_param<Arg3>::get(L, i++, def3);
+    auto arg4 = lua_CFunction_param<Arg4>::get(L, i++, def4);
+    auto arg5 = lua_CFunction_param<Arg5>::get(L, i++, def5);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    lua_CFunction_param<RET>::set(L, fn(arg1, arg2, arg3, arg4, arg5));
+    return 1;
+  }
+};
+
+template <typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6>
+struct lua_CFunction_wrapper<void(*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6)>
+{
+  typedef void (*dest_func_t)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto def2 = init_value_traits_t<Arg2>::value();
+    auto def3 = init_value_traits_t<Arg3>::value();
+    auto def4 = init_value_traits_t<Arg4>::value();
+    auto def5 = init_value_traits_t<Arg5>::value();
+    auto def6 = init_value_traits_t<Arg6>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, def1);
+    auto arg2 = lua_CFunction_param<Arg2>::get(L, i++, def2);
+    auto arg3 = lua_CFunction_param<Arg3>::get(L, i++, def3);
+    auto arg4 = lua_CFunction_param<Arg4>::get(L, i++, def4);
+    auto arg5 = lua_CFunction_param<Arg5>::get(L, i++, def5);
+    auto arg6 = lua_CFunction_param<Arg6>::get(L, i++, def6);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    fn(arg1, arg2, arg3, arg4, arg5, arg6);
+    return 0;
+  }
+};
+
+template <typename RET, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6>
+struct lua_CFunction_wrapper<RET(*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6)>
+{
+  typedef RET (*dest_func_t)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto def2 = init_value_traits_t<Arg2>::value();
+    auto def3 = init_value_traits_t<Arg3>::value();
+    auto def4 = init_value_traits_t<Arg4>::value();
+    auto def5 = init_value_traits_t<Arg5>::value();
+    auto def6 = init_value_traits_t<Arg6>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, def1);
+    auto arg2 = lua_CFunction_param<Arg2>::get(L, i++, def2);
+    auto arg3 = lua_CFunction_param<Arg3>::get(L, i++, def3);
+    auto arg4 = lua_CFunction_param<Arg4>::get(L, i++, def4);
+    auto arg5 = lua_CFunction_param<Arg5>::get(L, i++, def5);
+    auto arg6 = lua_CFunction_param<Arg6>::get(L, i++, def6);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    lua_CFunction_param<RET>::set(L, fn(arg1, arg2, arg3, arg4, arg5, arg6));
+    return 1;
+  }
+};
+
+template <typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6, typename Arg7>
+struct lua_CFunction_wrapper<void(*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7)>
+{
+  typedef void (*dest_func_t)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto def2 = init_value_traits_t<Arg2>::value();
+    auto def3 = init_value_traits_t<Arg3>::value();
+    auto def4 = init_value_traits_t<Arg4>::value();
+    auto def5 = init_value_traits_t<Arg5>::value();
+    auto def6 = init_value_traits_t<Arg6>::value();
+    auto def7 = init_value_traits_t<Arg7>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, def1);
+    auto arg2 = lua_CFunction_param<Arg2>::get(L, i++, def2);
+    auto arg3 = lua_CFunction_param<Arg3>::get(L, i++, def3);
+    auto arg4 = lua_CFunction_param<Arg4>::get(L, i++, def4);
+    auto arg5 = lua_CFunction_param<Arg5>::get(L, i++, def5);
+    auto arg6 = lua_CFunction_param<Arg6>::get(L, i++, def6);
+    auto arg7 = lua_CFunction_param<Arg7>::get(L, i++, def7);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    fn(arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    return 0;
+  }
+};
+
+template <typename RET, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6, typename Arg7>
+struct lua_CFunction_wrapper<RET(*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7)>
+{
+  typedef RET (*dest_func_t)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto def2 = init_value_traits_t<Arg2>::value();
+    auto def3 = init_value_traits_t<Arg3>::value();
+    auto def4 = init_value_traits_t<Arg4>::value();
+    auto def5 = init_value_traits_t<Arg5>::value();
+    auto def6 = init_value_traits_t<Arg6>::value();
+    auto def7 = init_value_traits_t<Arg7>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, def1);
+    auto arg2 = lua_CFunction_param<Arg2>::get(L, i++, def2);
+    auto arg3 = lua_CFunction_param<Arg3>::get(L, i++, def3);
+    auto arg4 = lua_CFunction_param<Arg4>::get(L, i++, def4);
+    auto arg5 = lua_CFunction_param<Arg5>::get(L, i++, def5);
+    auto arg6 = lua_CFunction_param<Arg6>::get(L, i++, def6);
+    auto arg7 = lua_CFunction_param<Arg7>::get(L, i++, def7);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    lua_CFunction_param<RET>::set(L, fn(arg1, arg2, arg3, arg4, arg5, arg6, arg7));
+    return 1;
+  }
+};
+
+template <typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6, typename Arg7, typename Arg8>
+struct lua_CFunction_wrapper<void(*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8)>
+{
+  typedef void (*dest_func_t)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto def2 = init_value_traits_t<Arg2>::value();
+    auto def3 = init_value_traits_t<Arg3>::value();
+    auto def4 = init_value_traits_t<Arg4>::value();
+    auto def5 = init_value_traits_t<Arg5>::value();
+    auto def6 = init_value_traits_t<Arg6>::value();
+    auto def7 = init_value_traits_t<Arg7>::value();
+    auto def8 = init_value_traits_t<Arg8>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, def1);
+    auto arg2 = lua_CFunction_param<Arg2>::get(L, i++, def2);
+    auto arg3 = lua_CFunction_param<Arg3>::get(L, i++, def3);
+    auto arg4 = lua_CFunction_param<Arg4>::get(L, i++, def4);
+    auto arg5 = lua_CFunction_param<Arg5>::get(L, i++, def5);
+    auto arg6 = lua_CFunction_param<Arg6>::get(L, i++, def6);
+    auto arg7 = lua_CFunction_param<Arg7>::get(L, i++, def7);
+    auto arg8 = lua_CFunction_param<Arg8>::get(L, i++, def8);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    fn(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    return 0;
+  }
+};
+
+template <typename RET, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6, typename Arg7, typename Arg8>
+struct lua_CFunction_wrapper<RET(*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8)>
+{
+  typedef RET (*dest_func_t)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto def2 = init_value_traits_t<Arg2>::value();
+    auto def3 = init_value_traits_t<Arg3>::value();
+    auto def4 = init_value_traits_t<Arg4>::value();
+    auto def5 = init_value_traits_t<Arg5>::value();
+    auto def6 = init_value_traits_t<Arg6>::value();
+    auto def7 = init_value_traits_t<Arg7>::value();
+    auto def8 = init_value_traits_t<Arg8>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, def1);
+    auto arg2 = lua_CFunction_param<Arg2>::get(L, i++, def2);
+    auto arg3 = lua_CFunction_param<Arg3>::get(L, i++, def3);
+    auto arg4 = lua_CFunction_param<Arg4>::get(L, i++, def4);
+    auto arg5 = lua_CFunction_param<Arg5>::get(L, i++, def5);
+    auto arg6 = lua_CFunction_param<Arg6>::get(L, i++, def6);
+    auto arg7 = lua_CFunction_param<Arg7>::get(L, i++, def7);
+    auto arg8 = lua_CFunction_param<Arg8>::get(L, i++, def8);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    lua_CFunction_param<RET>::set(L, fn(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8));
+    return 1;
+  }
+};
+
+template <typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9>
+struct lua_CFunction_wrapper<void(*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9)>
+{
+  typedef void (*dest_func_t)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto def2 = init_value_traits_t<Arg2>::value();
+    auto def3 = init_value_traits_t<Arg3>::value();
+    auto def4 = init_value_traits_t<Arg4>::value();
+    auto def5 = init_value_traits_t<Arg5>::value();
+    auto def6 = init_value_traits_t<Arg6>::value();
+    auto def7 = init_value_traits_t<Arg7>::value();
+    auto def8 = init_value_traits_t<Arg8>::value();
+    auto def9 = init_value_traits_t<Arg9>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, def1);
+    auto arg2 = lua_CFunction_param<Arg2>::get(L, i++, def2);
+    auto arg3 = lua_CFunction_param<Arg3>::get(L, i++, def3);
+    auto arg4 = lua_CFunction_param<Arg4>::get(L, i++, def4);
+    auto arg5 = lua_CFunction_param<Arg5>::get(L, i++, def5);
+    auto arg6 = lua_CFunction_param<Arg6>::get(L, i++, def6);
+    auto arg7 = lua_CFunction_param<Arg7>::get(L, i++, def7);
+    auto arg8 = lua_CFunction_param<Arg8>::get(L, i++, def8);
+    auto arg9 = lua_CFunction_param<Arg9>::get(L, i++, def9);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    fn(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    return 0;
+  }
+};
+
+template <typename RET, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9>
+struct lua_CFunction_wrapper<RET(*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9)>
+{
+  typedef RET (*dest_func_t)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9);
+  typedef lua_CFunction_userdata<dest_func_t> lua_CFunction_userdata;
+  static int lua_function(lua_State* L)
+  {
+    int i = 1;
+    auto def1 = init_value_traits_t<Arg1>::value();
+    auto def2 = init_value_traits_t<Arg2>::value();
+    auto def3 = init_value_traits_t<Arg3>::value();
+    auto def4 = init_value_traits_t<Arg4>::value();
+    auto def5 = init_value_traits_t<Arg5>::value();
+    auto def6 = init_value_traits_t<Arg6>::value();
+    auto def7 = init_value_traits_t<Arg7>::value();
+    auto def8 = init_value_traits_t<Arg8>::value();
+    auto def9 = init_value_traits_t<Arg9>::value();
+    auto arg1 = lua_CFunction_param<Arg1>::get(L, i++, def1);
+    auto arg2 = lua_CFunction_param<Arg2>::get(L, i++, def2);
+    auto arg3 = lua_CFunction_param<Arg3>::get(L, i++, def3);
+    auto arg4 = lua_CFunction_param<Arg4>::get(L, i++, def4);
+    auto arg5 = lua_CFunction_param<Arg5>::get(L, i++, def5);
+    auto arg6 = lua_CFunction_param<Arg6>::get(L, i++, def6);
+    auto arg7 = lua_CFunction_param<Arg7>::get(L, i++, def7);
+    auto arg8 = lua_CFunction_param<Arg8>::get(L, i++, def8);
+    auto arg9 = lua_CFunction_param<Arg9>::get(L, i++, def9);
+
+    void* ud = lua_touserdata(L, lua_upvalueindex(1));
+    dest_func_t& fn = *((dest_func_t*)ud);
+    lua_CFunction_param<RET>::set(L, fn(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9));
+    return 1;
+  }
+};
+
+/***********************************************************************************/
+
+template <typename Handler>
+static void lua_pushchandler(lua_State* L, Handler fn)
+{
+  typedef typename lua_CFunction_wrapper<Handler>::lua_CFunction_userdata lua_CFunction_userdata;
+  auto ud = lua_newuserdata(L, sizeof(lua_CFunction_userdata));
+  new (ud) lua_CFunction_userdata(fn);
+  lua_pushcclosure(L, lua_CFunction_wrapper<Handler>::lua_function, 1);
+}
+
+/***********************************************************************************/
