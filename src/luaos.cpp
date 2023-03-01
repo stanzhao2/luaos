@@ -16,9 +16,12 @@
 #include <clipp/include/clipp.h>
 #include <md5.h>
 #include "luaos.h"
+#include "luaos_master.h"
 #include "luaos_mc.h"
 #include "luaos_logo.h"
 #include "luaos_compile.h"
+
+static identifier _G_;
 
 #ifndef _MSC_VER
 #include <gperftools/malloc_extension.h>
@@ -77,6 +80,37 @@ static void replace(std::string& filename)
   }
 }
 
+static int start_master(lua_State* L)
+{
+  const char* host = luaL_checkstring(L, 1);
+  unsigned short port = (unsigned short)luaL_checkinteger(L, 2);
+  int threads = (int)luaL_optinteger(L, 3, 1);
+  lua_pushboolean(L, luaos_start_master(host, port, threads) ? 1 : 0);
+  return 1;
+}
+
+static int stop_master(lua_State* L)
+{
+  luaos_stop_master();
+  return 0;
+}
+
+lua_State* init_main_state()
+{
+  lua_State* L = luaos_local.lua_state();
+#if 0
+  lua_getglobal(L, "os");   /* push os from stack */
+  lua_newtable(L);
+  lua_pushcfunction(L, start_master);
+  lua_setfield(L, -2, "start");
+  lua_pushcfunction(L, stop_master);
+  lua_setfield(L, -2, "stop");
+  lua_setfield(L, -2, "master");
+  lua_pop(L, 1);  /* pop os from stack */
+#endif
+  return L;
+}
+
 int main(int argc, char* argv[])
 {
   display_logo();
@@ -104,10 +138,6 @@ int main(int argc, char* argv[])
     luaos_error("Invalid parameter, use -h to view help\n\n");
     return 0;
   }
-
-  luaos_trace("LuaOS has been started\n");
-  lua_Integer error = -1;
-  lua_State* L = luaos_local.lua_state();
 
   if (help) {
     std::string fname(argv[0]);
@@ -139,15 +169,15 @@ int main(int argc, char* argv[])
     sprintf(hex, "%02x", hash[i]);
     strkey.append(hex);
   }
+
+  lua_State* L = init_main_state();
   if (compile) {
     std::set<std::string> exts;
     for (size_t i = 0; i < extnames.size(); i++) {
       exts.insert(extnames[i]);
     }
-    luaos_trace("Prepare to build project files\n");
     replace(filename);
     int count = luaos_compile(L, filename.c_str(), exts, strkey.c_str());
-    luaos_trace("Successfully build %d files\n\n", count);
     return 0;
   }
   if (bexport) {
@@ -155,9 +185,7 @@ int main(int argc, char* argv[])
     int count = luaos_export(L, filename.c_str(), strkey.c_str(), true);
     if (count < 0) {
       luaos_trace("Please check whether the key entered is correct\n\n");
-      return 1;
     }
-    luaos_trace("Successfully export %d files\n\n", count);
     return 0;
   }
   if (bimport) {
@@ -167,9 +195,10 @@ int main(int argc, char* argv[])
       luaos_trace("Please check whether the key entered is correct\n\n");
       return 1;
     }
-    luaos_trace("Successfully import %d files\n", count);
   }
 
+  lua_Integer error = -1;
+  luaos_trace("Starting LuaOS...\n");
   lua_pushcfunction(L, &pmain);           /* to call 'pmain' in protected mode */
   lua_pushstring(L, fmain.c_str());       /* 1st argument */
   if (luaos_pcall(L, 1, 1) == LUA_OK) {   /* do the call */

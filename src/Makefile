@@ -23,6 +23,7 @@ SOURCE  := luaos.o \
 		   luaos_socket.o \
 		   luaos_rpcall.o \
 		   luaos_mc.o \
+		   luaos_master.o \
 		   luaos_local.o \
 		   luaos_state.o \
 		   luaos_storage.o \

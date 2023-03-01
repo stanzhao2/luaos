@@ -60,6 +60,9 @@
     <ClCompile Include="..\src\luaos_rpcall.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\luaos_master.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\luaos.h">
@@ -108,6 +111,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\luaos_rpcall.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\luaos_master.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

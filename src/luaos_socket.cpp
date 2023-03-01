@@ -16,8 +16,6 @@
 #include "luaos.h"
 #include "luaos_socket.h"
 
-static identifier _G_placeholders;
-
 /*******************************************************************************/
 
 static void collectgarbage(lua_State* L)

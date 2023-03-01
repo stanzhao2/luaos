@@ -68,7 +68,7 @@ function main(...)
         if not success then
             error(err);
         end
-	end	
+	end
     
 	nginx.close();
 end
