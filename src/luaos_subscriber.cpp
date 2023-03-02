@@ -13,6 +13,7 @@
 **
 ************************************************************************************/
 
+#include <map>
 #include "luaos.h"
 
 typedef struct {
@@ -20,7 +21,7 @@ typedef struct {
   io_handler ios;
 } subscriber_item;
 
-typedef std::vector<std::any> params_type;
+typedef std::vector<lua_value> params_type;
 typedef std::vector<subscriber_item> item_array;
 typedef std::map<size_t, item_array> topic_array;
 
@@ -40,7 +41,7 @@ static void on_publish(size_t publisher, size_t mask, int index, const params_ty
   lua_pushinteger(L, (lua_Integer)mask);
 
   for (size_t i = 0; i < params.size(); i++) {
-    lexpush_any(L, params[i]);
+    luaL_pushvalue(L, params[i]);
   }
   if (luaos_pcall(L, (int)params.size() + 2, 0) != LUA_OK) {
     luaos_error("%s\n", lua_tostring(L, -1));
@@ -250,7 +251,7 @@ static int lua_os_publish(lua_State* L)
 
   params_type params;
   for (int i = 4; i <= argc; i++) {
-    params.push_back(lexget_any(L, i));
+    params.push_back(luaL_getvalue(L, i));
   }
 
   std::unique_lock<std::mutex> lock(_mutex);

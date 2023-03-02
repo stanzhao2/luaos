@@ -910,7 +910,7 @@ static int local_pthread(lua_State* L)
   return is_success(result) ? 0 : lua_error(L);
 }
 
-static int local_thread(luaos_job* job, const std::vector<std::any>& argv, io_handler ios, int* result)
+static int local_thread(luaos_job* job, const std::vector<lua_value>& argv, io_handler ios, int* result)
 {
   lua_State* L = luaos_local.lua_state();
   job->ios = luaos_local.lua_service();
@@ -922,7 +922,7 @@ static int local_thread(luaos_job* job, const std::vector<std::any>& argv, io_ha
   lua_pushcfunction(L, local_pthread);
   lua_pushstring(L, job->name.c_str());
   for (size_t i = 0; i < argv.size(); i++) {
-    lexpush_any(L, argv[i]);
+    luaL_pushvalue(L, argv[i]);
   }
 
   int perror = luaos_pcall(L, (int)argv.size() + 1, 0);
@@ -976,10 +976,10 @@ static int load_stop_gc(lua_State* L)
 
 static int load_execute(lua_State* L)
 {
-  std::vector<std::any> argv;
+  std::vector<lua_value> argv;
   const char* name = luaL_checkstring(L, 1);
   for (int i = 2; i <= lua_gettop(L); i++) {
-    argv.push_back(lexget_any(L, i));
+    argv.push_back(luaL_getvalue(L, i));
   }
 
   int result = LUA_OK;

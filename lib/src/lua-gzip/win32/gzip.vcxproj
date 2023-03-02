@@ -48,13 +48,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir)..\..\..\..\3rd\zlib;$(ProjectDir)..\..\..\..\3rd\lua\src;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)..\..\..\..\3rd\zlib\lib;$(ProjectDir)..\..\..\..\3rd\lua\src;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <IncludePath>$(ProjectDir)..\zlib-1.2.11;$(ProjectDir)..\..\..\..\3rd\lua\src;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)..\zlib-1.2.11\lib;$(ProjectDir)..\..\..\..\3rd\lua\src;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir)..\..\..\..\3rd\zlib;$(ProjectDir)..\..\..\..\3rd\lua\src;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)..\..\..\..\3rd\zlib\lib;$(ProjectDir)..\..\..\..\3rd\lua\src;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <IncludePath>$(ProjectDir)..\zlib-1.2.11;$(ProjectDir)..\..\..\..\3rd\lua\src;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)..\zlib-1.2.11\lib;$(ProjectDir)..\..\..\..\3rd\lua\src;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

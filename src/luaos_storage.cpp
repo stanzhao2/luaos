@@ -18,13 +18,13 @@
 #include "luaos_storage.h"
 
 static std::recursive_mutex _mutex;
-static std::map<std::string, std::any> _storage;
+static std::map<std::string, lua_value> _storage;
 
 /*******************************************************************************/
 
 static int lua_storage_set(lua_State* L)
 {
-  std::any value;
+  lua_value value;
   std::string key = luaL_checkstring(L, 1);
   luaL_checkany(L, 2);
 
@@ -36,22 +36,22 @@ static int lua_storage_set(lua_State* L)
   if (lua_isfunction(L, 2))
   {
     lua_pushvalue(L, 2);    /* push function to stack */
-    lexpush_any(L, value);  /* push old value to stack */
+    luaL_pushvalue(L, value);  /* push old value to stack */
     if (luaos_pcall(L, 1, 1) != LUA_OK) {
       luaos_error("%s\n", lua_tostring(L, -1));
       lua_pop(L, 1); /* pop error from stack */
       return 0;
     }
   }
-  _storage[key] = lexget_any(L, -1);
+  _storage[key] = luaL_getvalue(L, -1);
   lua_settop(L, 2);
-  lexpush_any(L, value);
+  luaL_pushvalue(L, value);
   return 1;
 }
 
 static int lua_storage_get(lua_State* L)
 {
-  std::string key = lexget_string(L, 1);
+  std::string key = luaL_checkstring(L, 1);
   std::unique_lock<std::recursive_mutex> lock(_mutex);
 
   auto iter = _storage.find(key);
@@ -59,23 +59,23 @@ static int lua_storage_get(lua_State* L)
     lua_pushnil(L);
     return 1;
   }
-  lexpush_any(L, iter->second);
+  luaL_pushvalue(L, iter->second);
   return 1;
 }
 
 static int lua_storage_erase(lua_State* L)
 {
-  std::string key = lexget_string(L, 1);
+  std::string key = luaL_checkstring(L, 1);
   std::unique_lock<std::recursive_mutex> lock(_mutex);
 
-  std::any value;
+  lua_value value;
   auto iter = _storage.find(key);
   if (iter != _storage.end())
   {
     value = iter->second;
     _storage.erase(iter);
   }
-  lexpush_any(L, value);
+  luaL_pushvalue(L, value);
   return 1;
 }
 

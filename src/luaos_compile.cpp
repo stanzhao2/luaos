@@ -1,5 +1,6 @@
 
 
+#include <map>
 #include "luaos.h"
 #include "luaos_compile.h"
 

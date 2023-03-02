@@ -55,7 +55,7 @@ static int random32_srand(lua_State* L)
 {
   random32* self = check_random32(L);
   if (self) {
-    MT19937_srand32(self->gen, (unsigned long)lexget_integer(L, 2));
+    MT19937_srand32(self->gen, (unsigned long)luaL_checkinteger(L, 2));
   }
   return 0;
 }
@@ -74,15 +74,15 @@ static int random32_generate(lua_State* L)
     return 1;
   case 2:
     low = 1;
-    up = (unsigned int)lexget_integer(L, 2);
+    up = (unsigned int)luaL_checkinteger(L, 2);
     if (up == 0) {
       lua_pushinteger(L, MT19937_random32(self->gen));
       return 1;
     }
     break;
   case 3:
-    low = (unsigned int)lexget_integer(L, 2);
-    up = (unsigned int)lexget_integer(L, 3);
+    low = (unsigned int)luaL_checkinteger(L, 2);
+    up = (unsigned int)luaL_checkinteger(L, 3);
     break;
   default:
     return luaL_error(L, "wrong number of arguments");
@@ -113,7 +113,7 @@ static int random64_srand(lua_State* L)
 {
   random64* self = check_random64(L);
   if (self) {
-    MT19937_srand64(self->gen, lexget_integer(L, 2));
+    MT19937_srand64(self->gen, luaL_checkinteger(L, 2));
   }
   return 0;
 }
@@ -132,15 +132,15 @@ static int random64_generate(lua_State* L)
     return 1;
   case 2:
     low = 1;
-    up = lexget_integer(L, 2);
+    up = luaL_checkinteger(L, 2);
     if (up == 0) {
       lua_pushinteger(L, MT19937_random64(self->gen));
       return 1;
     }
     break;
   case 3:
-    low = lexget_integer(L, 2);
-    up = lexget_integer(L, 3);
+    low = luaL_checkinteger(L, 2);
+    up = luaL_checkinteger(L, 3);
     break;
   default:
     return luaL_error(L, "wrong number of arguments");

@@ -10,7 +10,7 @@
 #include "lauxlib.h"
 
 #define	ZLIB_CONST
-#include "zlib.h"
+#include <zlib.h>
 
 #define BUFFSIZE (128)
 

@@ -16,7 +16,7 @@ typedef struct {
 
 static std::mutex  _mutex;
 static std::map<std::string, rpc_node> _rpc_reged;
-typedef std::vector<std::any> params_type;
+typedef std::vector<lua_value> params_type;
 
 /*******************************************************************************/
 
@@ -28,15 +28,15 @@ static void invoke(int index, const params_type& params, io_handler ios, int cal
   int top = lua_gettop(L);
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   for (size_t i = 0; i < params.size(); i++) {
-    lexpush_any(L, params[i]);
+    luaL_pushvalue(L, params[i]);
   }
   params_type result;
   auto status = luaos_pcall(L, (int)params.size(), LUA_MULTRET);
-  result.push_back(status == LUA_OK ? true : false);
+  result.push_back(status == LUA_OK);
 
   int now = lua_gettop(L);
   for (int i = top + 1; i <= now; i++) {
-    result.push_back(lexget_any(L, i));
+    result.push_back(luaL_getvalue(L, i));
   }
   ios->post([result, callback]()
   {
@@ -45,7 +45,7 @@ static void invoke(int index, const params_type& params, io_handler ios, int cal
 
       lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
       for (size_t i = 0; i < result.size(); i++) {
-        lexpush_any(L, result[i]);
+        luaL_pushvalue(L, result[i]);
       }
       luaL_unref(L, LUA_REGISTRYINDEX, callback);
       if (luaos_pcall(L, (int)result.size(), 0) != LUA_OK) {
@@ -66,7 +66,7 @@ static void call(int index, const params_type& params, std::shared_ptr<params_ty
   int top = lua_gettop(L);
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   for (size_t i = 0; i < params.size(); i++) {
-    lexpush_any(L, params[i]);
+    luaL_pushvalue(L, params[i]);
   }
 
   auto status = luaos_pcall(L, (int)params.size(), LUA_MULTRET);
@@ -74,7 +74,7 @@ static void call(int index, const params_type& params, std::shared_ptr<params_ty
 
   int now = lua_gettop(L);
   for (int i = top + 1; i <= now; i++) {
-    result->push_back(lexget_any(L, i));
+    result->push_back(luaL_getvalue(L, i));
   }
   ios->stop();
 }
@@ -135,7 +135,7 @@ static int lua_rpcall_call(lua_State* L)
 
   params_type params;
   for (int i = 2; i <= argc; i++) {
-    params.push_back(lexget_any(L, i));
+    params.push_back(luaL_getvalue(L, i));
   }
 
   int index = 0;
@@ -167,7 +167,7 @@ static int lua_rpcall_call(lua_State* L)
   }
   wait->run();
   for (size_t i = 0; i < result->size(); i++) {
-    lexpush_any(L, (*result)[i]);
+    luaL_pushvalue(L, (*result)[i]);
   }
   return (int)result->size();
 }
@@ -184,7 +184,7 @@ static int lua_rpcall_invoke(lua_State* L)
   params_type params;
   const char* name = luaL_checkstring(L, 1);
   for (int i = 3; i <= argc; i++) {
-    params.push_back(lexget_any(L, i));
+    params.push_back(luaL_getvalue(L, i));
   }
 
   lua_pushvalue(L, 2);

@@ -496,12 +496,12 @@ static int lua_os_socket_encode(lua_State* L)
   error_code ec;
   size_t size = 0;
   const char* data = luaL_checklstring(L, 2, &size);
-  int opcode = (int)lexget_optinteger(L, 3, 1);
+  int opcode = (int)luaL_optinteger(L, 3, 1);
   if (opcode < 1 || opcode > 15) {
     luaL_argerror(L, 3, "opcode: [1 - 15]");
   }
-  bool encrypt  = lexget_optboolean(L, 4, true);
-  bool compress = lexget_optboolean(L, 5, true);
+  bool encrypt  = luaL_optboolean(L, 4, true);
+  bool compress = luaL_optboolean(L, 5, true);
 
   std::string packet;
   lua_socket* lua_sock = *mt;
@@ -527,7 +527,7 @@ static int lua_os_socket_send(lua_State* L)
 
   error_code ec;
   lua_socket* lua_sock = *mt;
-  if (lexget_optboolean(L, 3, false)) {
+  if (luaL_optboolean(L, 3, false)) {
     lua_sock->send(data, size);
   }
   else {
@@ -561,7 +561,7 @@ static int lua_os_socket_send_to(lua_State* L)
   const char* data = luaL_checklstring(L, 2, &size);
   const char* host = luaL_checkstring(L, 3);
   unsigned short port = (unsigned short)luaL_checkinteger(L, 4);
-  bool async_send = lexget_optboolean(L, 5, false);
+  bool async_send = luaL_optboolean(L, 5, false);
 
   error_code ec;
   auto remote = udp::resolve(host, port, ec);
