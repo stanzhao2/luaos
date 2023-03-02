@@ -54,8 +54,11 @@ class lua_table final {
       lua_newtable(L);
       return;
     }
+    int top = lua_gettop(F);
     clone(F, L, index, 0);
     ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    int now = lua_gettop(F);
+    now++;
   }
   int ref;
   lua_State* L;
@@ -97,51 +100,52 @@ public:
     if (level > 32) {
       luaL_error(F, "table nesting level is too deep");
     }
+    if (index < 0) {
+      index = lua_gettop(F) + index + 1;
+    }
     lua_newtable(T);
     lua_pushnil(F);
     while (lua_next(F, index))
     {
       size_t size = 0;
-      int key_index = index + 1;
-      int val_index = index + 2;
-      int key_type = lua_type(F, key_index);
+      int key_type = lua_type(F, -2);
       switch (key_type) {
       case LUA_TTABLE:
-        clone(F, T, key_index, level++);
+        clone(F, T, -2, level++);
         break;
       case LUA_TNUMBER:
-        lua_pushinteger(T, lua_tointeger(F, key_index));
+        lua_pushinteger(T, lua_tointeger(F, -2));
         break;
       case LUA_TSTRING:
-        lua_pushlstring(T, lua_tolstring(F, key_index, &size), size);
+        lua_pushlstring(T, lua_tolstring(F, -2, &size), size);
         break;
       default:
-        lua_pushstring(T, lua_tostring(F, key_index));
+        lua_pushstring(T, lua_tostring(F, -2));
         break;
       }
-      int value_type = lua_type(F, val_index);
+      int value_type = lua_type(F, -1);
       switch (value_type) {
       case LUA_TTABLE:
-        clone(F, T, val_index, level++);
+        clone(F, T, -1, level++);
         break;
       case LUA_TBOOLEAN:
-        lua_pushboolean(T, lua_toboolean(F, val_index));
+        lua_pushboolean(T, lua_toboolean(F, -1));
         break;
       case LUA_TUSERDATA:
       case LUA_TLIGHTUSERDATA:
-        lua_pushlightuserdata(T, lua_touserdata(F, val_index));
+        lua_pushlightuserdata(T, lua_touserdata(F, -1));
         break;
       case LUA_TSTRING:
-        lua_pushlstring(T, lua_tolstring(F, val_index, &size), size);
+        lua_pushlstring(T, lua_tolstring(F, -1, &size), size);
         break;
       case LUA_TNUMBER:
-        if (lua_isinteger(F, val_index))
-          lua_pushinteger(T, luaL_checkinteger(F, val_index));
+        if (lua_isinteger(F, -1))
+          lua_pushinteger(T, luaL_checkinteger(F, -1));
         else
-          lua_pushnumber(T, lua_tonumber(F, val_index));
+          lua_pushnumber(T, lua_tonumber(F, -1));
         break;
       default:
-        lua_pushstring(T, lua_tostring(F, val_index));
+        lua_pushstring(T, lua_tostring(F, -1));
         break;
       }
       lua_settable(T, -3);
@@ -180,6 +184,8 @@ public:
     return *this;
   }
 };
+
+/***********************************************************************************/
 
 class lua_value final {
   struct {
