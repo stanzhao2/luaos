@@ -54,11 +54,8 @@ class lua_table final {
       lua_newtable(L);
       return;
     }
-    int top = lua_gettop(F);
     clone(F, L, index, 0);
     ref = luaL_ref(L, LUA_REGISTRYINDEX);
-    int now = lua_gettop(F);
-    now++;
   }
   int ref;
   lua_State* L;
