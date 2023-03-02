@@ -76,85 +76,15 @@ struct lua_enum { const char* name; const int value; };
 /*
 ** Read any type of data on stack
 */
-inline lua_value luaL_getvalue(lua_State* L, int index, int level = 0)
-{
-  lua_value value;
-  if (lua_isnoneornil(L, index)) {
-    return value;
-  }
-  if (index < 0) {
-    index = lua_gettop(L) + 1 + index;
-  }
-  auto type = lua_type(L, index);
-  if (type == LUA_TNUMBER) {
-    if (lua_isinteger(L, index)) {
-      return lua_tointeger(L, index);
-    }
-    return lua_tonumber(L, index);
-  }
-  if (type == LUA_TSTRING) {
-    size_t size = 0;
-    const char* data = lua_tolstring(L, index, &size);
-    return std::string(data, size);
-  }
-  if (type == LUA_TNONE || type == LUA_TTABLE) {
-    return lua_table::create(L, index);
-  }
-  if (type == LUA_TBOOLEAN) {
-    return lua_toboolean(L, index) ? true : false;
-  }
-  if (type == LUA_TFUNCTION) {
-    lua_function luafn;
-    luafn.ref(L, index);
-    return luafn;
-  }
-  if (type == LUA_TUSERDATA) {
-    return lua_touserdata(L, index);
-  }
-  return value;
+inline lua_value luaL_getvalue(lua_State* L, int index) {
+  return lua_value(L, index);
 }
 
 /*
 ** Push any type of data on stack
 */
 inline void luaL_pushvalue(lua_State* L, const lua_value& value) {
-  if (!value.has_value()) {
-    lua_pushnil(L);
-    return;
-  }
-  auto type = value.type();
-  if (type == LUA_TNUMBER) {
-    if (value.is_integer()) {
-      lua_pushinteger(L, (lua_Integer)value);
-      return;
-    }
-    lua_pushnumber(L, (lua_Number)value);
-    return;
-  }
-  if (type == LUA_TSTRING) {
-    std::string data = value;
-    lua_pushlstring(L, data.c_str(), data.size());
-    return;
-  }
-  if (type == LUA_TTABLE) {
-    lua_table::value_type tbl = value;
-    tbl->push(L);
-    return;
-  }
-  if (type == LUA_TBOOLEAN) {
-    lua_pushboolean(L, ((bool)value) ? 1 : 0);
-    return;
-  }
-  if (type == LUA_TFUNCTION) {
-    lua_function luafn;
-    luafn.rawget(L);
-    return;
-  }
-  if (type == LUA_TUSERDATA) {
-    lua_pushlightuserdata(L, (void*)value);
-    return;
-  }
-  lua_pushnil(L);
+  value.push(L);
 }
 
 template <typename... Args>

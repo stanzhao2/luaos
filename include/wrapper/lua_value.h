@@ -167,16 +167,16 @@ public:
   inline operator int() const {
     return r;
   }
-  inline lua_function& ref(lua_State* L, int index) {
+  inline lua_function ref(lua_State* L, int index) {
     lua_pushvalue(L, index);
     r = luaL_ref(L, LUA_REGISTRYINDEX);
     return *this;
   }
-  inline lua_function& unref(lua_State* L) {
+  inline lua_function unref(lua_State* L) {
     if (r) r = (luaL_unref(L, LUA_REGISTRYINDEX, r), 0);
     return *this;
   }
-  inline lua_function& rawget(lua_State* L) {
+  inline lua_function rawget(lua_State* L) const {
     if (r) lua_rawgeti(L, LUA_REGISTRYINDEX, r);
     return *this;
   }
@@ -186,7 +186,7 @@ public:
 
 class lua_value final {
   struct {
-    const void*  _ud = nullptr;
+    const void* _ud = nullptr;
     int          _vb = 0;
     lua_Integer  _vi = 0;
     lua_Number   _vf = 0;
@@ -212,6 +212,9 @@ public:
   }
   inline lua_value()
     : _type(LUA_TNIL), _integer(false) {
+  }
+  inline lua_value(lua_State* L, int i) {
+    assign(L, i);
   }
   inline lua_value(bool v) {
     *this = v;
@@ -243,13 +246,13 @@ public:
   inline lua_value(lua_table::value_type v) {
     *this = v;
   }
-  inline lua_value(const lua_value& v)  {
+  inline lua_value(const lua_value& v) {
     *this = v;
   }
   inline void operator=(const lua_value& v) {
-    _type    = v._type;
+    _type = v._type;
     _integer = v._integer;
-    _data    = v._data;
+    _data = v._data;
   }
   inline void operator=(bool v) {
     _type = LUA_TBOOLEAN;
@@ -280,6 +283,10 @@ public:
     _type = LUA_TSTRING;
     _data._vstr = v;
   }
+  inline void assign(const char* data, size_t size) {
+    _type = LUA_TSTRING;
+    _data._vstr.assign(data, size);
+  }
   inline void operator=(void* v) {
     _type = LUA_TUSERDATA;
     _data._ud = v;
@@ -298,7 +305,7 @@ public:
   inline operator lua_function() const {
     return _data._vfn;
   }
-  inline operator const lua_function&() const {
+  inline operator const lua_function& () const {
     return _data._vfn;
   }
   inline operator lua_Integer() const {
@@ -307,16 +314,16 @@ public:
   inline operator lua_Number() const {
     return _data._vf;
   }
-  inline operator void*() const {
+  inline operator void* () const {
     return (void*)_data._ud;
   }
-  inline operator const void*() const {
+  inline operator const void* () const {
     return _data._ud;
   }
-  inline operator char*() const {
+  inline operator char* () const {
     return (char*)_data._vstr.c_str();
   }
-  inline operator const char*() const {
+  inline operator const char* () const {
     return _data._vstr.c_str();
   }
   inline operator std::string() const {
@@ -324,6 +331,79 @@ public:
   }
   inline operator lua_table::value_type() const {
     return _data._vtbl;
+  }
+  inline void push(lua_State* L) const {
+    if (!has_value()) {
+      lua_pushnil(L);
+      return;
+    }
+    if (_type == LUA_TNUMBER) {
+      if (is_integer()) {
+        lua_pushinteger(L, _data._vi);
+        return;
+      }
+      lua_pushnumber(L, _data._vf);
+      return;
+    }
+    if (_type == LUA_TSTRING) {
+      lua_pushlstring(L, _data._vstr.c_str(), _data._vstr.size());
+      return;
+    }
+    if (_type == LUA_TTABLE) {
+      _data._vtbl->push(L);
+      return;
+    }
+    if (_type == LUA_TBOOLEAN) {
+      lua_pushboolean(L, _data._vb);
+      return;
+    }
+    if (_type == LUA_TFUNCTION) {
+      _data._vfn.rawget(L);
+      return;
+    }
+    if (_type == LUA_TUSERDATA) {
+      lua_pushlightuserdata(L, (void*)_data._ud);
+      return;
+    }
+    lua_pushnil(L);
+  }
+  inline void assign(lua_State* L, int index) {
+    if (index < 0) {
+      index = lua_gettop(L) + 1 + index;
+    }
+    if (lua_isnoneornil(L, index)) {
+      return;
+    }
+    int type = lua_type(L, index);
+    if (type == LUA_TNUMBER) {
+      if (lua_isinteger(L, index))
+        *this = luaL_checkinteger(L, index);
+      else
+        *this = luaL_checknumber(L, index);
+      return;
+    }
+    if (type == LUA_TSTRING) {
+      size_t size = 0;
+      const char* data = luaL_checklstring(L, index, &size);
+      assign(data, size);
+      return;
+    }
+    if (type == LUA_TNONE || type == LUA_TTABLE) {
+      *this = lua_table::create(L, index);
+      return;
+    }
+    if (type == LUA_TBOOLEAN) {
+      *this = lua_toboolean(L, index) ? true : false;
+      return;
+    }
+    if (type == LUA_TUSERDATA) {
+      *this = lua_touserdata(L, index);
+      return;
+    }
+    if (type == LUA_TFUNCTION) {
+      *this = lua_function().ref(L, index);
+      return;
+    }
   }
 };
 
