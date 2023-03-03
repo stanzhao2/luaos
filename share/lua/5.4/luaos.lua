@@ -423,37 +423,14 @@ luaos.global = {
     ---@param value any
     ---@retrun any
     set = function(key, value)
-        key = tostring(key);
-        local ty = type(value)
-        if ty ~= "function" then
-            value = pack.encode(value);
-            value = storage.set(key, value);
-            if value then
-                value = pack.decode(value);
-            end
-            return value;
-        end        
-        local luaold;
-        storage.set(key, function(old)
-            if old then
-                old = pack.decode(old);
-            end
-            luaold = old;
-            return pack.encode(value(old))
-        end);        
-        return luaold;
+        return storage.set(key, value);
     end,
     
     ---获取一个 key-value 值
     ---@param key string
     ---@return any
     get = function(key)
-        key = tostring(key);        
-        local value = storage.get(key);        
-        if value then
-            value = pack.decode(value)
-        end        
-        return value;
+        return storage.get(key);
     end,
     
     ---清除所有 key-value 值
@@ -465,12 +442,7 @@ luaos.global = {
     ---@param key string
     ---@return any
     erase = function(key)
-        key = tostring(key);        
-        local value = storage.erase(key);        
-        if value then
-            value = pack.decode(value)
-        end        
-        return value;
+        return storage.erase(key);
     end,
 };
 

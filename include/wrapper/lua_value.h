@@ -19,7 +19,7 @@
 #include <string>
 #include <memory>
 #include <mutex>
-#include <lua.hpp> 
+#include <lua.hpp>
 
 /***********************************************************************************/
 
@@ -29,25 +29,37 @@ class lua_table final {
     lua_State* _L;
 
   public:
-    inline lua_state() : _L(luaL_newstate()) { }
-    inline ~lua_state() { lua_close(_L); }
-    inline lua_State* L() const { return _L; }
-    inline std::mutex& lock()   { return _lock; }
+    inline lua_state()
+      : _L(luaL_newstate()) {
+    }
+    inline ~lua_state() {
+      lua_close(_L);
+    }
+    inline lua_State* L() const {
+      return _L;
+    }
+    inline std::mutex& lock() {
+      return _lock;
+    }
   };
-  inline static lua_state& state() {
-    static lua_state _state;
+  inline static std::shared_ptr<lua_state> state() {
+    static std::shared_ptr<lua_state> _state(new lua_state());
     return _state;
+  }
+  inline lua_table()
+    : ref(0), L(nullptr) {
   }
   lua_table(lua_State* F, int index)
     : lua_table()
   {
+    st = state();
     if (!F || index == 0) {
       return;
     }
-    if (!(L = state().L())) {
+    if (!(L = st->L())) {
       return;
     }
-    std::unique_lock<std::mutex> lock(state().lock());
+    std::unique_lock<std::mutex> lock(st->lock());
     if (lua_type(F, index) == LUA_TNONE) {
       lua_newtable(L);
       return;
@@ -57,17 +69,16 @@ class lua_table final {
   }
   int ref;
   lua_State* L;
+  std::shared_ptr<lua_state> st;
 
 public:
   typedef std::shared_ptr<lua_table> value_type;
-  inline lua_table()
-    : ref(0), L(nullptr) {
-  }
+
   virtual ~lua_table() {
     if (!L || !ref) {
       return;
     }
-    std::unique_lock<std::mutex> lock(state().lock());
+    std::unique_lock<std::mutex> lock(st->lock());
     luaL_unref(L, LUA_REGISTRYINDEX, ref);
   }
   void push(lua_State* F) const
@@ -76,7 +87,7 @@ public:
       lua_pushnil(F);
       return;
     }
-    std::unique_lock<std::mutex> lock(state().lock());
+    std::unique_lock<std::mutex> lock(st->lock());
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
     clone(L, F, lua_gettop(L), 0);
   }
