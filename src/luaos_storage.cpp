@@ -24,28 +24,27 @@ static std::map<std::string, lua_value> _storage;
 
 static int lua_storage_set(lua_State* L)
 {
-  lua_value value;
+  lua_value old_value;
   std::string key = luaL_checkstring(L, 1);
-  luaL_checkany(L, 2);
+  lua_value new_value = luaL_getvalue(L, 2);
 
   std::unique_lock<std::recursive_mutex> lock(_mutex);
   auto iter = _storage.find(key);
   if (iter != _storage.end()) {
-    value = iter->second;
+    old_value = iter->second;
   }
-  if (lua_isfunction(L, 2))
+  if (lua_isfunction(L, 3))
   {
-    lua_pushvalue(L, 2);    /* push function to stack */
-    luaL_pushvalue(L, value);  /* push old value to stack */
-    if (luaos_pcall(L, 1, 1) != LUA_OK) {
+    luaL_pushvalue(L, new_value);  /* push new value to stack */
+    luaL_pushvalue(L, old_value);  /* push old value to stack */
+    if (luaos_pcall(L, 2, 1) != LUA_OK) {
       luaos_error("%s\n", lua_tostring(L, -1));
       lua_pop(L, 1); /* pop error from stack */
       return 0;
     }
   }
   _storage[key] = luaL_getvalue(L, -1);
-  lua_settop(L, 2);
-  luaL_pushvalue(L, value);
+  luaL_pushvalue(L, old_value);
   return 1;
 }
 

@@ -418,12 +418,12 @@ global = nil;  --disable original global
 
 luaos.global = {
     ---设置一个 key-value 对
-    ---@overload fun(key:string, handler:fun(original:any):any):any
     ---@param key string
     ---@param value any
+    ---@param handler nil|fun(new:any, old:any):any
     ---@retrun any
-    set = function(key, value)
-        return storage.set(key, value);
+    set = function(key, value, handler)
+        return storage.set(key, value, handler);
     end,
     
     ---获取一个 key-value 值
