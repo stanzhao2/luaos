@@ -122,7 +122,7 @@ public:
       size_t size = 0;
       switch (lua_type(F, -2)) {
       case LUA_TTABLE:
-        clone(F, T, -2, level++);
+        clone(F, T, -2, level + 1);
         break;
 
       case LUA_TNUMBER:
@@ -139,7 +139,7 @@ public:
       }
       switch (lua_type(F, -1)) {
       case LUA_TTABLE:
-        clone(F, T, -1, level++);
+        clone(F, T, -1, level + 1);
         break;
 
       case LUA_TNUMBER:
