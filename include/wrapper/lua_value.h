@@ -536,10 +536,6 @@ public:
         check_number(L, index);
         return;
       }
-      case LUA_TNONE: {
-        *this = lua_table::create(L, index);
-        return;
-      }
       case LUA_TTABLE: {
         *this = lua_table::create(L, index);
         return;
