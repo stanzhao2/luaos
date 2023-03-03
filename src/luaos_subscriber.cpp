@@ -41,7 +41,7 @@ static void on_publish(size_t publisher, size_t mask, int index, const params_ty
   lua_pushinteger(L, (lua_Integer)mask);
 
   for (size_t i = 0; i < params.size(); i++) {
-    luaL_pushvalue(L, params[i]);
+    params[i].push(L);
   }
   if (luaos_pcall(L, (int)params.size() + 2, 0) != LUA_OK) {
     luaos_error("%s\n", lua_tostring(L, -1));
@@ -251,7 +251,7 @@ static int lua_os_publish(lua_State* L)
 
   params_type params;
   for (int i = 4; i <= argc; i++) {
-    params.push_back(luaL_getvalue(L, i));
+    params.push_back(lua_value(L, i));
   }
 
   std::unique_lock<std::mutex> lock(_mutex);

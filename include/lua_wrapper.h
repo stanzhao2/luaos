@@ -74,47 +74,6 @@ struct lua_enum { const char* name; const int value; };
 /***********************************************************************************/
 
 /*
-** Read any type of data on stack
-*/
-inline lua_value luaL_getvalue(lua_State* L, int index) {
-  return lua_value(L, index);
-}
-
-/*
-** Push any type of data on stack
-*/
-inline void luaL_pushvalue(lua_State* L, const lua_value& value) {
-  value.push(L);
-}
-
-template <typename... Args>
-inline void luaL_pushparams(lua_State* L, Args... args) {
-  lua_value params[] = { args... };
-  for (size_t i = 0; i < sizeof...(args); i++) {
-    luaL_pushvalue(L, params[i]);
-  }
-}
-
-/***********************************************************************************/
-
-/*
-** Get table type parameters on stack
-** if there is any error, lexget_table catches it
-*/
-inline lua_table::value_type luaL_gettable(lua_State* L, int index) {
-  luaL_argcheck(L, lua_istable(L, index), index, "table expected");
-  return lua_table::create(L, index);
-}
-
-/*
-** Get optional table type parameters on stack
-** if there is any error, lexget_opttable catches it
-*/
-inline lua_table::value_type luaL_opttable(lua_State* L, int index, lua_table::value_type def) {
-  return lua_isnoneornil(L, index) ? def : luaL_gettable(L, index);
-}
-
-/*
 ** Get boolean type parameters on stack
 ** if there is any error, lexget_boolean catches it
 */

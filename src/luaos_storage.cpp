@@ -26,7 +26,7 @@ static int lua_storage_set(lua_State* L)
 {
   lua_value old_value;
   std::string key = luaL_checkstring(L, 1);
-  lua_value new_value = luaL_getvalue(L, 2);
+  lua_value new_value = lua_value(L, 2);
 
   std::unique_lock<std::recursive_mutex> lock(_mutex);
   auto iter = _storage.find(key);
@@ -35,16 +35,16 @@ static int lua_storage_set(lua_State* L)
   }
   if (lua_isfunction(L, 3))
   {
-    luaL_pushvalue(L, new_value);  /* push new value to stack */
-    luaL_pushvalue(L, old_value);  /* push old value to stack */
+    new_value.push(L);
+    old_value.push(L);
     if (luaos_pcall(L, 2, 1) != LUA_OK) {
       luaos_error("%s\n", lua_tostring(L, -1));
       lua_pop(L, 1); /* pop error from stack */
       return 0;
     }
   }
-  _storage[key] = luaL_getvalue(L, -1);
-  luaL_pushvalue(L, old_value);
+  _storage[key] = lua_value(L, -1);
+  old_value.push(L);
   return 1;
 }
 
@@ -58,7 +58,7 @@ static int lua_storage_get(lua_State* L)
     lua_pushnil(L);
     return 1;
   }
-  luaL_pushvalue(L, iter->second);
+  iter->second.push(L);
   return 1;
 }
 
@@ -74,7 +74,7 @@ static int lua_storage_erase(lua_State* L)
     value = iter->second;
     _storage.erase(iter);
   }
-  luaL_pushvalue(L, value);
+  value.push(L);
   return 1;
 }
 

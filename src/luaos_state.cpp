@@ -722,6 +722,15 @@ inline _Ty* check_type(lua_State* L, const char* name)
 }
 
 struct luaos_job final {
+  inline void stop() {
+    ios->stop();
+    if (thread && thread->joinable()) {
+      thread->join();
+    }
+  }
+  inline ~luaos_job() {
+    stop();
+  }
   std::string name;
   int pid;
   io_handler ios;
@@ -922,7 +931,7 @@ static int local_thread(luaos_job* job, const std::vector<lua_value>& argv, io_h
   lua_pushcfunction(L, local_pthread);
   lua_pushstring(L, job->name.c_str());
   for (size_t i = 0; i < argv.size(); i++) {
-    luaL_pushvalue(L, argv[i]);
+    argv[i].push(L);
   }
 
   int perror = luaos_pcall(L, (int)argv.size() + 1, 0);
@@ -942,12 +951,8 @@ static luaos_job* check_jobself(lua_State* L)
 static int load_stop(lua_State* L)
 {
   luaos_job* luaself = check_jobself(L);
-  if (luaself)
-  {
-    if (luaself->thread->joinable()) {
-      luaself->ios->stop();
-      luaself->thread->join();
-    }
+  if (luaself) {
+    luaself->stop();
   }
   return 0;
 }
@@ -968,9 +973,6 @@ static int load_stop_gc(lua_State* L)
 {
   luaos_job* luaself = check_jobself(L);
   if (luaself) {
-    if (!luaself->ios->stopped()) {
-      load_stop(L);
-    }
     luaself->~luaos_job();
   }
   return 0;
@@ -981,7 +983,7 @@ static int load_execute(lua_State* L)
   std::vector<lua_value> argv;
   const char* name = luaL_checkstring(L, 1);
   for (int i = 2; i <= lua_gettop(L); i++) {
-    argv.push_back(luaL_getvalue(L, i));
+    argv.push_back(lua_value(L, i));
   }
 
   int result = LUA_OK;

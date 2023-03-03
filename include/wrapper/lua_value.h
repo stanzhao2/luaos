@@ -295,11 +295,51 @@ public:
     _type = lua_ctype::boolean;
     _data._vb = v ? 1 : 0;
   }
-  inline void operator=(lua_Integer v) {
+  inline void operator=(char v) {
     _type = lua_ctype::integer;
     _data._vi = v;
   }
-  inline void operator=(lua_Number v) {
+  inline void operator=(unsigned char v) {
+    _type = lua_ctype::integer;
+    _data._vi = v;
+  }
+  inline void operator=(short v) {
+    _type = lua_ctype::integer;
+    _data._vi = v;
+  }
+  inline void operator=(unsigned short v) {
+    _type = lua_ctype::integer;
+    _data._vi = v;
+  }
+  inline void operator=(int v) {
+    _type = lua_ctype::integer;
+    _data._vi = v;
+  }
+  inline void operator=(unsigned int v) {
+    _type = lua_ctype::integer;
+    _data._vi = v;
+  }
+  inline void operator=(long v) {
+    _type = lua_ctype::integer;
+    _data._vi = v;
+  }
+  inline void operator=(unsigned long v) {
+    _type = lua_ctype::integer;
+    _data._vi = v;
+  }
+  inline void operator=(long long v) {
+    _type = lua_ctype::integer;
+    _data._vi = v;
+  }
+  inline void operator=(unsigned long long v) {
+    _type = lua_ctype::integer;
+    _data._vi = v;
+  }
+  inline void operator=(float v) {
+    _type = lua_ctype::integer;
+    _data._vf = v;
+  }
+  inline void operator=(double v) {
     _type = lua_ctype::number;
     _data._vf = v;
   }
@@ -338,11 +378,44 @@ public:
   inline operator bool() const {
     return _data._vb ? true : false;
   }
-  inline operator lua_Integer() const {
-    return _data._vi;
+  inline operator char() const {
+    return (char)_data._vi;
   }
-  inline operator lua_Number() const {
-    return _data._vf;
+  inline operator unsigned char() const {
+    return (unsigned char)_data._vi;
+  }
+  inline operator short() const {
+    return (short)_data._vi;
+  }
+  inline operator unsigned short() const {
+    return (unsigned short)_data._vi;
+  }
+  inline operator int() const {
+    return (int)_data._vi;
+  }
+  inline operator unsigned int() const {
+    return (unsigned int)_data._vi;
+  }
+  inline operator long() const {
+    return (long)_data._vi;
+  }
+  inline operator unsigned long() const {
+    return (unsigned long)_data._vi;
+  }
+  inline operator long long() const {
+    return (long long)_data._vi;
+  }
+  inline operator unsigned long long() const {
+    return (unsigned long long)_data._vi;
+  }
+  inline operator float() const {
+    return (float)_data._vf;
+  }
+  inline operator double() const {
+    return (double)_data._vf;
+  }
+  inline operator long double() const {
+    return (long double)_data._vf;
   }
   inline operator void* () const {
     return (void*)_data._ud;
@@ -474,5 +547,15 @@ public:
     }
   }
 };
+
+/***********************************************************************************/
+
+template <typename... Args>
+inline void luaL_pushvalues(lua_State* L, Args... args) {
+  lua_value params[] = { args... };
+  for (size_t i = 0; i < sizeof...(args); i++) {
+    params[i].push(L);
+  }
+}
 
 /***********************************************************************************/
