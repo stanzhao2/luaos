@@ -79,22 +79,112 @@ inline static std::wstring mbs_to_wcs(const std::string& str, const char* locale
 
 inline static std::wstring utf8_to_wcs(const std::string& str)
 {
-  std::wstring ret;
-  try {
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> wcv;
-    ret = wcv.from_bytes(str);
-  } catch (...){}
-  return ret;
+  std::wstring wstr;
+  unsigned char chr;
+  wchar_t wchr = 0;
+  wchar_t* pwb = new wchar_t[str.size() + 1];
+  wchar_t* pwc = pwb;
+  const char* p = str.c_str();
+  if (!pwb) {
+    return wstr;
+  }
+  size_t follow = 0;
+  for (size_t i = 0; p[i] != 0; i++) {
+    chr = p[i];
+    if (follow == 0) {
+      wchr = 0;
+      if (chr > 0x80) {
+        if (chr == 0xfc || chr == 0xfd) {
+          follow = 5;
+          wchr = chr & 0x01;
+        }
+        else if (chr >= 0xf8) {
+          follow = 4;
+          wchr = chr & 0x03;
+        }
+        else if (chr >= 0xf0) {
+          follow = 3;
+          wchr = chr & 0x07;
+        }
+        else if (chr >= 0xe0) {
+          follow = 2;
+          wchr = chr & 0x0f;
+        }
+        else if (chr >= 0xc0) {
+          follow = 1;
+          wchr = chr & 0x1f;
+        }
+        else {
+          follow = -1;
+          break;
+        }
+      }
+      else {
+        *pwc++ = chr;
+      }
+    }
+    else {
+      if ((chr & 0xC0) != 0x80) {
+        return L"";
+      }
+      wchr = (wchr << 6) | (chr & 0x3f);
+      if (--follow == 0) {
+        *pwc++ = wchr;
+      }
+    }
+  }
+  if (follow == 0) {
+    wstr.append(pwb, pwc - pwb);
+  }
+  delete[] pwb;
+  return std::move(wstr);
 }
 
 inline static std::string wcs_to_utf8(const std::wstring& wstr)
 {
-  std::string ret;
-  try {
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> wcv;
-    ret = wcv.to_bytes(wstr);
-  } catch (...){}
-  return ret;
+  typedef unsigned char uchr;
+  typedef unsigned int  wchr;
+  if (wstr.empty()) {
+    return std::string();
+  }
+  std::string str;
+  size_t wlen = wstr.size();
+  uchr* obuff = new uchr[wlen * 3 + 1];
+  if (!obuff) {
+    return std::string();
+  }
+  uchr* t = obuff;
+  wchar_t* us = (wchar_t*)wstr.c_str();
+  size_t lwchr = sizeof(wchar_t);
+  wchr unmax = (lwchr >= 4 ? 0x110000 : 0x10000);
+  for (size_t i = 0; i < wlen; i++) {
+    wchr w = us[i];
+    if (w <= 0x7f) {
+      *t++ = (uchr)w;
+      continue;
+    }
+    if (w <= 0x7ff) {
+      *t++ = 0xc0 | (uchr)(w >> 6);
+      *t++ = 0x80 | (uchr)(w & 0x3f);
+      continue;
+    }
+    if (w <= 0xffff) {
+      *t++ = 0xe0 | (uchr)(w >> 12);
+      *t++ = 0x80 | (uchr)((w >> 6) & 0x3f);
+      *t++ = 0x80 | (uchr)(w & 0x3f);
+      continue;
+    }
+    if (w < unmax) {
+      *t++ = 0xf0 | (uchr)((w >> 18) & 0x07);
+      *t++ = 0x80 | (uchr)((w >> 12) & 0x3f);
+      *t++ = 0x80 | (uchr)((w >> 6) & 0x3f);
+      *t++ = 0x80 | (uchr)(w & 0x3f);
+      continue;
+    }
+  }
+  str.append((char*)obuff, t - obuff);
+  delete[]obuff;
+  return std::move(str);
 }
 
 inline static std::string mbs_to_utf8(const std::string& str)
