@@ -282,19 +282,16 @@ public:
   inline lua_value(long v) {
     *this = v;
   }
-  inline lua_value(unsigned long v) {
+  inline lua_value(lua_Integer v) {
     *this = v;
   }
-  inline lua_value(long long v) {
-    *this = v;
-  }
-  inline lua_value(unsigned long long v) {
+  inline lua_value(size_t v) {
     *this = v;
   }
   inline lua_value(float v) {
     *this = v;
   }
-  inline lua_value(double v) {
+  inline lua_value(lua_Number v) {
     *this = v;
   }
   inline lua_value(void* v) {
@@ -353,15 +350,11 @@ public:
     _type = lua_ctype::integer;
     _data._vi = v;
   }
-  inline void operator=(unsigned long v) {
+  inline void operator=(lua_Integer v) {
     _type = lua_ctype::integer;
     _data._vi = v;
   }
-  inline void operator=(long long v) {
-    _type = lua_ctype::integer;
-    _data._vi = v;
-  }
-  inline void operator=(unsigned long long v) {
+  inline void operator=(size_t v) {
     _type = lua_ctype::integer;
     _data._vi = v;
   }
@@ -369,7 +362,7 @@ public:
     _type = lua_ctype::integer;
     _data._vf = v;
   }
-  inline void operator=(double v) {
+  inline void operator=(lua_Number v) {
     _type = lua_ctype::number;
     _data._vf = v;
   }
@@ -429,23 +422,17 @@ public:
   inline operator long() const {
     return (long)_data._vi;
   }
-  inline operator unsigned long() const {
-    return (unsigned long)_data._vi;
+  inline operator lua_Integer() const {
+    return (lua_Integer)_data._vi;
   }
-  inline operator long long() const {
-    return (long long)_data._vi;
-  }
-  inline operator unsigned long long() const {
-    return (unsigned long long)_data._vi;
+  inline operator size_t() const {
+    return (size_t)_data._vi;
   }
   inline operator float() const {
     return (float)_data._vf;
   }
-  inline operator double() const {
-    return (double)_data._vf;
-  }
-  inline operator long double() const {
-    return (long double)_data._vf;
+  inline operator lua_Number() const {
+    return (lua_Number)_data._vf;
   }
   inline operator void* () const {
     return (void*)_data._ud;
