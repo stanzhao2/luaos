@@ -261,10 +261,40 @@ public:
   inline lua_value(bool v) {
     *this = v;
   }
-  inline lua_value(lua_Integer v) {
+  inline lua_value(char v) {
     *this = v;
   }
-  inline lua_value(lua_Number v) {
+  inline lua_value(unsigned char v) {
+    *this = v;
+  }
+  inline lua_value(short v) {
+    *this = v;
+  }
+  inline lua_value(unsigned short v) {
+    *this = v;
+  }
+  inline lua_value(int v) {
+    *this = v;
+  }
+  inline lua_value(unsigned int v) {
+    *this = v;
+  }
+  inline lua_value(long v) {
+    *this = v;
+  }
+  inline lua_value(unsigned long v) {
+    *this = v;
+  }
+  inline lua_value(long long v) {
+    *this = v;
+  }
+  inline lua_value(unsigned long long v) {
+    *this = v;
+  }
+  inline lua_value(float v) {
+    *this = v;
+  }
+  inline lua_value(double v) {
     *this = v;
   }
   inline lua_value(void* v) {
@@ -506,6 +536,7 @@ public:
   }
   inline void assign(lua_State* L, int index)
   {
+    _type = lua_ctype::nil;
     if (index < 0) {
       index = lua_gettop(L) + 1 + index;
     }
