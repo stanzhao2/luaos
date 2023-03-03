@@ -143,7 +143,7 @@ static int lua_os_cancel(lua_State* L)
   {
     item_array& items = iter->second;
     auto item = items.begin();
-    for (; item != items.end(); item++)
+    for (; item != items.end(); ++item)
     {
       if (item->ios->id() == ios->id())
       {
@@ -163,7 +163,7 @@ static int lua_os_cancel(lua_State* L)
   {
     item_array& items = watch_iter->second;
     auto item = items.begin();
-    for (; item != items.end(); item++)
+    for (; item != items.end(); ++item)
     {
       if (item->ios->id() == ios->id())
       {
@@ -293,12 +293,15 @@ static int lua_os_publish(lua_State* L)
 
   size_t total = 0;
   auto item = items.begin();
-  for (; item != items.end(); item++)
+  for (; item != items.end(); ++item)
   {
     if (receiver > 0) {
       if (item->ios->id() != receiver) {
         continue;
       }
+    }
+    if (self_id == item->ios->id()) {
+      continue;
     }
     total++;
     item->ios->post(std::bind(&on_publish, publisher, mask, item->index, params));
