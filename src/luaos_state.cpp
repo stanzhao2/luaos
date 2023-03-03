@@ -968,7 +968,9 @@ static int load_stop_gc(lua_State* L)
 {
   luaos_job* luaself = check_jobself(L);
   if (luaself) {
-    load_stop(L);
+    if (!luaself->ios->stopped()) {
+      load_stop(L);
+    }
     luaself->~luaos_job();
   }
   return 0;
