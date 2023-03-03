@@ -41,7 +41,7 @@ function main(host, port, root, certs)
 	local nginx, result = luaos.nginx.start(host, port, root, tls_context);
     assert(nginx, result);    
     nginx:upgrade(); --websocket enabled
-
+    
 	while not luaos.stopped() do
 		local success, err = pcall(luaos.wait);
         if not success then
