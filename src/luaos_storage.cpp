@@ -42,8 +42,9 @@ static int lua_storage_set(lua_State* L)
       lua_pop(L, 1); /* pop error from stack */
       return 0;
     }
+    new_value = lua_value(L, -1);
   }
-  _storage[key] = lua_value(L, -1);
+  _storage[key] = new_value;
   old_value.push(L);
   return 1;
 }
