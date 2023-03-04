@@ -149,10 +149,10 @@ int main(int argc, char* argv[])
       "  > usage: %s [module] [options]\n"
       "  > Available options are:\n"
       "  >   -h show this usage\n"
-      "  >   -c filename [[*] | [extensions]] output to file 'filename'\n"
+      "  >   -c filename [[all] | [extensions]] output to file 'filename'\n"
       "  >   -i filename import from file 'filename'\n"
       "  >   -e filename export from file 'filename'\n"
-      "  >   -k key for import/export\n",
+      "  >   -k key for import/export\n\n",
       fname.c_str()
     );
     return 0;
@@ -177,23 +177,18 @@ int main(int argc, char* argv[])
       exts.insert(extnames[i]);
     }
     replace(filename);
-    int count = luaos_compile(L, filename.c_str(), exts, strkey.c_str());
-    return 0;
+    luaos_compile(L, filename.c_str(), exts, strkey.c_str());
+    return printf("\n");
   }
   if (bexport) {
     replace(filename);
-    int count = luaos_export(L, filename.c_str(), strkey.c_str(), true);
-    if (count < 0) {
-      luaos_trace("Please check whether the key entered is correct\n\n");
-    }
-    return 0;
+    luaos_export(L, filename.c_str(), strkey.c_str(), true);
+    return printf("\n");
   }
   if (bimport) {
     replace(filename);
-    int count = luaos_export(L, filename.c_str(), strkey.c_str(), false);
-    if (count < 0) {
-      luaos_trace("Please check whether the key entered is correct\n\n");
-      return 1;
+    if (luaos_export(L, filename.c_str(), strkey.c_str(), false) < 0) {
+      return printf("\n");
     }
   }
 
