@@ -12,7 +12,6 @@ LIBHIREDIS    = $(LIB3RD)/hiredis/hiredis
 
 LUAEXT        = ./lib/src
 LUABIGINT     = $(LUAEXT)/lua-bigint
-LUACJSON      = $(LUAEXT)/lua-cjson
 LUACONV       = $(LUAEXT)/lua-conv
 LUACURL       = $(LUAEXT)/lua-curl
 LUAGZIP       = $(LUAEXT)/lua-gzip
@@ -43,7 +42,6 @@ all:
 	$(MKDIR) ./lib/lua/$(LUA_VERSION)/luasql
 	
 	cd $(LUABIGINT) && $(MAKE)
-	cd $(LUACJSON) && $(MAKE)
 	cd $(LUACONV) && $(MAKE)
 	cd $(LUACURL) && $(MAKE)
 	cd $(LUAGZIP) && $(MAKE)
@@ -64,7 +62,6 @@ clean:
 	cd $(LIBLUA) && $(MAKE) clean
 	cd $(LIBHIREDIS) && $(MAKE) clean
 	cd $(LUABIGINT) && $(MAKE) clean
-	cd $(LUACJSON) && $(MAKE) clean
 	cd $(LUACONV) && $(MAKE) clean
 	cd $(LUACURL) && $(MAKE) clean
 	cd $(LUAGZIP) && $(MAKE) clean
