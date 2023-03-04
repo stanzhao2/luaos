@@ -99,6 +99,26 @@ int luaos_pcall(lua_State* L, int n, int r)
   return status;
 }
 
+static int luaos_bind(lua_State* L)
+{
+  static auto callback = [](lua_State* L) {
+    int upvcnt = (int)luaL_checkinteger(L, lua_upvalueindex(1));
+    for (int i = 2; i <= upvcnt; i++) {
+      lua_pushvalue(L, lua_upvalueindex(i));
+    }
+    if (upvcnt > 1) {
+      lua_rotate(L, 1, upvcnt - 1);
+    }
+    luaos_pcall(L, lua_gettop(L) - 1, LUA_MULTRET);
+    return lua_gettop(L);
+  };
+  int upvcnt = lua_gettop(L);
+  lua_pushinteger(L, upvcnt + 1);
+  lua_rotate(L, 1, 1);
+  lua_pushcclosure(L, callback, upvcnt + 1);
+  return 1;
+}
+
 /***********************************************************************************/
 //lua loader
 /***********************************************************************************/
@@ -1257,6 +1277,7 @@ static int luaopen_basic(lua_State* L)
   lua_setglobal(L, "throw");
   luaL_Reg globals[] = {
     {"pcall",           pcall         },
+    {"bind",            luaos_bind    },
     {"print",           color_print   },
     {"trace",           color_trace   },
     {"error",           color_error   },

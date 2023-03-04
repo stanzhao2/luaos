@@ -79,6 +79,13 @@ local luaos = {
 
     write = io.socket.write,
     
+    ---给函数绑定参数
+    ---@param  fn function
+    ---@return function
+    bind = function(fn, ...)
+        return bind(fn, ...);
+    end,
+    
     ---创建一个 socket
     ---@param family string
     ---@return luaos_socket
@@ -198,11 +205,10 @@ local luaos = {
 ----------------------------------------------------------------------------
 
 local modules = {
-    bind    =   "bind",     --lua bind
-    try     =   "try",      --lua try
     conv    =   "conv",     --lua conv
     curl    =   "curl",     --lua curl
     odbc    =   "odbc",     --lua odbc
+    try     =   "try",      --lua try
     class   =   "classy",   --lua classy
 }
 
