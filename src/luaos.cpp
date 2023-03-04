@@ -125,12 +125,12 @@ int main(int argc, char* argv[])
   std::vector<std::string> extnames;
 
   auto cli = (
-    opt_value("filename", fmain),
-    option("-h", "/h", "--help").set(help),
-    option("-i", "/i", "--input").set(bimport) & value("filename", filename),
-    option("-c", "/c", "--compile").set(compile) & value("filename", filename) & repeatable(opt_value("ext", extnames)),
-    option("-e", "/e", "--export").set(bexport) & value("filename", filename),
-    option("-k", "/k", "--key").set(usekey) & value("key", strkey)
+    (opt_value("filename", fmain)),
+    (option("-h", "/h", "--help").set(help)) |
+    (option("-i", "/i", "--input").set(bimport)   & value("filename", filename)) |
+    (option("-c", "/c", "--compile").set(compile) & value("filename", filename) & repeatable(opt_value("ext", extnames))) |
+    (option("-e", "/e", "--export").set(bexport)  & value("filename", filename)),
+    (option("-k", "/k", "--key").set(usekey) & value("key", strkey))
   );
 
   extnames.push_back("lua");
