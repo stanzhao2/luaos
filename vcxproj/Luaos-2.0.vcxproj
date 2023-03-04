@@ -18,6 +18,7 @@
     <ClCompile Include="..\src\luaos_logo.cpp" />
     <ClCompile Include="..\src\luaos_master.cpp" />
     <ClCompile Include="..\src\luaos_mc.cpp" />
+    <ClCompile Include="..\src\luaos_pack.cpp" />
     <ClCompile Include="..\src\luaos_rpcall.cpp" />
     <ClCompile Include="..\src\luaos_socket.cpp" />
     <ClCompile Include="..\src\luaos_local.cpp" />
@@ -36,6 +37,7 @@
     <ClInclude Include="..\src\luaos_logo.h" />
     <ClInclude Include="..\src\luaos_master.h" />
     <ClInclude Include="..\src\luaos_mc.h" />
+    <ClInclude Include="..\src\luaos_pack.h" />
     <ClInclude Include="..\src\luaos_rpcall.h" />
     <ClInclude Include="..\src\luaos_socket.h" />
     <ClInclude Include="..\src\luaos_io.h" />

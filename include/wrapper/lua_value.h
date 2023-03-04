@@ -24,178 +24,50 @@
 /***********************************************************************************/
 
 class lua_table final {
-  class lua_state final {
-    std::mutex _lock;
-    lua_State* _L;
+  std::string _data;
 
-  public:
-    inline lua_state()
-      : _L(luaL_newstate()) {
-    }
-    inline ~lua_state() {
-      lua_close(_L);
-    }
-    inline lua_State* L() const {
-      return _L;
-    }
-    inline std::mutex& lock() {
-      return _lock;
-    }
-  };
-  inline static std::shared_ptr<lua_state> state() {
-    static std::shared_ptr<lua_state> _state(new lua_state());
-    return _state;
-  }
+public:
   inline lua_table()
-    : ref(0), L(nullptr) {
+    : _data("") {  
   }
-  lua_table(lua_State* F, int index)
-    : lua_table()
-  {
-    st = state();
-    if (!F || index == 0) {
-      return;
-    }
-    if (!(L = st->L())) {
-      return;
-    }
-    std::unique_lock<std::mutex> lock(st->lock());
-    if (lua_type(F, index) == LUA_TNONE) {
+  inline lua_table(const lua_table& r)
+    : _data(r._data) {
+  }
+  inline lua_table(lua_State* L, int index) {
+    extern int pack_encode(
+      lua_State * L, int index, std::string & out
+    );
+    pack_encode(L, index, _data);
+  }
+  inline void push(lua_State* L) const {
+    if (_data.empty()) {
       lua_newtable(L);
       return;
     }
-    clone(F, L, index, 0);
-    ref = luaL_ref(L, LUA_REGISTRYINDEX);
-  }
-  int ref;
-  lua_State* L;
-  std::shared_ptr<lua_state> st;
-
-public:
-  typedef std::shared_ptr<lua_table> value_type;
-
-  virtual ~lua_table() {
-    if (!L || !ref) {
-      return;
-    }
-    std::unique_lock<std::mutex> lock(st->lock());
-    luaL_unref(L, LUA_REGISTRYINDEX, ref);
-  }
-  void push(lua_State* F) const
-  {
-    if (!L || !ref) {
-      lua_pushnil(F);
-      return;
-    }
-    std::unique_lock<std::mutex> lock(st->lock());
-    lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
-    clone(L, F, lua_gettop(L), 0);
-  }
-  inline static value_type create()
-  {
-    return value_type(new lua_table());
-  }
-  inline static value_type create(lua_State* F, int index)
-  {
-    return value_type(new lua_table(F, index));
-  }
-  static void push(lua_State* F, lua_State* T, int index)
-  {
-    if (lua_isinteger(F, -1)) {
-      lua_pushinteger(T, lua_tointeger(F, -1));
-      return;
-    }
-    lua_pushnumber(T, lua_tonumber(F, -1));
-  }
-  static void clone(lua_State* F, lua_State* T, int index, int level)
-  {
-    if (level > 32) {
-      luaL_error(F, "table nesting level is too deep");
-    }
-    if (index < 0) {
-      index = lua_gettop(F) + index + 1;
-    }
-    lua_newtable(T);
-    lua_pushnil(F);
-    while (lua_next(F, index))
-    {
-      size_t size = 0;
-      switch (lua_type(F, -2)) {
-      case LUA_TTABLE:
-        clone(F, T, -2, level + 1);
-        break;
-
-      case LUA_TNUMBER:
-        lua_pushinteger(T, lua_tointeger(F, -2));
-        break;
-
-      case LUA_TSTRING:
-        lua_pushlstring(T, lua_tolstring(F, -2, &size), size);
-        break;
-
-      default:
-        lua_pushstring(T, lua_tostring(F, -2));
-        break;
-      }
-      switch (lua_type(F, -1)) {
-      case LUA_TTABLE:
-        clone(F, T, -1, level + 1);
-        break;
-
-      case LUA_TNUMBER:
-        push(F, T, index);
-        break;
-
-      case LUA_TBOOLEAN:
-        lua_pushboolean(T, lua_toboolean(F, -1));
-        break;
-
-      case LUA_TUSERDATA:
-        lua_pushlightuserdata(T, lua_touserdata(F, -1));
-        break;
-
-      case LUA_TLIGHTUSERDATA:
-        lua_pushlightuserdata(T, lua_touserdata(F, -1));
-        break;
-
-      case LUA_TSTRING:
-        lua_pushlstring(T, lua_tolstring(F, -1, &size), size);
-        break;
-
-      default:
-        lua_pushstring(T, lua_tostring(F, -1));
-        break;
-      }
-      lua_settable(T, -3);
-      lua_pop(F, 1);
-      lua_checkstack(T, 3);
-    }
+    extern int pack_decode(
+      lua_State* L, const std::string& data
+    );
+    pack_decode(L, _data);
   }
 };
 
 /***********************************************************************************/
 
 class lua_method final {
-  inline lua_method(int v)
-    : r(v), L(nullptr) {
-  }
-  inline lua_method(lua_State* L, int index)
-  {
-    this->L = L;
-    lua_pushvalue(L, index);
-    r = luaL_ref(L, LUA_REGISTRYINDEX);
-  }
   int r;
   lua_State* L;
 
 public:
-  typedef std::shared_ptr<lua_method> value_type;
-
-  inline static value_type create(int v = 0) {
-    return value_type(new lua_method(v));
+  inline lua_method(int v = 0)
+    : r(v), L(nullptr) {
   }
-  inline static value_type create(lua_State* L, int index) {
-    return value_type(new lua_method(L, index));
+  inline lua_method(const lua_method& v)
+    :r(v.r), L(v.L){    
+  }
+  inline lua_method(lua_State* L, int index) {
+    this->L = L;
+    lua_pushvalue(L, index);
+    r = luaL_ref(L, LUA_REGISTRYINDEX);
   }
   inline ~lua_method() {
     if (L && r) {
@@ -211,14 +83,13 @@ public:
 
 enum struct lua_ctype {
   nil                 = 1,
-  none                = 2,
-  boolean             = 3,
-  integer             = 4,
-  number              = 5,
-  string              = 6,
-  table               = 7,
-  userdata            = 8,
-  function            = 9
+  boolean             = 2,
+  integer             = 3,
+  number              = 4,
+  string              = 5,
+  table               = 6,
+  userdata            = 7,
+  function            = 8
 };
 
 class lua_value final {
@@ -228,8 +99,8 @@ class lua_value final {
     lua_Integer   _vi = 0;
     lua_Number    _vf = 0;
     std::string   _vstr;
-    lua_table::value_type  _vtbl;
-    lua_method::value_type _vfn;
+    lua_table     _vtbl;
+    lua_method    _vfn;
   } _data;
   lua_ctype _type;
 
@@ -261,34 +132,10 @@ public:
   inline lua_value(bool v) {
     *this = v;
   }
-  inline lua_value(char v) {
-    *this = v;
-  }
-  inline lua_value(unsigned char v) {
-    *this = v;
-  }
-  inline lua_value(short v) {
-    *this = v;
-  }
-  inline lua_value(unsigned short v) {
-    *this = v;
-  }
-  inline lua_value(int v) {
-    *this = v;
-  }
-  inline lua_value(unsigned int v) {
-    *this = v;
-  }
-  inline lua_value(long v) {
-    *this = v;
-  }
   inline lua_value(lua_Integer v) {
     *this = v;
   }
   inline lua_value(size_t v) {
-    *this = v;
-  }
-  inline lua_value(float v) {
     *this = v;
   }
   inline lua_value(lua_Number v) {
@@ -309,10 +156,10 @@ public:
   inline lua_value(const std::string& v) {
     *this = v;
   }
-  inline lua_value(lua_table::value_type v) {
+  inline lua_value(lua_table v) {
     *this = v;
   }
-  inline lua_value(lua_method::value_type v) {
+  inline lua_value(lua_method v) {
     *this = v;
   }
   inline void operator=(const lua_value& v) {
@@ -322,34 +169,6 @@ public:
     _type = lua_ctype::boolean;
     _data._vb = v ? 1 : 0;
   }
-  inline void operator=(char v) {
-    _type = lua_ctype::integer;
-    _data._vi = v;
-  }
-  inline void operator=(unsigned char v) {
-    _type = lua_ctype::integer;
-    _data._vi = v;
-  }
-  inline void operator=(short v) {
-    _type = lua_ctype::integer;
-    _data._vi = v;
-  }
-  inline void operator=(unsigned short v) {
-    _type = lua_ctype::integer;
-    _data._vi = v;
-  }
-  inline void operator=(int v) {
-    _type = lua_ctype::integer;
-    _data._vi = v;
-  }
-  inline void operator=(unsigned int v) {
-    _type = lua_ctype::integer;
-    _data._vi = v;
-  }
-  inline void operator=(long v) {
-    _type = lua_ctype::integer;
-    _data._vi = v;
-  }
   inline void operator=(lua_Integer v) {
     _type = lua_ctype::integer;
     _data._vi = v;
@@ -357,10 +176,6 @@ public:
   inline void operator=(size_t v) {
     _type = lua_ctype::integer;
     _data._vi = v;
-  }
-  inline void operator=(float v) {
-    _type = lua_ctype::integer;
-    _data._vf = v;
   }
   inline void operator=(lua_Number v) {
     _type = lua_ctype::number;
@@ -378,10 +193,6 @@ public:
     _type = lua_ctype::string;
     _data._vstr = v;
   }
-  inline void assign(const char* data, size_t size) {
-    _type = lua_ctype::string;
-    _data._vstr.assign(data, size);
-  }
   inline void operator=(void* v) {
     _type = lua_ctype::userdata;
     _data._ud = v;
@@ -390,46 +201,26 @@ public:
     _type = lua_ctype::userdata;
     _data._ud = v;
   }
-  inline void operator=(lua_table::value_type v) {
+  inline void operator=(lua_table v) {
     _type = lua_ctype::table;
     _data._vtbl = v;
   }
-  inline void operator=(lua_method::value_type v) {
+  inline void operator=(lua_method v) {
     _type = lua_ctype::function;
     _data._vfn = v;
   }
+  inline void assign(const char* data, size_t size) {
+    _type = lua_ctype::string;
+    _data._vstr.assign(data, size);
+  }
   inline operator bool() const {
     return _data._vb ? true : false;
-  }
-  inline operator char() const {
-    return (char)_data._vi;
-  }
-  inline operator unsigned char() const {
-    return (unsigned char)_data._vi;
-  }
-  inline operator short() const {
-    return (short)_data._vi;
-  }
-  inline operator unsigned short() const {
-    return (unsigned short)_data._vi;
-  }
-  inline operator int() const {
-    return (int)_data._vi;
-  }
-  inline operator unsigned int() const {
-    return (unsigned int)_data._vi;
-  }
-  inline operator long() const {
-    return (long)_data._vi;
   }
   inline operator lua_Integer() const {
     return (lua_Integer)_data._vi;
   }
   inline operator size_t() const {
     return (size_t)_data._vi;
-  }
-  inline operator float() const {
-    return (float)_data._vf;
   }
   inline operator lua_Number() const {
     return (lua_Number)_data._vf;
@@ -449,10 +240,10 @@ public:
   inline operator std::string() const {
     return _data._vstr;
   }
-  inline operator lua_table::value_type() const {
+  inline operator lua_table() const {
     return _data._vtbl;
   }
-  inline operator lua_method::value_type() const {
+  inline operator lua_method() const {
     return _data._vfn;
   }
   inline void copy(const lua_value& r)
@@ -499,12 +290,8 @@ public:
       lua_pushnumber(L, _data._vf);
       return;
 
-    case lua_ctype::string:
-      lua_pushlstring(L, _data._vstr.c_str(), _data._vstr.size());
-      return;
-
     case lua_ctype::table:
-      _data._vtbl->push(L);
+      _data._vtbl.push(L);
       return;
 
     case lua_ctype::boolean:
@@ -512,7 +299,11 @@ public:
       return;
 
     case lua_ctype::function:
-      _data._vfn->rawget(L);
+      _data._vfn.rawget(L);
+      return;
+
+    case lua_ctype::string:
+      lua_pushlstring(L, _data._vstr.c_str(), _data._vstr.size());
       return;
 
     case lua_ctype::userdata:
@@ -537,13 +328,11 @@ public:
         return;
       }
       case LUA_TTABLE: {
-        *this = lua_table::create(L, index);
+        *this = lua_table(L, index);
         return;
       }
-      case LUA_TSTRING: {
-        size_t size = 0;
-        const char* data = luaL_checklstring(L, index, &size);
-        assign(data, size);
+      case LUA_TFUNCTION: {
+        *this = lua_method(L, index);
         return;
       }
       case LUA_TBOOLEAN: {
@@ -554,8 +343,10 @@ public:
         *this = lua_touserdata(L, index);
         return;
       }
-      case LUA_TFUNCTION: {
-        *this = lua_method::create(L, index);
+      case LUA_TSTRING: {
+        size_t size = 0;
+        const char* data = luaL_checklstring(L, index, &size);
+        assign(data, size);
         return;
       }
     }

@@ -25,6 +25,7 @@
 #include "luaos_socket.h"
 #include "luaos_compile.h"
 #include "luaos_mc.h"
+#include "luaos_pack.h"
 #include "luaos_rpcall.h"
 #include "luaos_storage.h"
 #include "luaos_subscriber.h"
@@ -1388,6 +1389,19 @@ int luaos_openlibs(lua_State* L)
   for (const luaL_Reg* libs = modules; libs->func; libs++) {
     libs->func(L);
   }
+
+  luaL_Reg preload[] = {
+    { "pack",       luaopen_pack       },
+    { "pack.safe",  luaopen_pack_safe  },
+    { NULL,         NULL               }
+  };
+  lua_getglobal(L, LUA_LOADLIBNAME);
+  lua_getfield (L, -1, "preload");
+  for (const luaL_Reg* libs = preload; libs->func; libs++) {
+    lua_pushcfunction(L, libs->func);
+    lua_setfield(L, -2, libs->name);
+  }
+  lua_pop(L, 2);
   return LUA_OK;
 }
 

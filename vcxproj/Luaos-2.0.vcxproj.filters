@@ -63,6 +63,9 @@
     <ClCompile Include="..\src\luaos_master.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\luaos_pack.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\luaos.h">
@@ -115,6 +118,9 @@
     </ClInclude>
     <ClInclude Include="..\src\luaos_master.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\luaos_pack.h">
+      <Filter>源文件</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

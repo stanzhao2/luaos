@@ -6,9 +6,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "lua.h"
-#include "lualib.h"
-#include "lauxlib.h"
+#include "luaos_pack.h"
 
 #define LUACMSGPACK_NAME        "cmsgpack"
 #define LUACMSGPACK_SAFE_NAME   "cmsgpack_safe"
@@ -920,71 +918,65 @@ static int mp_safe(lua_State* L) {
 /* -------------------------------------------------------------------------- */
 
 static const struct luaL_Reg cmds[] = {
-    { "encode",         mp_pack         },
-    { "decode",         mp_unpack       },
-    //{ "decode_one",     mp_unpack_one   },
-    //{ "decode_limit",   mp_unpack_limit },
-    { NULL,             NULL }
+    { "encode",       mp_pack         },
+    { "decode",       mp_unpack       },
+    { NULL,           NULL }
 };
 
-static int luaopen_create(lua_State* L) {
-  int i;
-  /* Manually construct our module table instead of
-   * relying on _register or _newlib */
+static int luaopen_create(lua_State* L)
+{
   lua_newtable(L);
-
-  for (i = 0; i < (sizeof(cmds) / sizeof(*cmds) - 1); i++) {
+  for (int i = 0; i < (sizeof(cmds) / sizeof(*cmds) - 1); i++) {
     lua_pushcfunction(L, cmds[i].func);
     lua_setfield(L, -2, cmds[i].name);
   }
-
-  /* Add metadata */
-  /*
-  lua_pushliteral(L, LUACMSGPACK_NAME);
-  lua_setfield(L, -2, "_NAME");
-  lua_pushliteral(L, LUACMSGPACK_VERSION);
-  lua_setfield(L, -2, "_VERSION");
-  lua_pushliteral(L, LUACMSGPACK_COPYRIGHT);
-  lua_setfield(L, -2, "_COPYRIGHT");
-  lua_pushliteral(L, LUACMSGPACK_DESCRIPTION);
-  lua_setfield(L, -2, "_DESCRIPTION");
-  */
   return 1;
 }
 
 /***********************************************************************************/
 
-LUALIB_API int luaopen_pack(lua_State* L)
+int pack_encode(lua_State* L, int index, std::string& out)
 {
-  luaopen_create(L);
-
-#if LUA_VERSION_NUM < 502
-  /* Register name globally for 5.1 */
-  //lua_pushvalue(L, -1);
-  //lua_setglobal(L, LUACMSGPACK_NAME);
-#endif
-
-  return 1;
+  lua_pushcfunction(L, mp_pack);
+  lua_pushvalue(L, index);
+  int status = luaos_pcall(L, 1, 1);
+  if (status != LUA_OK) {
+    lua_pop(L, 1);  /* pop error from stack */
+    return status;
+  }
+  size_t size = 0;
+  const char* data = luaL_checklstring(L, -1, &size);
+  out.assign(data, size);
+  lua_pop(L, 1);
+  return status;
 }
 
-LUALIB_API int luaopen_pack_safe(lua_State* L)
+int pack_decode(lua_State* L, const std::string& data)
 {
-  int i;
-  luaopen_pack(L);
+  lua_pushcfunction(L, mp_unpack);
+  lua_pushlstring(L, data.c_str(), data.size());
+  int status = luaos_pcall(L, 1, 1);
+  if (status != LUA_OK) {
+    lua_pop(L, 1);  /* pop error from stack */
+    lua_pushnil(L);
+  }
+  return status;
+}
 
+int luaopen_pack(lua_State * L)
+{
+  return luaopen_create(L);
+}
+
+int luaopen_pack_safe(lua_State* L)
+{
+  luaopen_pack(L);
   /* Wrap all functions in the safe handler */
-  for (i = 0; i < (sizeof(cmds) / sizeof(*cmds) - 1); i++) {
+  for (int i = 0; i < (sizeof(cmds) / sizeof(*cmds) - 1); i++) {
     lua_getfield(L, -1, cmds[i].name);
     lua_pushcclosure(L, mp_safe, 1);
     lua_setfield(L, -2, cmds[i].name);
   }
-
-#if LUA_VERSION_NUM < 502
-  /* Register name globally for 5.1 */
-  //lua_pushvalue(L, -1);
-  //lua_setglobal(L, LUACMSGPACK_SAFE_NAME);
-#endif
-
   return 1;
 }
 

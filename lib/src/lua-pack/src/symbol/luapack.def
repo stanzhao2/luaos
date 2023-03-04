@@ -1,5 +1,0 @@
-
-EXPORTS
-	luaopen_pack
-	luaopen_pack_safe
-	
