@@ -109,7 +109,10 @@ static int luaos_bind(lua_State* L)
     if (upvcnt > 1) {
       lua_rotate(L, 1, upvcnt - 1);
     }
-    luaos_pcall(L, lua_gettop(L) - 1, LUA_MULTRET);
+    int status = luaos_pcall(L, lua_gettop(L) - 1, LUA_MULTRET);
+    if (status != LUA_OK) {
+      luaL_error(L, lua_tostring(L, -1));
+    }
     return lua_gettop(L);
   };
   int upvcnt = lua_gettop(L);
