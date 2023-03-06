@@ -142,8 +142,8 @@ static int luaos_finally(lua_State* L)
   check_function(L);
   luaos_pcall(L, 0, 0);
   if (!lua_toboolean(L, lua_upvalueindex(1))) {
-    if (!lua_toboolean(L, lua_upvalueindex(2))) {
-      luaos_error("%s\n", lua_tostring(L, lua_upvalueindex(3)));
+    if (!lua_toboolean(L, lua_upvalueindex(3))) {
+      luaos_error("%s\n", lua_tostring(L, lua_upvalueindex(2)));
     }
   }
   return 0;
@@ -160,8 +160,8 @@ static int luaos_catch(lua_State* L)
   }
   lua_newtable(L);
   lua_pushboolean(L, success);
-  lua_pushboolean(L, 1);
   lua_pushstring (L, errmsg ? errmsg : "");
+  lua_pushboolean(L, 1);
   lua_pushcclosure(L, luaos_finally, 3);
   lua_setfield(L, -2, "finally");
   return 1;
