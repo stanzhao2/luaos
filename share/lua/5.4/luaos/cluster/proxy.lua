@@ -66,7 +66,7 @@ local function luaos_cancel(topic, reason)
 end
 
 local function luaos_subscribe(topic, handler, reason)
-    luaos.subscribe(topic, handler);
+    assert(luaos.subscribe(topic, handler), format("topic %d subscribe faild!", topic));
     trace(format("topic %d is subscribed by %s proxy", topic, reason));
 end
 
