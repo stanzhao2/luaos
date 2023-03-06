@@ -232,6 +232,9 @@ static int lua_os_publish(lua_State* L)
   size_t mask = luaL_checkinteger(L, 2);
   size_t receiver = luaL_checkinteger(L, 3);
 
+  lua_value_array::value_type params;
+  params = lua_value_array::create(L, 4, argc);
+
   size_t highbits = receiver >> 16;
   receiver = receiver & 0xffff;
 
@@ -244,8 +247,6 @@ static int lua_os_publish(lua_State* L)
       return 0;
     }
   }
-  lua_value_array::value_type params;
-  params = lua_value_array::create(L, 4, argc);
   std::unique_lock<std::mutex> lock(_mutex);
   auto iter = _topics.find(topic);
   if (iter == _topics.end()) {

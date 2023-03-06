@@ -101,7 +101,8 @@ int luaos_pcall(lua_State* L, int n, int r)
 
 static int luaos_bind(lua_State* L)
 {
-  static auto callback = [](lua_State* L) {
+  static auto callback = [](lua_State* L)
+  {
     int upvcnt = (int)luaL_checkinteger(L, lua_upvalueindex(1));
     for (int i = 2; i <= upvcnt; i++) {
       lua_pushvalue(L, lua_upvalueindex(i));
@@ -119,6 +120,75 @@ static int luaos_bind(lua_State* L)
   lua_pushinteger(L, upvcnt + 1);
   lua_rotate(L, 1, 1);
   lua_pushcclosure(L, callback, upvcnt + 1);
+  return 1;
+}
+
+static void check_function(lua_State* L)
+{
+  auto i = (lua_type(L, 1) == LUA_TTABLE);
+  luaL_argcheck(L, i, 1, "table expected");
+  lua_pushnil(L);
+  if (lua_next(L, 1) == 0) {
+    luaL_error(L, "empty table is not allowed");
+  }
+  luaL_checkinteger(L, -2);
+  lua_remove(L, -2);
+  i = (lua_type(L, -1) == LUA_TFUNCTION);
+  luaL_argcheck(L, i, -1, "function expected");
+}
+
+static int luaos_finally(lua_State* L)
+{
+  check_function(L);
+  luaos_pcall(L, 0, 0);
+  if (!lua_toboolean(L, lua_upvalueindex(1))) {
+    if (!lua_toboolean(L, lua_upvalueindex(2))) {
+      luaos_error("%s\n", lua_tostring(L, lua_upvalueindex(3)));
+    }
+  }
+  return 0;
+}
+
+static int luaos_catch(lua_State* L)
+{
+  check_function(L);
+  int success = lua_toboolean(L, lua_upvalueindex(1));
+  const char* errmsg = lua_tostring(L, lua_upvalueindex(2));
+  if (errmsg) {
+    lua_pushstring(L, errmsg);
+    luaos_pcall(L, 1, 0);
+  }
+  lua_newtable(L);
+  lua_pushboolean(L, success);
+  lua_pushboolean(L, 1);
+  lua_pushstring (L, errmsg ? errmsg : "");
+  lua_pushcclosure(L, luaos_finally, 3);
+  lua_setfield(L, -2, "finally");
+  return 1;
+}
+
+static int luaos_try(lua_State* L)
+{
+  if (lua_gettop(L) == 0) {
+    return 0;
+  }
+  check_function(L);
+  int success = luaos_pcall(L, 0, 0);
+  if (success == LUA_OK) {
+    lua_pushnil(L);
+  }
+  lua_pushboolean(L, success == LUA_OK ? 1 : 0);
+
+  lua_newtable(L);
+  lua_pushvalue(L, 3);
+  lua_pushvalue(L, 2);
+  lua_pushcclosure(L, luaos_catch, 2);
+  lua_setfield(L, -2, "catch");
+
+  lua_pushvalue(L, 3);
+  lua_pushvalue(L, 2);
+  lua_pushcclosure(L, luaos_finally, 2);
+  lua_setfield(L, -2, "finally");
   return 1;
 }
 
@@ -716,7 +786,7 @@ static int luaos_wait(lua_State* L)
     while (!ios_local->stopped())
     {
       count += ios_local->run_for(std::chrono::milliseconds(expires));
-      size_t now = begin = os::milliseconds();
+      size_t now = os::milliseconds();
       if (now - last_alive > interval) {
         keep_alive(L);
         last_alive = now;
@@ -747,17 +817,19 @@ inline _Ty* check_type(lua_State* L, const char* name)
 
 struct luaos_job final {
   inline void stop() {
-    if (thread && thread->joinable()) {
+    if (ios) {
       ios->stop();
+    }
+    if (thread && thread->joinable()) {
       thread->join();
     }
   }
   inline ~luaos_job() {
     stop();
   }
-  std::string name;
   int pid;
-  io_handler ios;
+  std::string name;
+  io_handler  ios;
   std::shared_ptr<std::thread> thread;
 };
 
@@ -1003,7 +1075,7 @@ static int load_execute(lua_State* L)
 {
   int result = LUA_OK;
   lua_value_array::value_type argv;
-  argv = lua_value_array::create(L, 2, lua_gettop(L));
+  argv = lua_value_array::create(L, 2, 0);
 
   auto userdata = lexnew_userdata<luaos_job>(L, luaos_job_name);
   luaos_job* newjob = new (userdata) luaos_job();
@@ -1178,16 +1250,15 @@ int luaos_close(lua_State* L)
 {
   auto removeL = [L]() {
     std::unique_lock<std::mutex> lock(alive_mutex);
+    lua_close(L);
     alive_states.erase(L);
     return alive_states.size();
   };
-  if (!alive_thread || removeL()) {
-    return LUA_OK;
-  }
-  if (alive_thread->joinable()) {
+  if (removeL() == 0) {
     alive_exit->stop();
-    alive_thread->join();
-    lua_close(L);
+    if (alive_thread && alive_thread->joinable()) {
+      alive_thread->join();
+    }
   }
   return LUA_OK;
 }
@@ -1237,7 +1308,7 @@ int luaos_pexec(lua_State* L, const char* filename, int n)
   {
     lua_getglobal(L, luaos_fmain);
     if (lua_isfunction(L, -1)) {
-      if (n > 0)
+      if (n > 0) 
         lua_insert(L, -(n + 1)); /* insert main to bottom of params */
       result = luaos_pcall(L, n, 0);
     }
@@ -1274,6 +1345,7 @@ static int luaopen_basic(lua_State* L)
   luaL_Reg globals[] = {
     {"pcall",           pcall         },
     {"bind",            luaos_bind    },
+    {"try",             luaos_try     },
     {"print",           color_print   },
     {"trace",           color_trace   },
     {"error",           color_error   },

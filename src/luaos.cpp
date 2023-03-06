@@ -203,7 +203,6 @@ int main(int argc, char* argv[])
     luaos_error("%s\n", lua_tostring(L, -1));
     lua_pop(L, 1);
   }
-  luaos_close(L);
   luaos_trace("LuaOS has exited, see you...\n\n");
   return (int)error;
 }
