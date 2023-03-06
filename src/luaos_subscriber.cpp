@@ -244,7 +244,8 @@ static int lua_os_publish(lua_State* L)
       return 0;
     }
   }
-  lua_value_array::value_type params = lua_value_array::create(L, 4, argc);
+  lua_value_array::value_type params;
+  params = lua_value_array::create(L, 4, argc);
   std::unique_lock<std::mutex> lock(_mutex);
   auto iter = _topics.find(topic);
   if (iter == _topics.end()) {

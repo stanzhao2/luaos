@@ -378,8 +378,8 @@ public:
       _values.push_back(lua_value(L, i));
     }
   }
-  inline static value_type create(lua_State* L, int begin, int end = 0) {
-    return value_type(new lua_value_array(L, begin, end ? end : lua_gettop(L)));
+  inline static value_type create(lua_State* L, int begin, int end) {
+    return value_type(new lua_value_array(L, begin, (end ? end : lua_gettop(L))));
   }
   inline static value_type create() {
     return value_type(new lua_value_array());

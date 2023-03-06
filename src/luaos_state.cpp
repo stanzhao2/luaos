@@ -747,8 +747,8 @@ inline _Ty* check_type(lua_State* L, const char* name)
 
 struct luaos_job final {
   inline void stop() {
-    ios->stop();
     if (thread && thread->joinable()) {
+      ios->stop();
       thread->join();
     }
   }
@@ -1001,17 +1001,16 @@ static int load_stop_gc(lua_State* L)
 
 static int load_execute(lua_State* L)
 {
-  const char* name = luaL_checkstring(L, 1);
-  lua_value_array::value_type argv = lua_value_array::create(L, 2, lua_gettop(L));
-
   int result = LUA_OK;
   auto userdata = lexnew_userdata<luaos_job>(L, luaos_job_name);
   luaos_job* newjob = new (userdata) luaos_job();
 
   newjob->pid  = luaos_local.get_id();
-  newjob->name = name;
+  newjob->name = luaL_checkstring(L, 1);
   io_handler ios_wait = luaos_ionew();
 
+  lua_value_array::value_type argv;
+  argv = lua_value_array::create(L, 2, lua_gettop(L));
   newjob->thread.reset(new std::thread(std::bind(&local_thread, newjob, argv, ios_wait, &result)));
   ios_wait->run();
   return is_success(result) ? 1 : 0;
@@ -1187,7 +1186,6 @@ int luaos_close(lua_State* L)
   if (alive_thread->joinable()) {
     alive_exit->stop();
     alive_thread->join();
-    alive_thread.reset();
     lua_close(L);
   }
   return LUA_OK;

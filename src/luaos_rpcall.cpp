@@ -28,7 +28,8 @@ static void invoke(int index, lua_value_array::value_type params, io_handler ios
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   auto status = luaos_pcall(L, (int)params->push(L), LUA_MULTRET);
 
-  lua_value_array::value_type result = lua_value_array::create();
+  lua_value_array::value_type result;
+  result = lua_value_array::create();
   result->append(L, lua_value(status == LUA_OK));
   result->append(L, top + 1, 0);
 
@@ -117,7 +118,8 @@ static int lua_rpcall_call(lua_State* L)
 {
   int index = 0;
   const char* name = luaL_checkstring(L, 1);
-  lua_value_array::value_type params = lua_value_array::create(L, 2, 0);
+  lua_value_array::value_type params;
+  params = lua_value_array::create(L, 2, 0);
   io_handler regios;
   {
     std::unique_lock<std::mutex> lock(_mutex);
@@ -134,7 +136,8 @@ static int lua_rpcall_call(lua_State* L)
   }
   auto wait = luaos_ionew();
   auto ios  = luaos_local.lua_service();
-  lua_value_array::value_type result = lua_value_array::create();
+  lua_value_array::value_type result;
+  result = lua_value_array::create();
 
   if (regios->id() == ios->id()) {
     call(index, params, result, wait);
@@ -155,7 +158,8 @@ static int lua_rpcall_invoke(lua_State* L)
     return lua_rpcall_call(L);
   }
   const char* name = luaL_checkstring(L, 1);
-  lua_value_array::value_type params = lua_value_array::create(L, 3, argc);
+  lua_value_array::value_type params;
+  params = lua_value_array::create(L, 3, argc);
 
   int index = 0;
   lua_pushvalue(L, 2);
