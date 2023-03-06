@@ -15,14 +15,14 @@
 
 #pragma once
 
-#include "luaos.h"
+#include <lua_wrapper.h>
 
 int luaopen_pack(lua_State* L);
 
 int luaopen_pack_safe(lua_State* L);
 
-int pack_encode(lua_State* L, int index, std::string& out);
+int pack_any(lua_State* L);
 
-int pack_decode(lua_State* L, const std::string& data);
+int unpack_any(lua_State* L);
 
 /***********************************************************************************/

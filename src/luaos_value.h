@@ -16,10 +16,17 @@
 
 #pragma once
 
-#include <string>
-#include <memory>
-#include <mutex>
-#include <lua.hpp>
+#include "luaos_pack.h"
+
+/***********************************************************************************/
+
+int lua_packany(
+  lua_State* L, int index, std::string& out
+);
+
+int lua_unpackany(
+  lua_State* L, const std::string& data
+);
 
 /***********************************************************************************/
 
@@ -34,20 +41,10 @@ public:
     : _data(r._data) {
   }
   inline lua_table(lua_State* L, int index) {
-    extern int pack_encode(
-      lua_State * L, int index, std::string & out
-    );
-    pack_encode(L, index, _data);
+    lua_packany(L, index, _data);
   }
   inline void push(lua_State* L) const {
-    if (_data.empty()) {
-      lua_newtable(L);
-      return;
-    }
-    extern int pack_decode(
-      lua_State* L, const std::string& data
-    );
-    pack_decode(L, _data);
+    lua_unpackany(L, _data);
   }
 };
 
@@ -350,6 +347,42 @@ public:
         return;
       }
     }
+  }
+};
+
+/***********************************************************************************/
+
+class lua_value_array final {
+  inline lua_value_array(lua_State* L, int begin, int end) {
+    append(L, begin, end);
+  }
+  inline lua_value_array() {}
+  std::vector<lua_value> _values;
+
+public:
+  typedef std::shared_ptr<lua_value_array> value_type;
+
+  inline size_t push(lua_State* L) const {
+    for (size_t i = 0; i < _values.size(); i++)
+      _values[i].push(L);
+    return size();
+  }
+  inline size_t size() const {
+    return _values.size();
+  }
+  inline void append(lua_State* L, lua_value v) {
+    _values.push_back(v);
+  }
+  inline void append(lua_State* L, int begin, int end) {
+    for (int i = begin; i < end; i++) {
+      _values.push_back(lua_value(L, i));
+    }
+  }
+  inline static value_type create(lua_State* L, int begin, int end = 0) {
+    return value_type(new lua_value_array(L, begin, end ? end : lua_gettop(L)));
+  }
+  inline static value_type create() {
+    return value_type(new lua_value_array());
   }
 };
 

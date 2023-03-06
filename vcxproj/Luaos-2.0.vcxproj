@@ -26,6 +26,7 @@
     <ClCompile Include="..\src\luaos_storage.cpp" />
     <ClCompile Include="..\src\luaos_subscriber.cpp" />
     <ClCompile Include="..\src\luaos_traceback.cpp" />
+    <ClCompile Include="..\src\luaos_value.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\bios\bios.h" />
@@ -46,6 +47,7 @@
     <ClInclude Include="..\src\luaos_storage.h" />
     <ClInclude Include="..\src\luaos_subscriber.h" />
     <ClInclude Include="..\src\luaos_traceback.h" />
+    <ClInclude Include="..\src\luaos_value.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

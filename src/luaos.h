@@ -17,9 +17,9 @@
 
 /***********************************************************************************/
 
-#include <lua_wrapper.h>
 #include <tinydir.h>
 #include "luaos_local.h"
+#include "luaos_value.h"
 
 #define LOS_VERSION_MAJOR 2
 #define LOS_VERSION_MINOR	0

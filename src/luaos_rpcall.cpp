@@ -16,39 +16,31 @@ typedef struct {
 
 static std::mutex  _mutex;
 static std::map<std::string, rpc_node> _rpc_reged;
-typedef std::vector<lua_value> params_type;
 
 /*******************************************************************************/
 
-static void invoke(int index, const params_type& params, io_handler ios, int callback)
+static void invoke(int index, lua_value_array::value_type params, io_handler ios, int callback)
 {
   lua_State* L = luaos_local.lua_state();
   stack_rollback rollback(L);
-
   int top = lua_gettop(L);
-  lua_rawgeti(L, LUA_REGISTRYINDEX, index);
-  for (size_t i = 0; i < params.size(); i++) {
-    params[i].push(L);
-  }
-  params_type result;
-  auto status = luaos_pcall(L, (int)params.size(), LUA_MULTRET);
-  result.push_back(status == LUA_OK);
 
-  int now = lua_gettop(L);
-  for (int i = top + 1; i <= now; i++) {
-    result.push_back(lua_value(L, i));
-  }
+  lua_rawgeti(L, LUA_REGISTRYINDEX, index);
+  auto status = luaos_pcall(L, (int)params->push(L), LUA_MULTRET);
+
+  lua_value_array::value_type result = lua_value_array::create();
+  result->append(L, lua_value(status == LUA_OK));
+  result->append(L, top + 1, 0);
+
   ios->post([result, callback]()
   {
       lua_State* L = luaos_local.lua_state();
       stack_rollback rollback(L);
 
       lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
-      for (size_t i = 0; i < result.size(); i++) {
-        result[i].push(L);
-      }
-      luaL_unref(L, LUA_REGISTRYINDEX, callback);
-      if (luaos_pcall(L, (int)result.size(), 0) != LUA_OK) {
+      luaL_unref (L, LUA_REGISTRYINDEX, callback);
+
+      if (luaos_pcall(L, (int)result->push(L), 0) != LUA_OK) {
         luaos_error("%s\n", lua_tostring(L, -1));
         lua_pop(L, 1);
       }
@@ -58,24 +50,17 @@ static void invoke(int index, const params_type& params, io_handler ios, int cal
 
 /*******************************************************************************/
 
-static void call(int index, const params_type& params, std::shared_ptr<params_type>& result, io_handler ios)
+static void call(int index, lua_value_array::value_type params, lua_value_array::value_type result, io_handler ios)
 {
   lua_State* L = luaos_local.lua_state();
   stack_rollback rollback(L);
-
   int top = lua_gettop(L);
+
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
-  for (size_t i = 0; i < params.size(); i++) {
-    params[i].push(L);
-  }
+  auto status = luaos_pcall(L, (int)params->push(L), LUA_MULTRET);
 
-  auto status = luaos_pcall(L, (int)params.size(), LUA_MULTRET);
-  result->push_back(status == LUA_OK ? true : false);
-
-  int now = lua_gettop(L);
-  for (int i = top + 1; i <= now; i++) {
-    result->push_back(lua_value(L, i));
-  }
+  result->append(L, lua_value(status == LUA_OK));
+  result->append(L, top + 1, 0);
   ios->stop();
 }
 
@@ -130,34 +115,26 @@ static int lua_rpcall_cancel(lua_State* L)
 
 static int lua_rpcall_call(lua_State* L)
 {
-  int argc = lua_gettop(L);
-  const char* name = luaL_checkstring(L, 1);
-
-  params_type params;
-  for (int i = 2; i <= argc; i++) {
-    params.push_back(lua_value(L, i));
-  }
-
   int index = 0;
+  const char* name = luaL_checkstring(L, 1);
+  lua_value_array::value_type params = lua_value_array::create(L, 2, 0);
   io_handler regios;
   {
     std::unique_lock<std::mutex> lock(_mutex);
     auto iter = _rpc_reged.find(name);
     if (iter != _rpc_reged.end())
     {
-      index = iter->second.handler;
+      index  = iter->second.handler;
       regios = iter->second.ios;
     }
   }
-
   if (!index || !regios) {
     lua_pushboolean(L, 0);
     return 1;
   }
-
   auto wait = luaos_ionew();
   auto ios  = luaos_local.lua_service();
-  std::shared_ptr<params_type> result = std::make_shared<params_type>();
+  lua_value_array::value_type result = lua_value_array::create();
 
   if (regios->id() == ios->id()) {
     call(index, params, result, wait);
@@ -166,10 +143,7 @@ static int lua_rpcall_call(lua_State* L)
     regios->post(std::bind(&call, index, params, result, wait));
   }
   wait->run();
-  for (size_t i = 0; i < result->size(); i++) {
-    (*result)[i].push(L);
-  }
-  return (int)result->size();
+  return (int)result->push(L);
 }
 
 /*******************************************************************************/
@@ -180,17 +154,13 @@ static int lua_rpcall_invoke(lua_State* L)
   if (argc == 1 || !lua_isfunction(L, 2)) {
     return lua_rpcall_call(L);
   }
-
-  params_type params;
   const char* name = luaL_checkstring(L, 1);
-  for (int i = 3; i <= argc; i++) {
-    params.push_back(lua_value(L, i));
-  }
+  lua_value_array::value_type params = lua_value_array::create(L, 3, argc);
 
+  int index = 0;
   lua_pushvalue(L, 2);
   int callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
-  int index = 0;
   io_handler regios;
   {
     std::unique_lock<std::mutex> lock(_mutex);

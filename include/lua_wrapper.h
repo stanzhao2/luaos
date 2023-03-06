@@ -25,7 +25,7 @@
 #include <cctype>
 #include <vector>
 #include <algorithm>
-#include <wrapper/lua_value.h>
+#include <lua.hpp>
 
 /***********************************************************************************/
 //Compatibility adaptation

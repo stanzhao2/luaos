@@ -529,7 +529,7 @@ static void mp_encode_lua_type(lua_State* L, mp_buf* buf, int level) {
  * Packs all arguments as a stream for multiple upacking later.
  * Returns error if no arguments provided.
  */
-static int mp_pack(lua_State* L) {
+int pack_any(lua_State* L) {
   int nargs = lua_gettop(L);
   int i;
   mp_buf* buf;
@@ -872,7 +872,7 @@ static int mp_unpack_full(lua_State* L, int limit, int offset) {
   return cnt;
 }
 
-static int mp_unpack(lua_State* L) {
+int unpack_any(lua_State* L) {
   return mp_unpack_full(L, 0, 0);
 }
 
@@ -918,8 +918,8 @@ static int mp_safe(lua_State* L) {
 /* -------------------------------------------------------------------------- */
 
 static const struct luaL_Reg cmds[] = {
-    { "encode",       mp_pack         },
-    { "decode",       mp_unpack       },
+    { "encode",       pack_any         },
+    { "decode",       unpack_any       },
     { NULL,           NULL }
 };
 
@@ -934,34 +934,6 @@ static int luaopen_create(lua_State* L)
 }
 
 /***********************************************************************************/
-
-int pack_encode(lua_State* L, int index, std::string& out)
-{
-  lua_pushcfunction(L, mp_pack);
-  lua_pushvalue(L, index);
-  int status = luaos_pcall(L, 1, 1);
-  if (status != LUA_OK) {
-    lua_pop(L, 1);  /* pop error from stack */
-    return status;
-  }
-  size_t size = 0;
-  const char* data = luaL_checklstring(L, -1, &size);
-  out.assign(data, size);
-  lua_pop(L, 1);
-  return status;
-}
-
-int pack_decode(lua_State* L, const std::string& data)
-{
-  lua_pushcfunction(L, mp_unpack);
-  lua_pushlstring(L, data.c_str(), data.size());
-  int status = luaos_pcall(L, 1, 1);
-  if (status != LUA_OK) {
-    lua_pop(L, 1);  /* pop error from stack */
-    lua_pushnil(L);
-  }
-  return status;
-}
 
 int luaopen_pack(lua_State * L)
 {

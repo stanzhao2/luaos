@@ -21,7 +21,6 @@ typedef struct {
   io_handler ios;
 } subscriber_item;
 
-typedef std::vector<lua_value> params_type;
 typedef std::vector<subscriber_item> item_array;
 typedef std::map<size_t, item_array> topic_array;
 
@@ -31,7 +30,7 @@ static topic_array _watchs;
 
 /*******************************************************************************/
 
-static void on_publish(size_t publisher, size_t mask, int index, const params_type& params)
+static void on_publish(size_t publisher, size_t mask, int index, lua_value_array::value_type params)
 {
   lua_State* L = luaos_local.lua_state();
   stack_rollback rollback(L);
@@ -40,10 +39,7 @@ static void on_publish(size_t publisher, size_t mask, int index, const params_ty
   lua_pushinteger(L, (lua_Integer)publisher);
   lua_pushinteger(L, (lua_Integer)mask);
 
-  for (size_t i = 0; i < params.size(); i++) {
-    params[i].push(L);
-  }
-  if (luaos_pcall(L, (int)params.size() + 2, 0) != LUA_OK) {
+  if (luaos_pcall(L, (int)params->push(L) + 2, 0) != LUA_OK) {
     luaos_error("%s\n", lua_tostring(L, -1));
     lua_pop(L, 1);
   }
@@ -248,12 +244,7 @@ static int lua_os_publish(lua_State* L)
       return 0;
     }
   }
-
-  params_type params;
-  for (int i = 4; i <= argc; i++) {
-    params.push_back(lua_value(L, i));
-  }
-
+  lua_value_array::value_type params = lua_value_array::create(L, 4, argc);
   std::unique_lock<std::mutex> lock(_mutex);
   auto iter = _topics.find(topic);
   if (iter == _topics.end()) {
