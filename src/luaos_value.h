@@ -374,7 +374,7 @@ public:
     _values.push_back(v);
   }
   inline void append(lua_State* L, int begin, int end) {
-    for (int i = begin; i < end; i++) {
+    for (int i = begin; i <= end; i++) {
       _values.push_back(lua_value(L, i));
     }
   }

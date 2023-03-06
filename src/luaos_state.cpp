@@ -1002,6 +1002,9 @@ static int load_stop_gc(lua_State* L)
 static int load_execute(lua_State* L)
 {
   int result = LUA_OK;
+  lua_value_array::value_type argv;
+  argv = lua_value_array::create(L, 2, lua_gettop(L));
+
   auto userdata = lexnew_userdata<luaos_job>(L, luaos_job_name);
   luaos_job* newjob = new (userdata) luaos_job();
 
@@ -1009,8 +1012,6 @@ static int load_execute(lua_State* L)
   newjob->name = luaL_checkstring(L, 1);
   io_handler ios_wait = luaos_ionew();
 
-  lua_value_array::value_type argv;
-  argv = lua_value_array::create(L, 2, lua_gettop(L));
   newjob->thread.reset(new std::thread(std::bind(&local_thread, newjob, argv, ios_wait, &result)));
   ios_wait->run();
   return is_success(result) ? 1 : 0;
