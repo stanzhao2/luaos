@@ -1073,7 +1073,7 @@ static int load_stop_gc(lua_State* L)
 
 static int load_execute(lua_State* L)
 {
-  int result = LUA_OK;
+  static thread_local int result = LUA_OK;
   lua_value_array::value_type argv;
   argv = lua_value_array::create(L, 2, 0);
 
