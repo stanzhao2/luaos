@@ -889,6 +889,7 @@ static unsigned short csum(unsigned char *data, int size)
 
 static int os_snowid(lua_State* L)
 {
+  static const size_t utc2020 = 1577808000;
   static std::atomic<unsigned int> index = 0;
   static thread_local size_t tm_last = 0;
   static thread_local size_t localid = 0;
@@ -914,7 +915,7 @@ static int os_snowid(lua_State* L)
     tm_last = tm_now;
   }
   index = ++index & 0xffff;
-  size_t id = (tm_now - 0x60000000) & 0x7fffffff;
+  size_t id = (tm_now - utc2020) & 0x7fffffff;
   id <<= 32;
   id |= ((localid & 0xffff) << 16);
   lua_pushinteger(L, (lua_Integer)(id | index));
