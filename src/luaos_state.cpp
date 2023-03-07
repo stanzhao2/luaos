@@ -890,18 +890,33 @@ static unsigned short csum(unsigned char *data, int size)
 static int os_snowid(lua_State* L)
 {
   static std::atomic<unsigned int> index = 0;
+  static thread_local size_t tm_last = 0;
   static thread_local size_t localid = 0;
-  if (localid == 0) {
-    size_t size = 0;
+
+  if (!lua_isnoneornil(L, 1)) {
+    localid = luaL_checkinteger(L, 1);
+    if (localid < 0 || localid > 0xffff) {
+      luaL_error(L, "range: 0 - 65535");
+    }
+  }
+  else if (localid == 0) {
     code_generate(L);
+    size_t size = 0;
     const char* serial = lua_tolstring(L, -1, &size);
     localid = csum((unsigned char*)serial, (int)size);
     lua_pop(L, 1);
   }
+  size_t tm_now = (size_t)time(0);
+  if (tm_now < tm_last) {
+    tm_now = tm_last;
+  }
+  else if (tm_now > tm_last) {
+    tm_last = tm_now;
+  }
   index = ++index & 0xffff;
-  size_t id = ((size_t)time(0) - 0x60000000) & 0x7fffffff;
+  size_t id = (tm_now - 0x60000000) & 0x7fffffff;
   id <<= 32;
-  id |= (localid << 16);
+  id |= ((localid & 0xffff) << 16);
   lua_pushinteger(L, (lua_Integer)(id | index));
   return 1;
 }
