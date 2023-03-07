@@ -18,6 +18,7 @@
 #include <map>
 #include <vector>
 #include <functional>
+#include <atomic>
 #include <chrono>
 
 #include <conv.h>
@@ -870,6 +871,41 @@ static int os_typename(lua_State* L)
   return 1;
 }
 
+static unsigned short csum(unsigned char *data, int size)
+{
+  register long sum = 0;
+  while (size > 1)  {
+    sum += *(unsigned short*)data++;
+    size -= 2;
+  }
+  if (size > 0) {
+    sum += *(unsigned char*)data;
+  }
+  while (sum >> 16) {
+    sum = (sum & 0xffff) + (sum >> 16);
+  }
+  return (unsigned short)~sum;
+}
+
+static int os_snowid(lua_State* L)
+{
+  static std::atomic<unsigned int> index = 0;
+  static thread_local size_t localid = 0;
+  if (localid == 0) {
+    size_t size = 0;
+    code_generate(L);
+    const char* serial = lua_tolstring(L, -1, &size);
+    localid = csum((unsigned char*)serial, (int)size);
+    lua_pop(L, 1);
+  }
+  index = ++index & 0xffff;
+  size_t id = ((size_t)time(0) - 0x60000000) & 0x7fffffff;
+  id <<= 32;
+  id |= (localid << 16);
+  lua_pushinteger(L, (lua_Integer)(id | index));
+  return 1;
+}
+
 static int os_id(lua_State* L)
 {
   lua_pushinteger(L, luaos_local.get_id());
@@ -1382,6 +1418,7 @@ static int luaopen_los(lua_State* L)
     {"pid",           os_pid        },
     {"files",         enum_files    },
     {"uniqueid",      code_generate },
+    {"snowid",        os_snowid     },
     {"wait",          luaos_wait    },
     {"stopped",       luaos_stopped },
     {"exit",          luaos_exit    },

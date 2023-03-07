@@ -134,6 +134,12 @@ local luaos = {
         return os.uniqueid();
     end,
     
+    ---获取雪花码
+    ---@return integer
+    snowid = function()
+        return os.snowid();
+    end,
+    
     ---遍历目录下所有文件
     ---@param handler fun(filename:string, ext:string):void
     ---@param path string
