@@ -586,14 +586,14 @@ static int ll_output(const std::string& str, color_type color)
 #ifdef _MSC_VER
   console::instance()->print(data, color);
 #else
-  if (color == color_type::yellow) { //è­¦å‘Šè‰²(é»„è‰²)
+  if (color == color_type::yellow) { //¾¯¸æÉ«(»ÆÉ«)
     printf("\033[1;33m%s\033[0m", data.c_str());
   }
-  else if (color == color_type::red) { //é”™è¯¯è‰²(çº¢è‰²)
+  else if (color == color_type::red) { //´íÎóÉ«(ºìÉ«)
     printf("\033[1;31m%s\033[0m", data.c_str());
   }
   else {
-    printf("\033[1;36m%s\033[0m", data.c_str());  //ç¼ºçœè‰²(é’è‰²)
+    printf("\033[1;36m%s\033[0m", data.c_str());  //È±Ê¡É«(ÇàÉ«)
   }
 #endif
   return 0;
@@ -1027,14 +1027,16 @@ static int local_thread(luaos_job* job, lua_value_array::value_type argv, io_han
 
   lua_pushcfunction(L, local_pthread);
   lua_pushstring(L, job->name.c_str());
-  job->status = luaos_pcall(L, (int)argv->push(L) + 1, 0);
-
-  if (!is_success(job->status)) {
+  int status = luaos_pcall(L, (int)argv->push(L) + 1, 0);
+  if (!ios->stopped()) {
+    job->status = status;
+    ios->stop();
+  }
+  if (!is_success(status)) {
     luaos_error("%s\n", lua_tostring(L, -1));
     lua_pop(L, 1);
   }
-  ios->stop();
-  return job->status;
+  return status;
 }
 
 static luaos_job* check_jobself(lua_State* L)

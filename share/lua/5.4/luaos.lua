@@ -86,6 +86,13 @@ local luaos = {
         return bind(fn, ...);
     end,
     
+    ---尝试执行指定的函数(函数必须放在table里)
+    ---@param  fntry table
+    ---@return table
+    try = function(fntry)
+        return try(fntry);
+    end,
+    
     ---创建一个 socket
     ---@param family string
     ---@return luaos_socket
@@ -208,7 +215,6 @@ local modules = {
     conv    =   "conv",     --lua conv
     curl    =   "curl",     --lua curl
     odbc    =   "odbc",     --lua odbc
-    try     =   "try",      --lua try
     class   =   "classy",   --lua classy
 }
 
