@@ -1537,9 +1537,8 @@ int luaos_openlibs(lua_State* L)
   }
 
   luaL_Reg preload[] = {
-    { "pack",       luaopen_pack       },
-    { "pack.safe",  luaopen_pack_safe  },
-    { "conv",       luaopen_conv       },
+    { "msgpack",    luaopen_pack_safe  },
+    { "openssl",    luaopen_openssl    },
     { NULL,         NULL               }
   };
   lua_getglobal(L, LUA_LOADLIBNAME);

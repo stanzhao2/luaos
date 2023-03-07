@@ -16,9 +16,9 @@
 *********************************************************************************
 ]]--
 
+local pack = require("msgpack")
+local conv = require("openssl")
 local curl = require("curl")
-local conv = require("conv")
-local pack = require("pack.safe")
 local json = require("rapidjson")
 
 ----------------------------------------------------------------------------
