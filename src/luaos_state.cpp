@@ -25,6 +25,7 @@
 #include "luaos.h"
 #include "luaos_socket.h"
 #include "luaos_compile.h"
+#include "luaos_conv.h"
 #include "luaos_mc.h"
 #include "luaos_pack.h"
 #include "luaos_rpcall.h"
@@ -1538,6 +1539,7 @@ int luaos_openlibs(lua_State* L)
   luaL_Reg preload[] = {
     { "pack",       luaopen_pack       },
     { "pack.safe",  luaopen_pack_safe  },
+    { "conv",       luaopen_conv       },
     { NULL,         NULL               }
   };
   lua_getglobal(L, LUA_LOADLIBNAME);

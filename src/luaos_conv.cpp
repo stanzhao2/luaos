@@ -22,8 +22,7 @@
 #include <openssl/md5.h>
 #include <openssl/hmac.h>
 
-#include <string>
-#include <lua_wrapper.h>
+#include "luaos_conv.h"
 
 /***********************************************************************************/
 
@@ -641,7 +640,7 @@ static int rsa_verify(lua_State* L)
 
 /***********************************************************************************/
 
-extern "C" int luaopen_conv(lua_State* L)
+int luaopen_conv(lua_State* L)
 {
   lua_newtable(L);
   lua_newtable(L);

@@ -69,6 +69,9 @@
     <ClCompile Include="..\src\luaos_value.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\luaos_conv.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\luaos.h">
@@ -126,6 +129,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\luaos_value.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\luaos_conv.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
