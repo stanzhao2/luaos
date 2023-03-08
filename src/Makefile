@@ -32,6 +32,7 @@ SOURCE  := rapidjson/document.o \
 		   luaos_mc.o \
 		   luaos_master.o \
 		   luaos_local.o \
+		   luaos_stack.o \
 		   luaos_state.o \
 		   luaos_storage.o \
 		   luaos_subscriber.o \
