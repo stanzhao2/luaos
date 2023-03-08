@@ -54,6 +54,7 @@ static int uuid_create(lua_State* L)
 
 extern "C" int luaopen_uuid(lua_State * L)
 {
+  luaL_checkversion(L);
   struct luaL_Reg methods[] = {
     { "generate",   uuid_create },
     { NULL,		      NULL }

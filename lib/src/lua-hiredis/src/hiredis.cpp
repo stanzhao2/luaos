@@ -586,65 +586,66 @@ static const struct luaL_Reg R[] =
 extern "C" {
 #endif
 
-  int luaopen_hiredis(lua_State* L)
+int luaopen_hiredis(lua_State* L)
+{
+  luaL_checkversion(L);
+  /*
+  * Register module
+  */
+  //luaL_register(L, "hiredis", E);
+  lua_newtable(L);
+  
+  /*
+  * Register module information
+  */
+  lua_pushliteral(L, LUAHIREDIS_VERSION);
+  lua_setfield(L, -2, "_VERSION");
+  
+  lua_pushliteral(L, LUAHIREDIS_COPYRIGHT);
+  lua_setfield(L, -2, "_COPYRIGHT");
+  
+  lua_pushliteral(L, LUAHIREDIS_DESCRIPTION);
+  lua_setfield(L, -2, "_DESCRIPTION");
+  /*
+  * Register enums
+  */
+  reg_enum(L, Errors);
+  reg_enum(L, ReplyTypes);
+  
+  /*
+  * Register constants
+  */
+  push_new_const(L, "NIL", 3, REDIS_REPLY_NIL);
+  lua_setfield(L, -2, LUAHIREDIS_KEY_NIL);
+  
+  lua_newtable(L); /* status */
+  
+  if (luaL_newmetatable(L, LUAHIREDIS_STATUS_MT))
   {
-    /*
-    * Register module
-    */
-    //luaL_register(L, "hiredis", E);
-    lua_newtable(L);
-
-    /*
-    * Register module information
-    */
-    lua_pushliteral(L, LUAHIREDIS_VERSION);
-    lua_setfield(L, -2, "_VERSION");
-
-    lua_pushliteral(L, LUAHIREDIS_COPYRIGHT);
-    lua_setfield(L, -2, "_COPYRIGHT");
-
-    lua_pushliteral(L, LUAHIREDIS_DESCRIPTION);
-    lua_setfield(L, -2, "_DESCRIPTION");
-    /*
-    * Register enums
-    */
-    reg_enum(L, Errors);
-    reg_enum(L, ReplyTypes);
-
-    /*
-    * Register constants
-    */
-    push_new_const(L, "NIL", 3, REDIS_REPLY_NIL);
-    lua_setfield(L, -2, LUAHIREDIS_KEY_NIL);
-
-    lua_newtable(L); /* status */
-
-    if (luaL_newmetatable(L, LUAHIREDIS_STATUS_MT))
-    {
-      //luaL_register(L, NULL, STATUS_MT);
-      luaL_setfuncs(L, STATUS_MT, 0);
-      lua_pushliteral(L, LUAHIREDIS_STATUS_MT);
-      lua_setfield(L, -2, "__metatable");
-    }
-    lua_setmetatable(L, -2);
-
-    lua_getfield(L, -1, "OK");
-    lua_setfield(L, -3, "OK");     /* hiredis.OK = status.OK */
-    lua_getfield(L, -1, "QUEUED");
-    lua_setfield(L, -3, "QUEUED"); /* hiredis.QUEUED = status.QUEUED */
-    lua_getfield(L, -1, "PONG");
-    lua_setfield(L, -3, "PONG");   /* hiredis.PONG = status.PONG */
-
-    lua_setfield(L, -2, "status"); /* hiredis.status = status */
-
-                                   /*
-                                   * Register functions
-                                   */
-    lua_pushvalue(L, -1); /* Module table to be set as upvalue */
-    setfuncs(L, R, 1);
-
-    return 1;
+    //luaL_register(L, NULL, STATUS_MT);
+    luaL_setfuncs(L, STATUS_MT, 0);
+    lua_pushliteral(L, LUAHIREDIS_STATUS_MT);
+    lua_setfield(L, -2, "__metatable");
   }
+  lua_setmetatable(L, -2);
+  
+  lua_getfield(L, -1, "OK");
+  lua_setfield(L, -3, "OK");     /* hiredis.OK = status.OK */
+  lua_getfield(L, -1, "QUEUED");
+  lua_setfield(L, -3, "QUEUED"); /* hiredis.QUEUED = status.QUEUED */
+  lua_getfield(L, -1, "PONG");
+  lua_setfield(L, -3, "PONG");   /* hiredis.PONG = status.PONG */
+  
+  lua_setfield(L, -2, "status"); /* hiredis.status = status */
+  
+  							   /*
+  							   * Register functions
+  							   */
+  lua_pushvalue(L, -1); /* Module table to be set as upvalue */
+  setfuncs(L, R, 1);
+  
+  return 1;
+}
 
 #ifdef __cplusplus
 }

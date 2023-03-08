@@ -333,6 +333,7 @@ const luaL_Reg* lua_string::methods()
 
 static int ls_new(lua_State* L)
 {
+  luaL_checkversion(L);
   lua_string* result = nullptr;
   int type = lua_gettop(L) ? lua_type(L, 1) : LUA_TNIL;
   switch (type)

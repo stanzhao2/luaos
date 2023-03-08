@@ -799,6 +799,7 @@ static int opencls__skiplist(lua_State* L)
 
 extern "C" int luaopen_skiplist(lua_State* L)
 {
+  luaL_checkversion(L);
   luaL_Reg lfuncs[] = {
     { "new",    lua__new  },
     { NULL,     NULL      },

@@ -652,7 +652,9 @@ static void lhp_push_execute_fn(lua_State* L) {
     assert(lua_isfunction(L, -1));
 }
 
-LUA_API int luaopen_http_parser(lua_State* L) {
+LUA_API int luaopen_http_parser(lua_State* L)
+ {
+    luaL_checkversion(L);
     /* parser metatable init */
     luaL_newmetatable(L, PARSER_MT);
 

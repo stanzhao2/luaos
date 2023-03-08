@@ -15,8 +15,9 @@
 *********************************************************************************
 ]]--
 
-local class = require("luaos.classy")
+local class  = require("luaos.classy")
 local format = string.format;
+local mysql  = class("mysql");
 
 ----------------------------------------------------------------------------
 
@@ -24,15 +25,17 @@ local function connect(sqlenv, conf)
     local conn, errmsg = sqlenv:connect(
         conf.dbname, conf.user, conf.pwd, conf.host, conf.port
     );
+    if not conf.port then
+        conf.port = 3306;
+    end
+    if not conf.charset then
+        conf.charset = "utf8mb4";
+    end
     if conn then
         conn:execute(format("set names %s", conf.charset));
     end
     return conn, errmsg;
 end
-
-----------------------------------------------------------------------------
-
-local mysql = class("mysql");
 
 function mysql:__init(sqlenv, conf)
     self.conf   = conf;
@@ -41,19 +44,13 @@ function mysql:__init(sqlenv, conf)
     assert(self:keepalive());
 end
 
-----------------------------------------------------------------------------
-
 function mysql:__gc()
     self:close();
 end
 
-----------------------------------------------------------------------------
-
 function mysql:__close()
     self:close();
 end
-
-----------------------------------------------------------------------------
 
 function mysql:close()
     if self.conn then
@@ -63,13 +60,9 @@ function mysql:close()
     self.closed = true;
 end
 
-----------------------------------------------------------------------------
-
 function mysql:is_open()
     return self.conn ~= nil and not self.closed;
 end
-
-----------------------------------------------------------------------------
 
 function mysql:begin()
     if not self.conn then
@@ -99,8 +92,6 @@ function mysql:lastid()
     return self.conn:getlastautoid();
 end
 
-----------------------------------------------------------------------------
-
 function mysql:execute(sql, ...)    
     if not self:keepalive() then
         return nil;
@@ -109,8 +100,6 @@ function mysql:execute(sql, ...)
     assert(stmt:bind(...));
     return stmt:execute({});
 end
-
-----------------------------------------------------------------------------
 
 function mysql:keepalive()
     if self.closed then

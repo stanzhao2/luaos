@@ -1709,7 +1709,9 @@ static int create_environment (lua_State *L) {
 ** Creates the metatables for the objects and registers the
 ** driver open method.
 */
-LUASQL_API int luaopen_luasql_mysql (lua_State *L) { 
+LUASQL_API int luaopen_luasql_mysql (lua_State *L)
+{ 
+    luaL_checkversion(L);
 	struct luaL_Reg driver[] = {
 		{"mysql", create_environment},
 		{NULL, NULL},

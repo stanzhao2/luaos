@@ -192,6 +192,7 @@ static int random64_metatable(lua_State* L)
 
 extern "C" int luaopen_random(lua_State* L)
 {
+  luaL_checkversion(L);
   random32_metatable(L);
   random64_metatable(L);
   struct luaL_Reg methods[] = {

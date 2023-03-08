@@ -69,6 +69,7 @@ static int bigint_metatable(lua_State* L)
 /* Module initializer, called from Lua when the module is loaded. */
 extern "C" int luaopen_bigint(lua_State* L)
 {
+  luaL_checkversion(L);
   bigint_metatable(L);
   struct luaL_Reg methods[] = {
     { "new",          bigint_new            },

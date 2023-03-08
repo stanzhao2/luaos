@@ -191,6 +191,7 @@ static int linflategz(lua_State *L)
 
 LUALIB_API int luaopen_gzip(lua_State* L)
 {
+    luaL_checkversion(L);
 	luaL_Reg tbl[] = {
 		{"deflate", ldeflategz},
 		{"inflate", linflategz},

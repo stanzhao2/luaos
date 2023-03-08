@@ -1136,6 +1136,7 @@ static void setcurlinfo(lua_State* L)
 
 LUA_API int luaopen_curl(lua_State* L)
 {
+  luaL_checkversion(L);
   curl_global_init(CURL_GLOBAL_ALL); /* In windows, this will init the winsock stuff */
   createmeta(L);
 
