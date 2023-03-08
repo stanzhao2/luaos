@@ -908,7 +908,7 @@ static int os_snowid(lua_State* L)
     localid = csum((unsigned char*)serial, (int)size);
     lua_pop(L, 1);
   }
-  size_t tm_now = (size_t)time(0);
+  size_t tm_now = os::seconds();
   if (tm_now < tm_last) {
     tm_now = tm_last;
   }
@@ -1537,7 +1537,7 @@ int luaos_openlibs(lua_State* L)
   }
 
   luaL_Reg preload[] = {
-    { "msgpack",    luaopen_pack_safe  },
+    { "msgpack",    luaopen_cmsgpack_safe },
     { "openssl",    luaopen_openssl    },
     { NULL,         NULL               }
   };

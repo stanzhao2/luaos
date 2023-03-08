@@ -17,9 +17,9 @@
 
 #include <lua_wrapper.h>
 
-int luaopen_pack(lua_State* L);
+int luaopen_cmsgpack(lua_State* L);
 
-int luaopen_pack_safe(lua_State* L);
+int luaopen_cmsgpack_safe(lua_State* L);
 
 int pack_any(lua_State* L);
 
