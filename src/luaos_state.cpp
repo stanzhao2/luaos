@@ -819,19 +819,19 @@ inline _Ty* check_type(lua_State* L, const char* name)
 }
 
 struct luaos_job final {
+  inline ~luaos_job() {
+    stop();
+  }
   inline void stop() {
     if (ios && !ios->stopped()) {
       auto wait = luaos_ionew();
-      wait->post([wait]() { wait->stop(); });
+      ios->post([wait]() { wait->stop(); });
       wait->run();
       ios->stop();
     }
     if (thread && thread->joinable()) {
       thread->join();
     }
-  }
-  inline ~luaos_job() {
-    stop();
   }
   int pid;
   int status;
