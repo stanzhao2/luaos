@@ -17,7 +17,8 @@
 
 #include <lua_wrapper.h>
 
-#define luaos_list_name "luaos_stack"
+#define luaos_list_name "luaos::list"
+#define luaos_list_iterator "luaos::list::iterator"
 
 /***********************************************************************************/
 
