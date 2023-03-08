@@ -78,6 +78,10 @@ local x_pack = {};
 ---@return any
 function x_pack.decode(str) end
 
+function x_pack.decode_one(str, offset) end
+
+function x_pack.decode_limit(str, limit, offset) end
+
 --- 将LUA的变量序列化成字符串
 ---
 --- Returns json字符串
@@ -88,7 +92,7 @@ function x_pack.decode(str) end
 --- **`table`**
 ---@param value any
 ---@return string
-function x_pack.encode(value) end
+function x_pack.encode(value, ...) end
 
 ----------------------------------------------------------------------------
 ---@class xor
