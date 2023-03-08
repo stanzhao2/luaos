@@ -16,13 +16,18 @@
 ]]--
 
 local class = require("luaos.classy")
+local format = string.format;
 
 ----------------------------------------------------------------------------
 
 local function connect(sqlenv, conf)
-    return sqlenv:connect(
-        conf.dbname, conf.user, conf.pwd, conf.host, conf.port or 3306
+    local conn, errmsg = sqlenv:connect(
+        conf.dbname, conf.user, conf.pwd, conf.host, conf.port
     );
+    if conn then
+        conn:execute(format("set names %s", conf.charset));
+    end
+    return conn, errmsg;
 end
 
 ----------------------------------------------------------------------------
@@ -69,15 +74,13 @@ end
 function mysql:begin()
     if not self.conn then
         return nil;
-    end
-    
+    end    
     local pending = { conn = self.conn };    
     function pending.commit(self)
         assert(self);
         self.conn:commit();
         self.conn = nil;
-    end
-    
+    end    
     self.conn:execute("start transaction");
     return setmetatable(pending, {
         __close = function(holder)
@@ -101,8 +104,7 @@ end
 function mysql:execute(sql, ...)    
     if not self:keepalive() then
         return nil;
-    end
-    
+    end    
     local stmt <close> = self.conn:prepare(sql);
     assert(stmt:bind(...));
     return stmt:execute({});
@@ -113,15 +115,13 @@ end
 function mysql:keepalive()
     if self.closed then
         return false;
-    end
-    
+    end    
     if self.conn then
         if not self.conn:ping() then
             self.conn:close();
             self.conn = nil;
         end
-    end
-    
+    end    
     if not self.conn then
         local ok, conn, errmsg = pcall(connect, self.sqlenv, self.conf);
         if not ok or not conn then
@@ -129,8 +129,7 @@ function mysql:keepalive()
             return false;
         end
         self.conn = conn;
-    end
-    
+    end    
     return self.conn ~= nil;
 end
 

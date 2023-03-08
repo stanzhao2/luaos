@@ -16,10 +16,10 @@
 *********************************************************************************
 ]]--
 
-local pack = require("msgpack")
-local conv = require("openssl")
-local curl = require("curl")
-local json = require("rapidjson")
+local pack = require("msgpack");
+local conv = require("openssl");
+local curl = require("curl");
+local json = require("rapidjson");
 
 ----------------------------------------------------------------------------
 ---@class url

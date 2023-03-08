@@ -21,24 +21,22 @@ local odbc = { mysql_env = nil };
 
 ----------------------------------------------------------------------------
 
-function odbc.mysql(dbname, user, pwd, host, port)
+function odbc.mysql(dbname, user, pwd, host, port, charset)
     local ok, luasql = pcall(require, "luasql.mysql")
     if not ok then
         throw(luasql);
-    end
-    
+    end    
     local conf = {
-        dbname = dbname,
-        user   = user,
-        pwd    = pwd,
-        host   = host,
-        port   = port
-    };
-    
+        dbname  = dbname,
+        user    = user,
+        pwd     = pwd,
+        host    = host,
+        port    = port or 3306,
+        charset = charset or "utf8mb4"
+    };    
     if not odbc.mysql_env then
         odbc.mysql_env = luasql.mysql();
-    end
-    
+    end    
     local mysql = require("luaos.odbc.mysql")
     return mysql(odbc.mysql_env, conf);    
 end
