@@ -87,7 +87,7 @@
     <ClCompile Include="..\src\rapidjson\values.cpp">
       <Filter>源文件\rapidjson</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\luaos_stack.cpp">
+    <ClCompile Include="..\src\luaos_list.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -170,7 +170,7 @@
     <ClInclude Include="..\src\rapidjson\rapidjson.h">
       <Filter>源文件\rapidjson</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\luaos_stack.h">
+    <ClInclude Include="..\src\luaos_list.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

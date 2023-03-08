@@ -225,7 +225,7 @@ local modules = {
     class   =   "classy",   --lua classy
 }
 
-luaos.stack = require("stack");
+luaos.list = require("list");
 
 for k, v in pairs(modules) do
     local ok, result = pcall(require, "luaos." .. v);

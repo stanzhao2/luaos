@@ -25,7 +25,7 @@
 #include "rapidjson/rapidjson.h"
 #include "luaos.h"
 #include "luaos_socket.h"
-#include "luaos_stack.h"
+#include "luaos_list.h"
 #include "luaos_compile.h"
 #include "luaos_conv.h"
 #include "luaos_mc.h"
@@ -1543,7 +1543,7 @@ int luaos_openlibs(lua_State* L)
 
   luaL_Reg preload[] = {
     { "msgpack",    luaopen_cmsgpack_safe },
-    { "stack",      luaopen_stack      },
+    { "list",       luaopen_list       },
     { "openssl",    luaopen_openssl    },
     { "rapidjson",  luaopen_rapidjson  },
     { NULL,         NULL               }

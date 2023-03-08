@@ -23,7 +23,7 @@
     <ClCompile Include="..\src\luaos_rpcall.cpp" />
     <ClCompile Include="..\src\luaos_socket.cpp" />
     <ClCompile Include="..\src\luaos_local.cpp" />
-    <ClCompile Include="..\src\luaos_stack.cpp" />
+    <ClCompile Include="..\src\luaos_list.cpp" />
     <ClCompile Include="..\src\luaos_state.cpp" />
     <ClCompile Include="..\src\luaos_storage.cpp" />
     <ClCompile Include="..\src\luaos_subscriber.cpp" />
@@ -50,7 +50,7 @@
     <ClInclude Include="..\src\luaos_socket.h" />
     <ClInclude Include="..\src\luaos_io.h" />
     <ClInclude Include="..\src\luaos_local.h" />
-    <ClInclude Include="..\src\luaos_stack.h" />
+    <ClInclude Include="..\src\luaos_list.h" />
     <ClInclude Include="..\src\luaos_state.h" />
     <ClInclude Include="..\src\luaos_storage.h" />
     <ClInclude Include="..\src\luaos_subscriber.h" />

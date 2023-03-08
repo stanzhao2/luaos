@@ -17,10 +17,10 @@
 
 #include <lua_wrapper.h>
 
-#define luaos_stack_name "luaos_stack"
+#define luaos_list_name "luaos_stack"
 
 /***********************************************************************************/
 
-int luaopen_stack(lua_State* L);
+int luaopen_list(lua_State* L);
 
 /***********************************************************************************/
