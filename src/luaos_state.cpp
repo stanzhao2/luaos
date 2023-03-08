@@ -820,7 +820,10 @@ inline _Ty* check_type(lua_State* L, const char* name)
 
 struct luaos_job final {
   inline void stop() {
-    if (ios) {
+    if (ios && !ios->stopped()) {
+      auto wait = luaos_ionew();
+      wait->post([wait]() { wait->stop(); });
+      wait->run();
       ios->stop();
     }
     if (thread && thread->joinable()) {
