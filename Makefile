@@ -17,7 +17,6 @@ LUAGZIP       = $(LUAEXT)/lua-gzip
 LUAHIREDIS    = $(LUAEXT)/lua-hiredis
 LUAHTTPPARSER = $(LUAEXT)/lua-http-parser
 LUARANDOM     = $(LUAEXT)/lua-random
-LUARAPIDJSON  = $(LUAEXT)/lua-rapidjson
 LUASKIPLIST   = $(LUAEXT)/lua-skiplist
 LUAUUID       = $(LUAEXT)/lua-uuid
 LUAXSTRING    = $(LUAEXT)/lua-xstring
@@ -46,7 +45,6 @@ all:
 	cd $(LUAHIREDIS) && $(MAKE)
 	cd $(LUAHTTPPARSER) && $(MAKE)
 	cd $(LUARANDOM) && $(MAKE)
-	cd $(LUARAPIDJSON) && $(MAKE)
 	cd $(LUASKIPLIST) && $(MAKE)
 	cd $(LUAUUID) && $(MAKE)
 	cd $(LUAXSTRING) && $(MAKE)
@@ -65,7 +63,6 @@ clean:
 	cd $(LUAHIREDIS) && $(MAKE) clean
 	cd $(LUAHTTPPARSER) && $(MAKE) clean
 	cd $(LUARANDOM) && $(MAKE) clean
-	cd $(LUARAPIDJSON) && $(MAKE) clean
 	cd $(LUASKIPLIST) && $(MAKE) clean
 	cd $(LUAUUID) && $(MAKE) clean
 	cd $(LUAXSTRING) && $(MAKE) clean

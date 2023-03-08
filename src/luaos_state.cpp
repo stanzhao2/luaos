@@ -22,6 +22,7 @@
 #include <chrono>
 
 #include <conv.h>
+#include "rapidjson/rapidjson.h"
 #include "luaos.h"
 #include "luaos_socket.h"
 #include "luaos_compile.h"
@@ -890,8 +891,8 @@ static unsigned short csum(unsigned char *data, int size)
 
 static int os_snowid(lua_State* L)
 {
+  static std::atomic<int> index(0);
   static const size_t utc2020 = 1577808000;
-  static std::atomic<unsigned int> index = 0;
   static thread_local size_t tm_last = 0;
   static thread_local size_t localid = 0;
 
@@ -1539,6 +1540,7 @@ int luaos_openlibs(lua_State* L)
   luaL_Reg preload[] = {
     { "msgpack",    luaopen_cmsgpack_safe },
     { "openssl",    luaopen_openssl    },
+    { "rapidjson",  luaopen_rapidjson  },
     { NULL,         NULL               }
   };
   lua_getglobal(L, LUA_LOADLIBNAME);

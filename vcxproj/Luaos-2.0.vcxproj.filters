@@ -19,6 +19,9 @@
     <Filter Include="源文件\bios">
       <UniqueIdentifier>{51965d3c-9fe9-4c60-a0e2-419ecdbf60af}</UniqueIdentifier>
     </Filter>
+    <Filter Include="源文件\rapidjson">
+      <UniqueIdentifier>{ed034810-f34a-4caf-be85-ab9d79759469}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\luaos.cpp">
@@ -71,6 +74,18 @@
     </ClCompile>
     <ClCompile Include="..\src\luaos_conv.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rapidjson\document.cpp">
+      <Filter>源文件\rapidjson</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rapidjson\rapidjson.cpp">
+      <Filter>源文件\rapidjson</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rapidjson\schema.cpp">
+      <Filter>源文件\rapidjson</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rapidjson\values.cpp">
+      <Filter>源文件\rapidjson</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -133,6 +148,24 @@
     </ClInclude>
     <ClInclude Include="..\src\luaos_conv.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rapidjson\file.hpp">
+      <Filter>源文件\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rapidjson\luax.hpp">
+      <Filter>源文件\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rapidjson\stringstream.hpp">
+      <Filter>源文件\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rapidjson\userdata.hpp">
+      <Filter>源文件\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rapidjson\values.hpp">
+      <Filter>源文件\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rapidjson\rapidjson.h">
+      <Filter>源文件\rapidjson</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -28,6 +28,10 @@
     <ClCompile Include="..\src\luaos_subscriber.cpp" />
     <ClCompile Include="..\src\luaos_traceback.cpp" />
     <ClCompile Include="..\src\luaos_value.cpp" />
+    <ClCompile Include="..\src\rapidjson\document.cpp" />
+    <ClCompile Include="..\src\rapidjson\rapidjson.cpp" />
+    <ClCompile Include="..\src\rapidjson\schema.cpp" />
+    <ClCompile Include="..\src\rapidjson\values.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\bios\bios.h" />
@@ -50,6 +54,12 @@
     <ClInclude Include="..\src\luaos_subscriber.h" />
     <ClInclude Include="..\src\luaos_traceback.h" />
     <ClInclude Include="..\src\luaos_value.h" />
+    <ClInclude Include="..\src\rapidjson\file.hpp" />
+    <ClInclude Include="..\src\rapidjson\luax.hpp" />
+    <ClInclude Include="..\src\rapidjson\rapidjson.h" />
+    <ClInclude Include="..\src\rapidjson\stringstream.hpp" />
+    <ClInclude Include="..\src\rapidjson\userdata.hpp" />
+    <ClInclude Include="..\src\rapidjson\values.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

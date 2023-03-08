@@ -3,8 +3,6 @@
 #include <vector>
 #include <algorithm>
 
-#include <lua.hpp>
-
 // __SSE2__ and __SSE4_2__ are recognized by gcc, clang, and the Intel compiler.
 // We use -march=native with gmake to enable -msse2 and -msse4.2, if supported.
 #if defined(__SSE4_2__)
@@ -13,25 +11,25 @@
 #  define RAPIDJSON_SSE2
 #endif
 
-#include "rapidjson/document.h"
-#include "rapidjson/encodedstream.h"
-#include "rapidjson/error/en.h"
-#include "rapidjson/error/error.h"
-#include "rapidjson/filereadstream.h"
-#include "rapidjson/filewritestream.h"
-#include "rapidjson/prettywriter.h"
-#include "rapidjson/rapidjson.h"
-#include "rapidjson/reader.h"
-#include "rapidjson/schema.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/writer.h"
+#include "include/document.h"
+#include "include/encodedstream.h"
+#include "include/error/en.h"
+#include "include/error/error.h"
+#include "include/filereadstream.h"
+#include "include/filewritestream.h"
+#include "include/prettywriter.h"
+#include "include/rapidjson.h"
+#include "include/reader.h"
+#include "include/schema.h"
+#include "include/stringbuffer.h"
+#include "include/writer.h"
 
 
-#include "Userdata.hpp"
+#include "userdata.hpp"
 #include "values.hpp"
 #include "luax.hpp"
 #include "file.hpp"
-#include "StringStream.hpp"
+#include "stringstream.hpp"
 
 using namespace rapidjson;
 
@@ -400,7 +398,7 @@ static const luaL_Reg methods[] = {
 	{NULL, NULL }
 };
 
-extern "C" int luaopen_rapidjson(lua_State* L)
+int luaopen_rapidjson(lua_State* L)
 {
 	lua_newtable(L); // [rapidjson]
 

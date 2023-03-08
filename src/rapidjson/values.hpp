@@ -3,13 +3,13 @@
 
 #include <vector>
 #include <lua.hpp>
-#include <rapidjson/rapidjson.h>
-#include <rapidjson/document.h>
-#include <rapidjson/reader.h>
-#include <rapidjson/error/en.h>
+#include "include/rapidjson.h"
+#include "include/document.h"
+#include "include/reader.h"
+#include "include/error/en.h"
 
 #include "luax.hpp"
-#include "StringStream.hpp"
+#include "stringstream.hpp"
 
 namespace values {
 	typedef rapidjson::Document::AllocatorType Allocator;

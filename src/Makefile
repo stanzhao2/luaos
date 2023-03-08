@@ -17,7 +17,11 @@ TARGET_NAME = luaos
 OUTPUT  := ../bin/$(TARGET_NAME)
 
 #source files
-SOURCE  := luaos.o \
+SOURCE  := rapidjson/document.o \
+		   rapidjson/schema.o \
+		   rapidjson/values.o \
+		   rapidjson/rapidjson.o \
+		   luaos.o \
 		   luaos_compile.o \
            luaos_logo.o \
 		   luaos_socket.o \
