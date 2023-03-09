@@ -121,75 +121,90 @@ int main(int argc, char* argv[])
 #endif
 
   using namespace clipp;
-  bool compile = false, bimport = false;
-  bool help = false, usekey = false, bexport = false;
-  std::string fmain(luaos_fmain), filename, strkey;
-  std::vector<std::string> extnames;
+  bool cmd_help     = false;
+  bool cmd_compile  = false;
+  bool cmd_filename = false;
+  bool cmd_key      = false;
+  bool cmd_unpack   = false;
 
-  auto cli = (
-    (opt_value("filename", fmain)),
-    (option("-h", "/h", "--help").set(help)) |
-    (option("-i", "/i", "--input").set(bimport)   & value("filename", filename)) |
-    (option("-c", "/c", "--compile").set(compile) & value("filename", filename) & repeatable(opt_value("ext", extnames))) |
-    (option("-e", "/e", "--export").set(bexport)  & value("filename", filename)),
-    (option("-k", "/k", "--key").set(usekey) & value("key", strkey))
+  std::string filename, filekey;
+  std::string main_name(luaos_fmain);
+  std::vector<std::string> filestype;
+
+  auto cmd = (
+    option("-h", "/h", "--help").set(cmd_help) | (
+      (opt_value("module-name", main_name)),
+      (option("-b", "/b", "--build").set(cmd_compile) & repeatable(opt_value("files-type", filestype))) |
+      (option("-u", "/u", "--unpack").set(cmd_unpack)),
+      (option("-f", "/f", "--filename").set(cmd_filename) & value("filename", filename)),
+      (option("-p", "/p", "--password").set(cmd_key) & value("key", filekey))
+    )
   );
 
-  extnames.push_back("lua");
-  if (!parse(argc, argv, cli) || (compile && bimport) || fmain[0] == '-') {
-    luaos_error("Invalid parameter, use -h to view help\n\n");
+  filestype.push_back("lua");
+  if (!parse(argc, argv, cmd) || main_name[0] == '-') {
+    luaos_error("Invalid command, use -h to view help\n\n");
     return 0;
   }
 
-  if (help) {
-    std::string fname(argv[0]);
+  if (cmd_help) {
+    std::string exefname(argv[0]);
     const char* pos = strrchr(argv[0], LUA_DIRSEP[0]);
     if (pos) {
-      fname = pos + 1;
+      exefname = pos + 1;
     }
     printf(
-      "  > usage: %s [module] [options]\n"
-      "  > Available options are:\n"
-      "  >   -h show this usage\n"
-      "  >   -c filename [[all] | [extensions]] output to file 'filename'\n"
-      "  >   -i filename import from file 'filename'\n"
-      "  >   -e filename export from file 'filename'\n"
-      "  >   -k key for import/export\n\n",
-      fname.c_str()
+      "> usage: %s [module] [options]\n"
+      "> Available options are:\n"
+      ">   -h .... show this usage\n"
+      ">   -b .... build [[all] or [list of file extensions]]\n"
+      ">   -u .... unpack\n"
+      ">   -f .... input/output file\n"
+      ">   -p .... password for input/output file\n\n",
+      exefname.c_str()
     );
     return 0;
   }
-  if (strkey.empty()) {
-    strkey = "11852234-3e57-484d-b128-cd99a6b76204";
-  }
-  unsigned char hash[16];
-  int size = md5::hash(strkey.c_str(), strkey.size(), hash);
-  strkey.clear();
 
+  if (filename.empty()) {
+    time_t now = time(0);
+    auto ptm = localtime(&now);
+    char name[256];
+    snprintf(name, sizeof(name), "%02d%02d%02d%02d%02d%02d.img", 1900 + ptm->tm_year, ptm->tm_mon + 1, ptm->tm_mday, ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
+    filename.assign(name);
+  }
+  if (filekey.empty()) {
+    filekey = "11852234-3e57-484d-b128-cd99a6b76204";
+  }
+
+  unsigned char hash[16];
+  int size = md5::hash(filekey.c_str(), filekey.size(), hash);
+  filekey.clear();
   for (int i = 0; i < size; i++) {
     char hex[3];
     sprintf(hex, "%02x", hash[i]);
-    strkey.append(hex);
+    filekey.append(hex);
   }
+  const char* password = filekey.c_str();
 
   lua_State* L = init_main_state();
-  if (compile) {
+  if (cmd_compile) {
     std::set<std::string> exts;
-    for (size_t i = 0; i < extnames.size(); i++) {
-      exts.insert(extnames[i]);
+    for (size_t i = 0; i < filestype.size(); i++) {
+      exts.insert(filestype[i]);
     }
     replace(filename);
-    luaos_compile(L, filename.c_str(), exts, strkey.c_str());
+    luaos_compile(L, filename.c_str(), exts, password);
     return printf("\n");
   }
-  if (bexport) {
+  if (cmd_unpack) {
     replace(filename);
-    luaos_export(L, filename.c_str(), strkey.c_str(), true);
+    luaos_export(L, filename.c_str(), password, true);
     return printf("\n");
   }
-  if (bimport) {
+  if (cmd_filename) {
     replace(filename);
-    if (luaos_export(L, filename.c_str(), strkey.c_str(), false) < 0) {
+    if (luaos_export(L, filename.c_str(), password, false) < 0) {
       return printf("\n");
     }
   }
@@ -197,7 +212,7 @@ int main(int argc, char* argv[])
   lua_Integer error = -1;
   luaos_trace("Starting LuaOS...\n");
   lua_pushcfunction(L, &pmain);           /* to call 'pmain' in protected mode */
-  lua_pushstring(L, fmain.c_str());       /* 1st argument */
+  lua_pushstring(L, main_name.c_str());   /* 1st argument */
   if (luaos_pcall(L, 1, 1) == LUA_OK) {   /* do the call */
     error = lua_tointeger(L, -1);         /* get result */
   }
