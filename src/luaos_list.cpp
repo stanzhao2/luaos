@@ -6,9 +6,9 @@
 
 typedef std::list<lua_value> stack_value;
 
-static stack_value* check_metatable(lua_State* L)
+static stack_value* check_list(lua_State* L, int i = 1)
 {
-  return lexget_userdata<stack_value>(L, 1, luaos_list_name);
+  return lexget_userdata<stack_value>(L, i, luaos_list_name);
 }
 
 static int lua_os_list_new(lua_State* L)
@@ -20,14 +20,14 @@ static int lua_os_list_new(lua_State* L)
 
 static int lua_os_list_gc(lua_State* L)
 {
-  stack_value* self = check_metatable(L);
+  stack_value* self = check_list(L);
   self->~list();
   return 0;
 }
 
 static int lua_os_list_front(lua_State* L)
 {
-  stack_value* self = check_metatable(L);
+  stack_value* self = check_list(L);
   if (self->empty()) {
     lua_pushnil(L);
   }
@@ -39,7 +39,7 @@ static int lua_os_list_front(lua_State* L)
 
 static int lua_os_list_push_front(lua_State* L)
 {
-  stack_value* self = check_metatable(L);
+  stack_value* self = check_list(L);
   luaL_argcheck(L, !lua_isnone(L, 2), 2, "missing value");
   self->push_front(lua_value(L, 2));
   lua_pushinteger(L, (lua_Integer)self->size());
@@ -48,7 +48,7 @@ static int lua_os_list_push_front(lua_State* L)
 
 static int lua_os_list_pop_front(lua_State* L)
 {
-  stack_value* self = check_metatable(L);
+  stack_value* self = check_list(L);
   if (self->empty()) {
     lua_pushnil(L);
   }
@@ -62,7 +62,7 @@ static int lua_os_list_pop_front(lua_State* L)
 
 static int lua_os_list_back(lua_State* L)
 {
-  stack_value* self = check_metatable(L);
+  stack_value* self = check_list(L);
   if (self->empty()) {
     lua_pushnil(L);
   }
@@ -74,7 +74,7 @@ static int lua_os_list_back(lua_State* L)
 
 static int lua_os_list_push_back(lua_State* L)
 {
-  stack_value* self = check_metatable(L);
+  stack_value* self = check_list(L);
   luaL_argcheck(L, !lua_isnone(L, 2), 2, "missing value");
   self->push_back(lua_value(L, 2));
   lua_pushinteger(L, (lua_Integer)self->size());
@@ -83,7 +83,7 @@ static int lua_os_list_push_back(lua_State* L)
 
 static int lua_os_list_pop_back(lua_State* L)
 {
-  stack_value* self = check_metatable(L);
+  stack_value* self = check_list(L);
   if (self->empty()) {
     lua_pushnil(L);
   }
@@ -97,14 +97,14 @@ static int lua_os_list_pop_back(lua_State* L)
 
 static int lua_os_list_size(lua_State* L)
 {
-  stack_value* self = check_metatable(L);
+  stack_value* self = check_list(L);
   lua_pushinteger(L, (lua_Integer)self->size());
   return 1;
 }
 
 static int lua_os_list_clear(lua_State* L)
 {
-  stack_value* self = check_metatable(L);
+  stack_value* self = check_list(L);
   self->clear();
   return 0;
 }
@@ -123,36 +123,26 @@ static int lua_os_list_iterator_gc(lua_State* L)
 
 static int lua_os_list_iterator(lua_State* L)
 {
-  auto list = (stack_value*)lua_touserdata(
-    L, lua_upvalueindex(1)
-  );
-  if (!list) {
-    luaL_error(L, "self invalid");
-    return 0;
-  }
-  auto iter = *(stack_value::iterator**)lua_touserdata(
-    L, lua_upvalueindex(2)
-  );
-  if (!iter) {
-    luaL_error(L, "iterator invalid");
-    return 0;
-  }
-  if (*iter == list->end()) {
-    return 0;
-  }
+  auto list = (stack_value*)lua_touserdata(L, lua_upvalueindex(1));
+  auto iter = *(stack_value::iterator**)lua_touserdata(L, lua_upvalueindex(2));
+
   size_t size = lua_tointeger(L, lua_upvalueindex(3));
-  if (list->size() != size) {
-    luaL_error(L, "traversing process cannot delete elements");
+  if (!list || list->size() != size) {
     return 0;
   }
-  (*iter)->push(L);
-  (*iter)++;
+  if (!iter || *iter == list->end()) {
+    return 0;
+  }
+  if (iter) {
+    (*iter)->push(L);
+    (*iter)++;
+  }
   return 1;
 }
 
 static int lua_os_list_pairs(lua_State* L)
 {
-  stack_value* self = check_metatable(L);
+  stack_value* self = check_list(L);
   lua_pushlightuserdata(L, self);
 
   auto iter = lexnew_userdata<stack_value::iterator*>(L, luaos_list_iterator);
