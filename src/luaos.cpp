@@ -133,12 +133,12 @@ int main(int argc, char* argv[])
   std::vector<std::string> filestype;
 
   auto cmd = (
-    option("-h", "/h", "--help").set(cmd_help) | (
+    option("-h", "/h").set(cmd_help).doc("display help information") | (
       (opt_value("module-name", main_name)),
-      (option("-b", "/b", "--build").set(cmd_compile) & repeatable(opt_value("extensions", filestype))) |
-      (option("-u", "/u", "--unpack").set(cmd_unpack)),
-      (option("-f", "/f", "--filename").set(cmd_filename) & value("filename", filename)),
-      (option("-p", "/p", "--password").set(cmd_key) & value("password", filekey))
+      (option("-b", "/b").set(cmd_compile).doc("build image file") & repeatable(opt_value("extensions", filestype))) |
+      (option("-u", "/u").set(cmd_unpack).doc("unpack image file")),
+      (option("-f", "/f").set(cmd_filename).doc("set image file name") & value("filename", filename)),
+      (option("-p", "/p").set(cmd_key).doc("set image file password") & value("password", filekey))
     )
   );
 
@@ -154,7 +154,10 @@ int main(int argc, char* argv[])
     if (pos) {
       exefname = pos + 1;
     }
-    std::cout << make_man_page(cmd, exefname.c_str()) << "\n";
+    auto fmt = doc_formatting{}
+      .first_column(5)
+      .doc_column(15);
+    std::cout << make_man_page(cmd, exefname.c_str(), fmt) << "\n";
     return 0;
   }
 
