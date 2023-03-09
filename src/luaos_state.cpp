@@ -559,7 +559,7 @@ static std::string location(lua_State* L)
   return data;
 }
 
-static int ll_savelog(const std::string& data, color_type color)
+static int ll_savelog(const char* data, color_type color)
 {
   lua_State* L = luaos_local.lua_state();
   if (luaos_is_debug(L)) {
@@ -572,32 +572,36 @@ static int ll_savelog(const std::string& data, color_type color)
   if (!fp) {
     return 0;
   }
-  fwrite(data.c_str(), 1, data.size(), fp);
+  fwrite(data, 1, strlen(data), fp);
   fclose(fp);
   return 0;
 }
 
 static int ll_output(const std::string& str, color_type color)
 {
+  const char* msg = str.c_str();
+#ifdef _MSC_VER
   std::string data(str);
   if (!is_utf8(str.c_str(), str.size())) {
     data = mbs_to_utf8(str);
+    msg = data.c_str();
   }
+#endif
   static std::mutex _mutex;
   std::unique_lock<std::mutex> lock(_mutex);
-  ll_savelog(data, color);
+  ll_savelog(msg, color);
 
 #ifdef _MSC_VER
-  console::instance()->print(data, color);
+  console::instance()->print(msg, color);
 #else
   if (color == color_type::yellow) { //警告色(黄色)
-    printf("\033[1;33m%s\033[0m", data.c_str());
+    printf("\033[1;33m%s\033[0m", msg);
   }
   else if (color == color_type::red) { //错误色(红色)
-    printf("\033[1;31m%s\033[0m", data.c_str());
+    printf("\033[1;31m%s\033[0m", msg);
   }
   else {
-    printf("\033[1;36m%s\033[0m", data.c_str());  //缺省色(青色)
+    printf("\033[1;36m%s\033[0m", msg);  //缺省色(青色)
   }
 #endif
   return 0;
@@ -825,10 +829,12 @@ struct luaos_job final {
   }
   inline void stop() {
     if (ios && !ios->stopped()) {
-      auto wait = luaos_ionew();
-      ios->post([wait]() { wait->stop(); });
-      wait->run();
-      ios->stop();
+      if (status == LUA_OK) {
+        auto wait = luaos_ionew();
+        ios->post([wait]() { wait->stop(); });
+        wait->run();
+        ios->stop();
+      }
     }
     if (thread && thread->joinable()) {
       thread->join();

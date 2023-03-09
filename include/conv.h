@@ -45,6 +45,7 @@ inline static bool is_utf8(const char* p, size_t n = 0)
 
 inline static std::string wcs_to_mbs(const std::wstring& wstr, const char* locale = 0)
 {
+  setlocale(LC_CTYPE, locale ? locale : "");
   std::string ret;
   std::mbstate_t state = {};
   const wchar_t* src = wstr.c_str();
@@ -57,11 +58,13 @@ inline static std::string wcs_to_mbs(const std::wstring& wstr, const char* local
       ret.assign(buff.get(), len);
     }
   }
+  setlocale(LC_CTYPE, "C");
   return ret;
 }
 
 inline static std::wstring mbs_to_wcs(const std::string& str, const char* locale = 0)
 {
+  setlocale(LC_CTYPE, locale ? locale : "");
   std::wstring ret;
   std::mbstate_t state = {};
   const char* src = str.c_str();
@@ -74,6 +77,7 @@ inline static std::wstring mbs_to_wcs(const std::string& str, const char* locale
       ret.assign(buff.get(), len);
     }
   }
+  setlocale(LC_CTYPE, "C");
   return ret;
 }
 

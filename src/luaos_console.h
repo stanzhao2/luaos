@@ -42,7 +42,7 @@ public:
     static console _console;
     return &_console;
   }
-  void print(const std::string& str, color_type color)
+  void print(const char* str, color_type color)
   {
     WORD print_color = FOREGROUND_INTENSITY;
     switch (color) {
@@ -59,7 +59,7 @@ public:
       break;
     }
     SetConsoleTextAttribute(_handle, print_color);
-    printf(str.c_str());
+    printf(str);
     SetConsoleTextAttribute(_handle, _color);
   }
 };

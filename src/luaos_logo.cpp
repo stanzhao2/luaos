@@ -26,8 +26,7 @@
 static void logo_print(const char* str, color_type color)
 {
 #ifdef _MSC_VER
-  const std::string info(str);
-  console::instance()->print(info, color);
+  console::instance()->print(str, color);
 #else
   printf("\033[1;36m%s\033[0m", str);  //缺省色(青色)
 #endif
