@@ -116,6 +116,9 @@ int main(int argc, char* argv[])
   display_logo();
 #ifndef _MSC_VER
   MallocExtension::instance()->SetMemoryReleaseRate(0);
+#else
+  setlocale(LC_ALL, "");
+  SetConsoleOutputCP(65001);
 #endif
 
   using namespace clipp;

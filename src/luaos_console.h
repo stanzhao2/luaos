@@ -29,12 +29,8 @@ class console final
     CONSOLE_SCREEN_BUFFER_INFO si;
     _handle = GetStdHandle(STD_OUTPUT_HANDLE);
     GetConsoleScreenBufferInfo(_handle, &si);
-
-    SetConsoleOutputCP(936);
-    _color    = si.wAttributes;
-    _codepage = GetConsoleOutputCP();
+    _color = si.wAttributes;
   }
-  UINT   _codepage;
   WORD   _color;
   HANDLE _handle;
 
@@ -48,10 +44,6 @@ public:
   }
   void print(const std::string& str, color_type color)
   {
-    std::string data(str);
-    if (_codepage == 936) { /* Simplified Chinese */
-      data = utf8_to_mbs(str);
-    }
     WORD print_color = FOREGROUND_INTENSITY;
     switch (color) {
     case color_type::red:
@@ -67,7 +59,7 @@ public:
       break;
     }
     SetConsoleTextAttribute(_handle, print_color);
-    printf(data.c_str());
+    printf(str.c_str());
     SetConsoleTextAttribute(_handle, _color);
   }
 };

@@ -13,6 +13,7 @@
 **
 ************************************************************************************/
 
+#include <conv.h>
 #include "luaos.h"
 
 /*
@@ -114,6 +115,11 @@ static void traceback(lua_State *L, lua_State *L1, const char *msg, int level)
   int limit2show = (last - level > LEVELS1 + LEVELS2) ? LEVELS1 : -1;
   luaL_buffinit(L, &b);
   if (msg) {
+    std::string data(msg);
+    if (!is_utf8(data.c_str(), data.size())) {
+      data = mbs_to_utf8(data);
+      msg = data.c_str();
+    }
     luaL_addstring(&b, msg);
     luaL_addchar(&b, '\n');
   }
