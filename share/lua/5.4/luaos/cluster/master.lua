@@ -96,7 +96,7 @@ local function on_publish_request(session, tb)
     
     --only send to one session
     if tb.mask > 0 and count > 1 then
-        local i = (tb.mask % count) + 1;
+        local i = (session.mask % count) + 1;
         send_to_peer(target[i].peer, message);
         return
     end
@@ -235,7 +235,10 @@ local function on_socket_accept(acceptor, peer)
         end
     end
     
-    sessions[fd] = {peer = peer};
+    sessions[fd] = {
+        peer = peer,
+        mask = math.random(0, 0xffffffff)
+    };
     onlines = onlines + 1;
     
     tb.type = cmd_ready;    
