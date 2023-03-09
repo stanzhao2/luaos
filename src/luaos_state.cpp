@@ -43,6 +43,8 @@
 //common functions
 /***********************************************************************************/
 
+static io_handler alive_exit = luaos_ionew();
+
 inline static int is_success(int status) {
   return status == LUA_OK || status == LUA_YIELD;
 }
@@ -559,37 +561,38 @@ static std::string location(lua_State* L)
   return data;
 }
 
-static int ll_savelog(const char* data, color_type color)
+static void ll_savelog(const char* data, size_t size, color_type color)
 {
-  lua_State* L = luaos_local.lua_state();
-  if (luaos_is_debug(L)) {
-    return 0;
+  if (luaos_is_debug()) {
+    return;
   }
-  if (color != color_type::red) {
-    return 0;
+  if (color == color_type::yellow) {
+    return;
   }
-  FILE* fp = fopen("~luaos.err.log", "a");
-  if (!fp) {
-    return 0;
+  if (!alive_exit || alive_exit->stopped()) {
+    return;
   }
-  fwrite(data, 1, strlen(data), fp);
-  fclose(fp);
-  return 0;
+  std::string log(data, size);
+  alive_exit->post(std::bind([](const std::string& data, color_type color) {
+    luaos_savelog(data, color);
+  }, log, color));
 }
 
 static int ll_output(const std::string& str, color_type color)
 {
+  size_t size = str.size();
   const char* msg = str.c_str();
 #ifdef _MSC_VER
   std::string data(str);
   if (!is_utf8(str.c_str(), str.size())) {
     data = mbs_to_utf8(str);
-    msg = data.c_str();
+    msg  = data.c_str();
+    size = data.size();
   }
 #endif
   static std::mutex _mutex;
   std::unique_lock<std::mutex> lock(_mutex);
-  ll_savelog(msg, color);
+  ll_savelog(msg, size, color);
 
 #ifdef _MSC_VER
   console::instance()->print(msg, color);
@@ -676,7 +679,6 @@ int luaos_printf(color_type color, const char* fmt, ...)
 
 /***********************************************************************************/
 
-static io_handler alive_exit = luaos_ionew();
 static std::mutex alive_mutex;
 static std::map<lua_State*, size_t> alive_states;
 static std::shared_ptr<std::thread> alive_thread;

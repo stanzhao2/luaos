@@ -33,4 +33,6 @@ public:
   inline ~stack_rollback() { lua_settop(ls, _topidx); }
 };
 
+void luaos_savelog(const std::string& data, color_type color);
+
 /***********************************************************************************/

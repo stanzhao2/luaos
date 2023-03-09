@@ -15,6 +15,7 @@
 
 #include <clipp/include/clipp.h>
 #include <iostream>
+#include <conv.h>
 #include <md5.h>
 #include "luaos.h"
 #include "luaos_master.h"
@@ -22,7 +23,7 @@
 #include "luaos_logo.h"
 #include "luaos_compile.h"
 
-static identifier _G_;
+/***********************************************************************************/
 
 #ifndef _MSC_VER
 #include <gperftools/malloc_extension.h>
@@ -31,6 +32,56 @@ static identifier _G_;
 #include "dumper/ifdumper.h"
 static CMiniDumper _G_dumper(true);
 #endif
+
+/***********************************************************************************/
+
+static identifier  _G_;
+static std::string _loghosten;
+static std::string _logserver;
+static unsigned short _logsvr_port = 0;
+
+static void sendto_server(const std::string& data, color_type color)
+{
+  static error_code ec;
+  static auto ios = eth::reactor::create();
+  static auto udpsock = eth::socket::create(ios, eth::socket::family::sock_dgram);
+  static const auto peer = eth::udp::resolve(_logserver.c_str(), _logsvr_port, ec);
+  if (ec) {
+    return;
+  }
+  if (!udpsock->is_open()) {
+    if (ec = udpsock->bind(0, "0.0.0.0")) {
+      return;
+    }
+  }
+  std::string packet;
+  packet.append((char*)&color, 1);
+  packet.append(data);
+  packet.append("\0", 1);
+  udpsock->send_to(packet.c_str(), packet.size(), *peer.begin(), ec);
+  if (ec) {
+    ec.clear();
+  }
+}
+
+void luaos_savelog(const std::string& data, color_type color)
+{
+  if (_loghosten.empty()) {
+    return; /* unknow log server */
+  }
+  if (!_logsvr_port) {
+    auto pos = _loghosten.find(':');
+    if (pos == std::string::npos) {
+      _logsvr_port = 1;
+      return;
+    }
+    _logserver   = _loghosten.substr(0, pos);
+    _logsvr_port = (unsigned short)std::stoi(_loghosten.substr(pos + 1));
+  }
+  if (!_logserver.empty()) {
+    sendto_server(data, color);
+  }
+}
 
 /***********************************************************************************/
 
@@ -175,29 +226,31 @@ int main(int argc, char* argv[])
 #endif
 
   using namespace clipp;
-  bool cmd_help     = false;
-  bool cmd_compile  = false;
-  bool cmd_filename = false;
-  bool cmd_key      = false;
-  bool cmd_unpack   = false;
-  bool cmd_params   = false;
+  bool cmd_help      = false;
+  bool cmd_compile   = false;
+  bool cmd_filename  = false;
+  bool cmd_key       = false;
+  bool cmd_unpack    = false;
+  bool cmd_params    = false;
+  bool cmd_loghosten = false;
 
   std::string filename, filekey;
   std::string main_name(luaos_fmain);
   std::vector<std::string> filestype, luaparams;
 
   auto cmd = (
-    option("-h", "/h").set(cmd_help).doc("display help information") | (
+    option("-h").set(cmd_help).doc("...... display help information") | (
       (opt_value("module-name", main_name)),
-      (option("-b", "/b").set(cmd_compile).doc("build image file") & repeatable(opt_value("extensions", filestype))) |
-      (option("-u", "/u").set(cmd_unpack).doc("unpack image file")),
-      (option("-f", "/f").set(cmd_filename).doc("set image file name") & value("filename", filename)),
-      (option("-p", "/p").set(cmd_key).doc("set image file password") & value("password", filekey))
+      (option("-b").set(cmd_compile).doc("...... build image file") & repeatable(opt_value("extensions", filestype))) |
+      (option("-u").set(cmd_unpack).doc("...... unpack image file")),
+      (option("-f").set(cmd_filename).doc("...... set image file name") & value("filename", filename)),
+      (option("-p").set(cmd_key).doc("...... set image file password") & value("password", filekey))
     ) | (
       (opt_value("module-name", main_name)),
-      (option("-f", "/f").set(cmd_filename).doc("set image file name") & value("filename", filename)),
-      (option("-p", "/p").set(cmd_key).doc("set image file password") & value("password", filekey)),
-      (option("-a", "/a").set(cmd_params).doc("parameters passed to lua") & repeatable(opt_value("parameters", luaparams)))
+      (option("-f").set(cmd_filename).doc("...... set image file name") & value("filename", filename)),
+      (option("-p").set(cmd_key).doc("...... set image file password") & value("password", filekey)),
+      (option("-a").set(cmd_params).doc("...... parameters passed to lua") & repeatable(opt_value("argvs", luaparams))),
+      (option("-l").set(cmd_loghosten).doc("...... remote logserver host:port") & value("hostname", _loghosten))
     )
   );
 
@@ -215,7 +268,7 @@ int main(int argc, char* argv[])
     }
     auto fmt = doc_formatting{}
       .first_column(5)
-      .doc_column(15);
+      .doc_column(8);
     std::cout << make_man_page(cmd, exefname.c_str(), fmt) << "\n";
     return 0;
   }
