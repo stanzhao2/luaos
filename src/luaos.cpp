@@ -14,6 +14,7 @@
 ************************************************************************************/
 
 #include <clipp/include/clipp.h>
+#include <iostream>
 #include <md5.h>
 #include "luaos.h"
 #include "luaos_master.h"
@@ -134,10 +135,10 @@ int main(int argc, char* argv[])
   auto cmd = (
     option("-h", "/h", "--help").set(cmd_help) | (
       (opt_value("module-name", main_name)),
-      (option("-b", "/b", "--build").set(cmd_compile) & repeatable(opt_value("files-type", filestype))) |
+      (option("-b", "/b", "--build").set(cmd_compile) & repeatable(opt_value("extensions", filestype))) |
       (option("-u", "/u", "--unpack").set(cmd_unpack)),
       (option("-f", "/f", "--filename").set(cmd_filename) & value("filename", filename)),
-      (option("-p", "/p", "--password").set(cmd_key) & value("key", filekey))
+      (option("-p", "/p", "--password").set(cmd_key) & value("password", filekey))
     )
   );
 
@@ -153,16 +154,7 @@ int main(int argc, char* argv[])
     if (pos) {
       exefname = pos + 1;
     }
-    printf(
-      "> usage: %s [module] [options]\n"
-      "> Available options are:\n"
-      ">   -h .... show this usage\n"
-      ">   -b .... build [[all] or [list of file extensions]]\n"
-      ">   -u .... unpack\n"
-      ">   -f .... input/output file\n"
-      ">   -p .... password for input/output file\n\n",
-      exefname.c_str()
-    );
+    std::cout << make_man_page(cmd, exefname.c_str()) << "\n";
     return 0;
   }
 
