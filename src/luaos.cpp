@@ -58,17 +58,70 @@ static const char* normal(const char* name)
   return name;
 }
 
+static bool is_integer(const char* p)
+{
+  while (*p) {
+    if (*p < '0' || *p > '9') return false;
+    p++;
+  }
+  return true;
+}
+
+static bool is_number(const char* p)
+{
+  int dotcnt = 0;
+  while (*p) {
+    if (*p < '0' || *p > '9') {
+      if (*p != '.' || dotcnt++) {
+        return false;
+      }
+    }
+    p++;
+  }
+  return true;
+}
+
+static bool is_boolean(const char* p)
+{
+  return (strcmp(p, "true") == 0 || strcmp(p, "false") == 0);
+}
+
+static void push_param(lua_State* L, const std::string& v)
+{
+  const char* p = v.c_str();
+  if (is_integer(p)) {
+    lua_pushinteger(L, std::stoll(v));
+    return;
+  }
+  if (is_number(p)) {
+    lua_pushnumber(L, std::stod(v));
+    return;
+  }
+  if (is_boolean(p)) {
+    lua_pushboolean(L, v == "true" ? 1 : 0);
+    return;
+  }
+  lua_pushlstring(L, v.c_str(), v.size());
+}
+
 static int pmain(lua_State* L)
 {
   luaL_checkversion(L);
   const char* name = luaL_checkstring(L, 1);
+  auto argvs = (const std::vector<std::string>*)lua_touserdata(L, 2);
   name = normal(name);
 
-  int result = luaos_pexec(L, name, 0);   /* load and run module in protect mode */
-  if (result != LUA_OK) {
-    lua_error(L);                         /* run error */
+  if (argvs) {
+    for (size_t i = 0; i < argvs->size(); i++) {
+      push_param(L, argvs->at(i));
+    }
   }
-  lua_pushinteger(L, result);             /* push result to stack */
+  int argc = argvs ? (int)argvs->size() : 0;
+  int result = luaos_pexec(L, name, argc);  /* load and run module in protect mode */
+  if (result != LUA_OK) {
+    lua_error(L); /* run error */
+  }
+  lua_pushinteger(L, result); /* push result to stack */
   return 1;
 }
 
@@ -127,10 +180,11 @@ int main(int argc, char* argv[])
   bool cmd_filename = false;
   bool cmd_key      = false;
   bool cmd_unpack   = false;
+  bool cmd_params   = false;
 
   std::string filename, filekey;
   std::string main_name(luaos_fmain);
-  std::vector<std::string> filestype;
+  std::vector<std::string> filestype, luaparams;
 
   auto cmd = (
     option("-h", "/h").set(cmd_help).doc("display help information") | (
@@ -139,6 +193,11 @@ int main(int argc, char* argv[])
       (option("-u", "/u").set(cmd_unpack).doc("unpack image file")),
       (option("-f", "/f").set(cmd_filename).doc("set image file name") & value("filename", filename)),
       (option("-p", "/p").set(cmd_key).doc("set image file password") & value("password", filekey))
+    ) | (
+      (opt_value("module-name", main_name)),
+      (option("-f", "/f").set(cmd_filename).doc("set image file name") & value("filename", filename)),
+      (option("-p", "/p").set(cmd_key).doc("set image file password") & value("password", filekey)),
+      (option("-a", "/a").set(cmd_params).doc("parameters passed to lua") & repeatable(opt_value("parameters", luaparams)))
     )
   );
 
@@ -208,7 +267,8 @@ int main(int argc, char* argv[])
   luaos_trace("Starting LuaOS...\n");
   lua_pushcfunction(L, &pmain);           /* to call 'pmain' in protected mode */
   lua_pushstring(L, main_name.c_str());   /* 1st argument */
-  if (luaos_pcall(L, 1, 1) == LUA_OK) {   /* do the call */
+  lua_pushlightuserdata(L, cmd_params ? &luaparams : nullptr);  /* 2st argument */
+  if (luaos_pcall(L, 2, 1) == LUA_OK) {   /* do the call */
     error = lua_tointeger(L, -1);         /* get result */
   }
   else {
