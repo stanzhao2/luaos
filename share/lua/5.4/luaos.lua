@@ -328,64 +328,51 @@ luaos.nginx = {
 ---封装 cluster 子模块
 ----------------------------------------------------------------------------
 
-luaos.cluster = {
-    ---创建一个集群监听
-    ---@param host string
-    ---@param port integer
-    ---@return table
-    listen = function(host, port)
-        local ok, master = pcall(
-            require, "luaos.cluster.master"
-        );
-        
-        if not ok then
-            throw(master);
-        end
-        
-        local ok, reason = master.start(host, port);
-        if not ok then
-            return nil, reason;
-        end
-        
-        local result = {};
-        
-        function result:close()
-            master.stop();
-        end
-        
+local function cluster_watch(proxy, watchs)
+    local result = {
+        proxy = proxy,
+        close = proxy.stop,
+        watch = proxy.watch,
+    };
+    if not watchs then
         return result;
-    end,
+    end
     
+    if type(watchs) == "number" then
+        proxy.watch(watchs);
+        return result;
+    end
+    
+    if type(watchs) == "table" then
+        for _, v in pairs(watchs) do
+            proxy.watch(v);
+        end
+        return result;
+    end
+    
+    error("invalid parameter");
+    return result;
+end
+
+luaos.cluster = {
     ---建立一个集群连接
     ---@param host string
     ---@param port integer
     ---@param timeout integer
     ---@return table
-    connect = function(host, port, timeout)
+    connect = function(host, port, watchs)
+        assert(host and port);
         local ok, proxy = pcall(
             require, "luaos.cluster.proxy"
         );
-        
         if not ok then
             throw(proxy);
-        end
-        
-        local ok, reason = proxy.start(host, port, timeout);
+        end        
+        local ok, reason = proxy.start(host, port, 2000);
         if not ok then
             return nil, reason;
-        end
-        
-        local result = {};
-        
-        function result:close()
-            proxy.stop();
-        end
-        
-        function result:watch(topic)
-            proxy.watch(topic);
-        end
-        
-        return result;
+        end        
+        return cluster_watch(proxy, watchs);
     end
 };
 
