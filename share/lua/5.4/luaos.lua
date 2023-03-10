@@ -328,23 +328,23 @@ luaos.nginx = {
 ---封装 cluster 子模块
 ----------------------------------------------------------------------------
 
-local function cluster_watch(proxy, watchs)
+local function cluster_watch(proxy, topics)
     local result = {
         proxy = proxy,
         close = proxy.stop,
         watch = proxy.watch,
     };
-    if not watchs then
+    if not topics then
         return result;
     end
     
-    if type(watchs) == "number" then
-        proxy.watch(watchs);
+    if type(topics) == "number" then
+        proxy.watch(topics);
         return result;
     end
     
-    if type(watchs) == "table" then
-        for _, v in pairs(watchs) do
+    if type(topics) == "table" then
+        for _, v in pairs(topics) do
             proxy.watch(v);
         end
         return result;
@@ -358,9 +358,9 @@ luaos.cluster = {
     ---建立一个集群连接
     ---@param host string
     ---@param port integer
-    ---@param watchs integer|table|nil
+    ---@param topics integer|table|nil
     ---@return table
-    connect = function(host, port, watchs)
+    connect = function(host, port, topics)
         assert(host and port);
         local ok, proxy = pcall(
             require, "luaos.cluster.proxy"
@@ -372,7 +372,7 @@ luaos.cluster = {
         if not ok then
             return nil, reason;
         end        
-        return true, cluster_watch(proxy, watchs);
+        return true, cluster_watch(proxy, topics);
     end
 };
 
