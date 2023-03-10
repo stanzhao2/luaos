@@ -372,7 +372,7 @@ luaos.cluster = {
         if not ok then
             return nil, reason;
         end        
-        return cluster_watch(proxy, watchs);
+        return true, cluster_watch(proxy, watchs);
     end
 };
 
