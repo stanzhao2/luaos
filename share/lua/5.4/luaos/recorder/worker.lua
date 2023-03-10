@@ -21,7 +21,23 @@ local format = string.format;
 
 ----------------------------------------------------------------------------
 
+local function check_data(data)
+    if type(data.module) ~= "string" then
+        return false;
+    end
+    if type(data.type) ~= "string" then
+        return false;
+    end
+    if type(data.message) ~= "string" then
+        return false;
+    end
+    return true;
+end
+
 local function on_publish(publisher, mask, from, data)
+    if not check_data(data) then
+        return;
+    end
     local date = os.date("*t");
     local path = format("log/%d%02d%02d", date.year, date.month, date.day);
     os.mkdir(path);
@@ -41,8 +57,10 @@ end
 
 function main(topic)
     assert(topic);
+    if not luaos.subscribe(topic, on_publish) then
+        return;
+    end
     os.mkdir("log");
-    luaos.subscribe(topic, on_publish);
 	while not luaos.stopped() do
 		local success, err = pcall(luaos.wait);
         if not success then

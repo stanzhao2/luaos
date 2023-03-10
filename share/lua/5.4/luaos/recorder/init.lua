@@ -30,8 +30,10 @@ local function on_receive_from(ec, data, from)
         return;
     end
     local packet = pack.decode(data);
-    local mask   = hash.crc32(from.ip);
-    luaos.publish(topic, mask, 0, from, packet);
+    if type(packet) == "table" then
+        local mask = hash.crc32(from.ip);
+        luaos.publish(topic, mask, 0, from, packet);
+    end
 end
 
 ----------------------------------------------------------------------------

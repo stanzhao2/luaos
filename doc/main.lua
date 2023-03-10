@@ -69,7 +69,8 @@ function main(...)
             error(err);
         end
 	end
-    recorder:stop();
+    
+    nginx.close();
 end
 
 ----------------------------------------------------------------------------
