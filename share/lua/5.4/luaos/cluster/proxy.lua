@@ -265,24 +265,21 @@ function proxy.stop()
 end
 
 function proxy.start(host, port, timeout)
+    assert(host and port);
     if server.peer then
         return false;
     end
-    
-    host = host or "0.0.0.0";
-    port = port or 7621;
-    timeout = timeout or 2000;
     
     local peer = socket("tcp");
     if not peer then
         return false;
     end
     
-    local ok, reason = peer:connect(host, port, timeout);
+    local ok, reason = peer:connect(host, port, timeout or 2000);
     if ok then
         server.peer = peer;
         peer:select(luaos.read, bind(on_socket_receive, peer));
-        timer = luaos.scheme(30000, bind(update_proxy, 30000));
+        timer = luaos.scheme(10000, bind(update_proxy, 10000));
     end
     return ok, reason;
 end
