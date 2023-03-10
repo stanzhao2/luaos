@@ -1,0 +1,13 @@
+
+https://github.com/stanzhao2/luaos
+
+LuaOS 2.0 安装说明：
+
+   1. 解压到指定的目录
+   2. 将解压目录下的 bin 目录添加进 PATH 环境变量
+
+启动集群根节点：
+	luaos luaos.cluster -a host port
+	
+启动日志服务器
+	luaos luaos.recorder -a host port [count]
