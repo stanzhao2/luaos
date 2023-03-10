@@ -40,7 +40,9 @@ end
 
 --The module can be started independently
 function main(host, port, count)
-    os.chdir(os.pwd());
+    if os.chdir(os.pwd()) then
+        os.mkdir("log");
+    end
     local socket = luaos.socket("udp");
     assert(socket and host and port);
     

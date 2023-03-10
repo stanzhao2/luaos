@@ -60,7 +60,6 @@ function main(topic)
     if not luaos.subscribe(topic, on_publish) then
         return;
     end
-    os.mkdir("log");
 	while not luaos.stopped() do
 		local success, err = pcall(luaos.wait);
         if not success then
