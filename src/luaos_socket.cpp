@@ -178,6 +178,60 @@ static void on_receive(const error_code& ec, size_t size, int index, socket_type
   }
 }
 
+static error_code on_read_from(size_t size, int index, socket_type peer)
+{
+  static thread_local std::string data;
+  lua_State* L = luaos_local.lua_state();
+  stack_rollback rollback(L);
+
+  if (data.size() < size) {
+    data.resize(size);
+  }
+  error_code ec;
+  ip::udp::endpoint remote;
+  size = peer->receive_from((char*)data.c_str(), size, remote, ec);
+  if (ec || size == 0) {
+    return ec;
+  }
+
+  lua_rawgeti(L, LUA_REGISTRYINDEX, index);
+  if (!lua_isfunction(L, -1)) {
+    return error::invalid_argument;
+  }
+
+  lua_pushinteger(L, 0); //no error
+  lua_pushlstring(L, data.c_str(), size);
+
+  lua_newtable(L);  /* ip and port of table */
+  lua_pushstring(L, remote.address().to_string().c_str());
+  lua_setfield(L, -2, "ip");
+  lua_pushinteger(L, remote.port());
+  lua_setfield(L, -2, "port");
+
+  if (luaos_pcall(L, 3, 0) != LUA_OK) {
+    luaos_error("%s\n", lua_tostring(L, -1));
+    lua_pop(L, 1);
+    peer->close();
+  }
+  return ec;
+}
+
+static void on_receive_from(const error_code& ec, size_t size, int index, socket_type peer)
+{
+  if (ec) {
+    on_error(ec, index, peer);
+    return;
+  }
+  error_code _ec = on_read_from(size, index, peer);
+  if (_ec) {
+    on_error(_ec, index, peer);
+    return;
+  }
+  if (!peer->is_open()) {
+    on_error(error::interrupted, index, peer);
+  }
+}
+
 static void on_send(const error_code& ec, size_t size, int index, socket_type peer)
 {
   lua_State* L = luaos_local.lua_state();
@@ -321,7 +375,7 @@ static int lua_os_socket_bind(lua_State* L)
 
   int handler_ref = luaL_ref(L, LUA_REGISTRYINDEX);
   error_code ec = lua_sock->bind(
-    port, host, std::bind(&on_receive, placeholders1, placeholders2, handler_ref, lua_sock->get_socket())
+    port, host, std::bind(&on_receive_from, placeholders1, placeholders2, handler_ref, lua_sock->get_socket())
   );
 
   if (ec) {

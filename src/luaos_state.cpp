@@ -563,25 +563,20 @@ static std::string location(lua_State* L)
 
 static void ll_savelog(const char* data, size_t size, color_type color)
 {
-  if (luaos_is_debug()) {
-    return;
-  }
-  if (color == color_type::yellow) {
-    return;
-  }
-  if (!alive_exit || alive_exit->stopped()) {
-    return;
-  }
   std::string log(data, size);
-  alive_exit->post(std::bind([](const std::string& data, color_type color) {
-    luaos_savelog(data, color);
-  }, log, color));
+  if (alive_exit && !alive_exit->stopped()) {
+    alive_exit->post(std::bind([](const std::string& data, color_type color) {
+      luaos_savelog(data, color);
+    }, log, color));
+  }
 }
 
 static int ll_output(const std::string& str, color_type color)
 {
+  static std::mutex _mutex;
   size_t size = str.size();
   const char* msg = str.c_str();
+
 #ifdef _MSC_VER
   std::string data(str);
   if (!is_utf8(str.c_str(), str.size())) {
@@ -590,9 +585,11 @@ static int ll_output(const std::string& str, color_type color)
     size = data.size();
   }
 #endif
-  static std::mutex _mutex;
+
   std::unique_lock<std::mutex> lock(_mutex);
-  ll_savelog(msg, size, color);
+  if (color != color_type::yellow) {
+    ll_savelog(msg, size, color);
+  }
 
 #ifdef _MSC_VER
   console::instance()->print(msg, color);

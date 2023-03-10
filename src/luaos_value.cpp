@@ -7,6 +7,9 @@
 
 int lua_packany(lua_State* L, int index, std::string& out)
 {
+  if (index < 0) {
+    index = lua_gettop(L) + index + 1;
+  }
   lua_pushcfunction(L, pack_any);
   lua_pushvalue(L, index);
   int status = luaos_pcall(L, 1, 1);

@@ -31,7 +31,7 @@ function i_socket:listen(host, port, handler) end;
 ---创建本地 UDP 绑定,成功时返回 true，否则返回 false 或 nil
 ---@param host string
 ---@param port integer
----@param handler fun(ec:integer, data:string):void
+---@param handler fun(ec:integer, data:string, from:table):void
 ---@return boolean|nil
 function i_socket:bind(host, port, handler) end;
 

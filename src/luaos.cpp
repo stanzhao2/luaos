@@ -36,54 +36,46 @@ static CMiniDumper _G_dumper(true);
 /***********************************************************************************/
 
 static identifier  _G_;
-static std::string _loghosten;
-static std::string _logserver;
-static unsigned short _logsvr_port = 0;
+static std::string _G_name;
+static eth::ip::udp::endpoint _logspeer;
 
 static void sendto_server(const std::string& data, color_type color)
 {
-  static error_code ec;
   static auto ios = eth::reactor::create();
   static auto udpsock = eth::socket::create(ios, eth::socket::family::sock_dgram);
-  static const auto peer = eth::udp::resolve(_logserver.c_str(), _logsvr_port, ec);
-  if (ec) {
-    return;
-  }
+  static const char* tynames[] = {
+    "print", "trace", "error"
+  };
+  error_code ec;
   if (!udpsock->is_open()) {
-    if (ec = udpsock->bind(0, "0.0.0.0")) {
-      return;
-    }
+    ec = udpsock->bind(0, "0.0.0.0");
   }
-  std::string packet;
-  packet.append((char*)&color, 1);
-  packet.append(data);
-  packet.append("\0", 1);
-  udpsock->send_to(packet.c_str(), packet.size(), *peer.begin(), ec);
-  if (ec) {
-    ec.clear();
+  if (!ec) {
+    lua_State* L = luaos_local.lua_state();
+    lua_newtable(L);
+
+    lua_pushstring(L, _G_name.c_str());
+    lua_setfield(L, -2, "module");
+
+    lua_pushstring(L, tynames[(int)color]);
+    lua_setfield(L, -2, "type");
+
+    lua_pushlstring(L, data.c_str(), data.size());
+    lua_setfield(L, -2, "message");
+
+    std::string packet;
+    lua_packany(L, -1, packet);
+    lua_pop(L, 1);
+    udpsock->send_to(packet.c_str(), packet.size(), _logspeer, ec);
   }
 }
 
 void luaos_savelog(const std::string& data, color_type color)
 {
-  if (_loghosten.empty()) {
-    return; /* unknow log server */
-  }
-  if (!_logsvr_port) {
-    auto pos = _loghosten.find(':');
-    if (pos == std::string::npos) {
-      _logsvr_port = 1;
-      return;
-    }
-    _logserver   = _loghosten.substr(0, pos);
-    _logsvr_port = (unsigned short)std::stoi(_loghosten.substr(pos + 1));
-  }
-  if (!_logserver.empty()) {
+  if (_logspeer.port()) {
     sendto_server(data, color);
   }
 }
-
-/***********************************************************************************/
 
 static const char* normal(const char* name)
 {
@@ -154,6 +146,8 @@ static void push_param(lua_State* L, const std::string& v)
   }
   lua_pushlstring(L, v.c_str(), v.size());
 }
+
+/***********************************************************************************/
 
 static int pmain(lua_State* L)
 {
@@ -234,7 +228,7 @@ int main(int argc, char* argv[])
   bool cmd_params    = false;
   bool cmd_loghosten = false;
 
-  std::string filename, filekey;
+  std::string filename, filekey, logserver;
   std::string main_name(luaos_fmain);
   std::vector<std::string> filestype, luaparams;
 
@@ -250,15 +244,16 @@ int main(int argc, char* argv[])
       (option("-f").set(cmd_filename).doc("...... set image file name") & value("filename", filename)),
       (option("-p").set(cmd_key).doc("...... set image file password") & value("password", filekey)),
       (option("-a").set(cmd_params).doc("...... parameters passed to lua") & repeatable(opt_value("argvs", luaparams))),
-      (option("-l").set(cmd_loghosten).doc("...... remote logserver host:port") & value("hostname", _loghosten))
+      (option("-l").set(cmd_loghosten).doc("...... remote logserver host:port") & value("hostname", logserver))
     )
   );
 
   filestype.push_back("lua");
   if (!parse(argc, argv, cmd) || main_name[0] == '-') {
-    luaos_error("Invalid command, use -h to view help\n\n");
+    luaos_error("invalid command, -h to view help\n\n");
     return 0;
   }
+  _G_name = main_name;  /* save to global */
 
   if (cmd_help) {
     std::string exefname(argv[0]);
@@ -315,7 +310,21 @@ int main(int argc, char* argv[])
       return printf("\n");
     }
   }
-
+  if (cmd_loghosten) {
+    auto pos = logserver.find(':');
+    if (pos != std::string::npos) {
+      error_code ec;
+      auto host = logserver.substr(0, pos);
+      auto port = (unsigned short)std::stoi(logserver.substr(pos + 1));
+      auto result = eth::udp::resolve(host.c_str(), port, ec);
+      if (!ec) {
+        _logspeer = *result.begin();
+      }
+      else {
+        luaos_error("%s\n", ec.message().c_str());
+      }
+    }
+  }
   lua_Integer error = -1;
   luaos_trace("Starting LuaOS...\n");
   lua_pushcfunction(L, &pmain);           /* to call 'pmain' in protected mode */

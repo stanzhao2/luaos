@@ -69,7 +69,7 @@ function main(...)
             error(err);
         end
 	end
-    
+
 	nginx.close();
 end
 
