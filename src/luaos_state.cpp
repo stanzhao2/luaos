@@ -202,6 +202,8 @@ static int luaos_try(lua_State* L)
 //lua loader
 /***********************************************************************************/
 
+static std::string cmdpath = dir::current();
+
 #if !defined LUA_VERSION_NUM || LUA_VERSION_NUM < 502
 # define loader_field "loaders"
 # define lua_read(a, b, c, d) lua_load(a, b, c, d)
@@ -941,6 +943,24 @@ static int os_mkdir(lua_State* L)
   return 1;
 }
 
+static int os_pwd(lua_State* L)
+{
+  lua_pushlstring(L, cmdpath.c_str(), cmdpath.size());
+  return 1;
+}
+
+static int os_chdir(lua_State* L)
+{
+  int result = chdir(luaL_checkstring(L, 1));
+  if (result == 0) {
+    char path[1024];
+    dir::current(path, (int)sizeof(path));
+    luaos_trace("Switch work path to: %s\n", path);
+  }
+  lua_pushboolean(L, result == 0 ? 1 : 0);
+  return 1;
+}
+
 static int os_id(lua_State* L)
 {
   lua_pushinteger(L, luaos_local.get_id());
@@ -1450,6 +1470,8 @@ static int luaopen_los(lua_State* L)
   luaL_Reg methods[] = {
     {"typename",      os_typename   },
     {"mkdir",         os_mkdir      },
+    {"pwd",           os_pwd        },
+    {"chdir",         os_chdir      },
     {"id",            os_id         },
     {"pid",           os_pid        },
     {"files",         enum_files    },

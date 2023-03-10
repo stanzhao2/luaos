@@ -40,6 +40,7 @@ end
 
 --The module can be started independently
 function main(host, port, count)
+    os.chdir(os.pwd());
     local socket = luaos.socket("udp");
     assert(socket and host and port);
     
@@ -63,6 +64,7 @@ function main(host, port, count)
     end
     
     luaos.global.set(tostring(topic), true);
+    
 	while not luaos.stopped() do
 		local success, err = pcall(luaos.wait);
         if not success then

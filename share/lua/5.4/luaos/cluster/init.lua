@@ -23,7 +23,12 @@ local master = require("luaos.cluster.master");
 
 --The module can be started independently
 function main(host, port)
-    master.start(host, port);
+    os.chdir(os.pwd());
+    local ok, err = master.start(host, port);
+    if not ok then
+        error(err);
+        return;
+    end
 	while not luaos.stopped() do
 		local success, err = pcall(luaos.wait);
         if not success then
