@@ -29,8 +29,8 @@ local function on_receive_from(ec, data, from)
         error(format("log receive error: %d", ec));
         return;
     end
-    local packet = pack.decode(data);
-    if type(packet) == "table" then
+    local ok, packet = pcall(pack.decode, data);
+    if ok and type(packet) == "table" then
         local mask = hash.crc32(from.ip);
         luaos.publish(topic, mask, 0, from, packet);
     end
@@ -40,7 +40,13 @@ end
 
 function main(host, port, count)
     local socket = luaos.socket("udp");
-    assert(socket and host and port);    
+    assert(socket and host and port);
+    
+    --Prevent starting multiple
+    if luaos.global.get(tostring(topic)) then
+        return;
+    end
+    
     local ok, err = socket:bind(host, port, on_receive_from);
     if not ok then
         error(err);
@@ -55,6 +61,7 @@ function main(host, port, count)
         end
     end
     
+    luaos.global.set(tostring(topic), true);
 	while not luaos.stopped() do
 		local success, err = pcall(luaos.wait);
         if not success then
