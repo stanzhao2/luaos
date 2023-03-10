@@ -278,12 +278,10 @@ function master.stop()
 end
 
 function master.start(host, port)
+    assert(host and port);
     if master.acceptor then
         return false;
     end
-    
-    host = host or "0.0.0.0";
-    port = port or 7621;
     
     local acceptor = socket("tcp");
     if not acceptor then
@@ -295,7 +293,7 @@ function master.start(host, port)
     );
     if ok then
         master.acceptor = acceptor;
-        timer = luaos.scheme(10000, bind(update_master, 10000));
+        timer = luaos.scheme(1000, bind(update_master, 1000));
     end
     return ok, reason;
 end

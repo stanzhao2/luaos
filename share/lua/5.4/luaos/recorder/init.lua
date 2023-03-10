@@ -38,6 +38,7 @@ end
 
 ----------------------------------------------------------------------------
 
+--The module can be started independently
 function main(host, port, count)
     local socket = luaos.socket("udp");
     assert(socket and host and port);
