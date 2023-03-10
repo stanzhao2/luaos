@@ -228,17 +228,17 @@ int main(int argc, char* argv[])
   bool cmd_params    = false;
   bool cmd_loghosten = false;
 
-  std::string filename, filekey, logserver;
+  std::string filename, filekey, loghost, logport;
   std::string main_name(luaos_fmain);
   std::vector<std::string> filestype, luaparams;
 
   auto cmd = (
     option("-h", "--help").set(cmd_help).doc("display this help") | (
-      (opt_value("module", main_name)),
+      (opt_value("module name", main_name)),
       (option("-f", "--file").set(cmd_filename).doc("name of image file") & value("filename", filename)),
       (option("-k", "--key").set(cmd_key).doc("password of image file") & value("key", filekey)),
       (option("-a", "--argv").set(cmd_params).doc("parameters to be passed to lua") & repeatable(opt_value("parameters", luaparams))),
-      (option("-l", "--log").set(cmd_loghosten).doc("host and port of remote log server") & value("hostname:port", logserver)),
+      (option("-l", "--log").set(cmd_loghosten).doc("host and port of remote log server") & value("host", loghost) & value("port", logport)),
       (option("-p", "--pack").set(cmd_compile).doc("package files to image file") & repeatable(opt_value("all", filestype))) |
       (option("-u", "--unpack").set(cmd_unpack).doc("unpack image file"))
     )
@@ -246,8 +246,10 @@ int main(int argc, char* argv[])
 
   filestype.push_back("lua");
   if (!parse(argc, argv, cmd) || main_name[0] == '-') {
-    luaos_error("invalid command, -h to view help\n\n");
-    return 0;
+    cmd_help = true;
+  }
+  if (!logport.empty() && !is_integer(logport.c_str())) {
+    cmd_help = true;
   }
   _G_name = main_name;  /* save to global */
 
@@ -307,18 +309,14 @@ int main(int argc, char* argv[])
     }
   }
   if (cmd_loghosten) {
-    auto pos = logserver.find(':');
-    if (pos != std::string::npos) {
-      error_code ec;
-      auto host = logserver.substr(0, pos);
-      auto port = (unsigned short)std::stoi(logserver.substr(pos + 1));
-      auto result = eth::udp::resolve(host.c_str(), port, ec);
-      if (!ec) {
-        _logspeer = *result.begin();
-      }
-      else {
-        luaos_error("%s\n", ec.message().c_str());
-      }
+    error_code ec;
+    auto port = (unsigned short)std::stoi(logport);
+    auto result = eth::udp::resolve(loghost.c_str(), port, ec);
+    if (!ec) {
+      _logspeer = *result.begin();
+    }
+    else {
+      luaos_error("%s\n", ec.message().c_str());
     }
   }
   lua_Integer error = -1;
