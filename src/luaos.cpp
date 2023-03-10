@@ -233,18 +233,13 @@ int main(int argc, char* argv[])
   std::vector<std::string> filestype, luaparams;
 
   auto cmd = (
-    option("-h").set(cmd_help).doc("...... display help information") | (
-      (opt_value("module-name", main_name)),
-      (option("-b").set(cmd_compile).doc("...... build image file") & repeatable(opt_value("extensions", filestype))) |
-      (option("-u").set(cmd_unpack).doc("...... unpack image file")),
-      (option("-f").set(cmd_filename).doc("...... set image file name") & value("filename", filename)),
-      (option("-p").set(cmd_key).doc("...... set image file password") & value("password", filekey))
-    ) | (
-      (opt_value("module-name", main_name)),
-      (option("-f").set(cmd_filename).doc("...... set image file name") & value("filename", filename)),
-      (option("-p").set(cmd_key).doc("...... set image file password") & value("password", filekey)),
-      (option("-a").set(cmd_params).doc("...... parameters passed to lua") & repeatable(opt_value("argvs", luaparams))),
-      (option("-l").set(cmd_loghosten).doc("...... remote logserver host:port") & value("hostname", logserver))
+    option("-h", "--help").set(cmd_help).doc("display this help") | (
+      (opt_value("module", main_name)),
+      (option("-f", "--file").set(cmd_filename).doc("name of image file") & value("filename", filename)),
+      (option("-k", "--key").set(cmd_key).doc("password of image file") & value("key", filekey)),
+      (option("-l", "--log").set(cmd_loghosten).doc("host and port of remote log server") & value("host:port", logserver)),
+      (option("-p", "--pack").set(cmd_compile).doc("package files to image file") & repeatable(opt_value("all", filestype))) |
+      (option("-u", "--unpack").set(cmd_unpack).doc("unpack image file"))
     )
   );
 
@@ -263,7 +258,7 @@ int main(int argc, char* argv[])
     }
     auto fmt = doc_formatting{}
       .first_column(5)
-      .doc_column(8);
+      .doc_column(20);
     std::cout << make_man_page(cmd, exefname.c_str(), fmt) << "\n";
     return 0;
   }
