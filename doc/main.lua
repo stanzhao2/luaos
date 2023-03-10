@@ -18,7 +18,6 @@
 
 local luaos  = require("luaos");
 local nginx  = require("luaos.nginx");
-local event  = nginx.event;
 local format = string.format;
 
 ----------------------------------------------------------------------------
@@ -58,9 +57,9 @@ end
 ----------------------------------------------------------------------------
 
 function main(...)
-    nginx.on(event.accept,  on_accept)
-         .on(event.error,   on_error)
-         .on(event.receive, on_receive)
+    nginx.on(nginx.event.accept,  on_accept)
+         .on(nginx.event.error,   on_error)
+         .on(nginx.event.receive, on_receive)
          .listen("0.0.0.0", 8899, "wwwroot", certificates);
 
 	while not luaos.stopped() do
