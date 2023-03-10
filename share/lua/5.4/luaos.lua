@@ -358,7 +358,7 @@ luaos.cluster = {
     ---建立一个集群连接
     ---@param host string
     ---@param port integer
-    ---@param timeout integer
+    ---@param watchs integer|table|nil
     ---@return table
     connect = function(host, port, watchs)
         assert(host and port);
