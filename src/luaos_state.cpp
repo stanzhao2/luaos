@@ -279,10 +279,31 @@ static const char* lua_reader(lua_State* L, void* ud, size_t* size)
 
 static int lua_loader(lua_State* L, const char* buff, size_t size, const char* name)
 {
+  std::string temp(name), filename(name);
+  auto n = filename.find("..");
+  while (n != std::string::npos)
+  {
+    const char c = LUA_DIRSEP[0];
+    if (n < 2) {
+      break;
+    }
+    auto a = temp.rfind(c, n - 2);
+    if (a == std::string::npos) {
+      break;
+    }
+    auto b = temp.find(c, n);
+    if (b == std::string::npos) {
+      break;
+    }
+    filename.clear();
+    filename += temp.substr(0, a);
+    filename += temp.substr(b);
+    n = filename.find("..");
+  }
   file_buffer fb;
   fb.data = buff;
   fb.size = size;
-  return lua_read(L, lua_reader, &fb, name);
+  return lua_read(L, lua_reader, &fb, filename.c_str());
 }
 
 static void chdir_fpath(const char* filename)
