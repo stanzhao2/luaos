@@ -933,6 +933,14 @@ static int os_snowid(lua_State* L)
   return 1;
 }
 
+static int os_mkdir(lua_State* L)
+{
+  const char* dir = luaL_checkstring(L, 1);
+  bool result = dir::make(dir);
+  lua_pushboolean(L, result ? 1 : 0);
+  return 1;
+}
+
 static int os_id(lua_State* L)
 {
   lua_pushinteger(L, luaos_local.get_id());
@@ -1441,6 +1449,7 @@ static int luaopen_los(lua_State* L)
   lua_getglobal(L, "os");
   luaL_Reg methods[] = {
     {"typename",      os_typename   },
+    {"mkdir",         os_mkdir      },
     {"id",            os_id         },
     {"pid",           os_pid        },
     {"files",         enum_files    },

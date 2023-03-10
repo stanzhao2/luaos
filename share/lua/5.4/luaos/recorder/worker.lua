@@ -17,53 +17,39 @@
 ]]--
 
 local luaos  = require("luaos");
-local pack   = luaos.conv.pack;
-local hash   = luaos.conv.hash;
-local topic  = 0x1122334455667788;
 local format = string.format;
 
 ----------------------------------------------------------------------------
 
-local function on_receive_from(ec, data, from)
-    if ec > 0 then
-        error(format("log receive error: %d", ec));
+local function on_publish(publisher, mask, from, data)
+    local date = os.date("*t");
+    local path = format("log/%d%02d%02d", date.year, date.month, date.day);
+    os.mkdir(path);
+    
+    local filename = format("%s/%s.log", path, from.ip);
+    local log = io.open(filename, "a");
+    if not log then
         return;
     end
-    local packet = pack.decode(data);
-    local mask   = hash.crc32(from.ip);
-    luaos.publish(topic, mask, 0, from, packet);
+    
+    local message = format("<%s:%s> %s", data.module, data.type, data.message);
+    log:write(message);
+    log:close();
 end
 
 ----------------------------------------------------------------------------
 
-function main(host, port, count)
-    local socket = luaos.socket("udp");
-    assert(socket and host and port);    
-    local ok, err = socket:bind(host, port, on_receive_from);
-    if not ok then
-        error(err);
-        return;
-    end
-    
-    local workers = {};
-    for i = 1, math.min(count or 1, 32) do
-        local worker = luaos.start("luaos.recorder.worker", topic);
-        if worker then
-            table.insert(workers, worker);
-        end
-    end
-    
+function main(topic)
+    assert(topic);
+    os.mkdir("log");
+    luaos.subscribe(topic, on_publish);
 	while not luaos.stopped() do
 		local success, err = pcall(luaos.wait);
         if not success then
             error(err);
         end
 	end
-    
-    socket:close();
-    for i = 1, #workers do
-        workers[i]:stop();
-    end
+    luaos.cancel(topic);
 end
 
 ----------------------------------------------------------------------------
