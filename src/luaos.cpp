@@ -38,41 +38,44 @@ static CMiniDumper _G_dumper(true);
 static identifier  _G_;
 static std::string _G_name;
 static eth::ip::udp::endpoint _logspeer;
+static auto logios = eth::reactor::create();
+static auto logsock = eth::socket::create(logios, eth::socket::family::sock_dgram);
+static auto logluaL = luaL_newstate();
+
+static const char* tynames[] = {
+  "print", "trace", "error"
+};
 
 static void sendto_server(const std::string& data, color_type color)
 {
-  static auto ios = eth::reactor::create();
-  static auto udpsock = eth::socket::create(ios, eth::socket::family::sock_dgram);
-  static const char* tynames[] = {
-    "print", "trace", "error"
-  };
   error_code ec;
-  if (!udpsock->is_open()) {
-    ec = udpsock->bind(0, "0.0.0.0");
+  if (!logsock->is_open()) {
+    ec = logsock->bind(0, "0.0.0.0");
   }
-  if (!ec) {
-    lua_State* L = luaos_local.lua_state();
-    lua_newtable(L);
-
-    lua_pushstring(L, _G_name.c_str());
-    lua_setfield(L, -2, "module");
-
-    lua_pushstring(L, tynames[(int)color]);
-    lua_setfield(L, -2, "type");
-
-    lua_pushlstring(L, data.c_str(), data.size());
-    lua_setfield(L, -2, "message");
-
-    std::string packet;
-    lua_packany(L, -1, packet);
-    lua_pop(L, 1);
-    udpsock->send_to(packet.c_str(), packet.size(), _logspeer, ec);
+  if (ec) {
+    return;
   }
+  lua_State* L = logluaL;
+  lua_newtable(L);
+
+  lua_pushstring(L, _G_name.c_str());
+  lua_setfield(L, -2, "module");
+
+  lua_pushstring(L, tynames[(int)color]);
+  lua_setfield(L, -2, "type");
+
+  lua_pushlstring(L, data.c_str(), data.size());
+  lua_setfield(L, -2, "message");
+
+  std::string packet;
+  lua_packany(L, -1, packet);
+  lua_pop(L, 1);
+  logsock->send_to(packet.c_str(), packet.size(), _logspeer, ec);
 }
 
 void luaos_savelog(const std::string& data, color_type color)
 {
-  if (_logspeer.port()) {
+  if (logsock && _logspeer.port()) {
     sendto_server(data, color);
   }
 }
@@ -330,6 +333,11 @@ int main(int argc, char* argv[])
   else {
     luaos_error("%s\n", lua_tostring(L, -1));
     lua_pop(L, 1);
+  }
+  if (logsock && logsock->is_open()) {
+    logsock->close();
+    logsock.reset();
+    lua_close(logluaL);
   }
   luaos_trace("LuaOS has exited, see you...\n\n");
   return (int)error;

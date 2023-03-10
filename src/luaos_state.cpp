@@ -1365,8 +1365,9 @@ int luaos_close(lua_State* L)
 {
   auto removeL = [L]() {
     std::unique_lock<std::mutex> lock(alive_mutex);
-    lua_close(L);
-    alive_states.erase(L);
+    if (alive_states.erase(L)) {
+      lua_close(L);
+    }
     return alive_states.size();
   };
   if (removeL() == 0) {
