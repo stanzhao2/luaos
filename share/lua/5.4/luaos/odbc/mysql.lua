@@ -99,11 +99,11 @@ function mysql:execute(sql, ...)
     local stmt = nil;
     local result = nil;
     try {
-        function()
+        bind(function(...)
             stmt = assert(self.conn:prepare(sql));
             assert(stmt:bind(...));
             result = assert(stmt:execute({}));   
-        end
+        end, ...)
     }
     .finally {
         function()
