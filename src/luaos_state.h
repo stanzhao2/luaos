@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include <lua.hpp>
+#include <lua_wrapper.h>
 #include "luaos_color.h"
 
 #ifndef _MSC_VER

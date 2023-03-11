@@ -21,6 +21,8 @@
 #include "luaos_local.h"
 #include "luaos_value.h"
 
+#define LUAOS_MAX_PATH _TINYDIR_PATH_MAX
+
 #define LOS_VERSION_MAJOR 2
 #define LOS_VERSION_MINOR	0
 
@@ -33,6 +35,7 @@ public:
   inline ~stack_rollback() { lua_settop(ls, _topidx); }
 };
 
+bool luaos_is_debug();
 void luaos_savelog(const std::string& data, color_type color);
 
 /***********************************************************************************/

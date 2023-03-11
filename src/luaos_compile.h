@@ -18,8 +18,6 @@
 #include <string>
 #include <set>
 
-int luaos_is_debug(lua_State* L = 0);
-
 int luaos_compile(lua_State* L, const char* filename, const std::set<std::string>& exts, const char* key);
 
 int luaos_export(lua_State* L, const char* filename, const char* key, bool all);

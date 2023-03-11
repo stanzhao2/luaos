@@ -20,10 +20,11 @@
 #include <functional>
 #include <atomic>
 #include <chrono>
-
 #include <conv.h>
-#include "rapidjson/rapidjson.h"
+
 #include "luaos.h"
+#include "luaos_state.h"
+#include "rapidjson/rapidjson.h"
 #include "luaos_socket.h"
 #include "luaos_list.h"
 #include "luaos_compile.h"
@@ -313,7 +314,7 @@ static void chdir_fpath(const char* filename)
     return;
   }
   is_main_load = false;
-  char path[1024];
+  char path[LUAOS_MAX_PATH];
   if (is_fullname(filename)) {
     strcpy(path, filename);
   }
@@ -355,7 +356,7 @@ static int ll_fload(lua_State* L, const char* buff, size_t size, const char* fil
       } while (*(++buff) != '\n');
     }
   }
-  char luaname[1024];
+  char luaname[LUAOS_MAX_PATH];
   snprintf(luaname, sizeof(luaname), "@%s", filename);
   int result = lua_loader(L, buff, size, luaname);
 
@@ -443,7 +444,7 @@ static int ll_fread(lua_State* L, const char* filename)
 
 static int ll_require(lua_State* L)
 {
-  char filename[256];
+  char filename[LUAOS_MAX_PATH];
   size_t namelen = 0;
   const char* name = luaL_checklstring(L, 1, &namelen);
   name = skip_pathroot(name);
@@ -473,7 +474,7 @@ static int ll_require(lua_State* L)
   }
   name = temp.c_str();
 
-  char path[1024];
+  char path[LUAOS_MAX_PATH];
   lua_getglobal(L, LUA_LOADLIBNAME);
   lua_getfield(L, -1, "path");
   strcpy(path, luaL_checkstring(L, -1));
@@ -510,7 +511,8 @@ static int ll_dofile(lua_State* L)
   int top = lua_gettop(L);
   bool replace = false;
   size_t namelen = 0;
-  char name[256], original[256];
+  char name[LUAOS_MAX_PATH];
+  char original[LUAOS_MAX_PATH];
   strcpy(name, luaL_checklstring(L, 1, &namelen));
   strcpy(original, name);
 
@@ -559,10 +561,7 @@ static int ll_install(lua_State* L, lua_CFunction loader)
 static std::string location(lua_State* L)
 {
   std::string data;
-  if (!luaos_is_debug(L)) {
-    return data;
-  }
-  char filename[1024] = { 0 };
+  char filename[LUAOS_MAX_PATH] = { 0 };
   for (int i = 1; i < 100; i++)
   {
     lua_Debug ar;
@@ -645,8 +644,8 @@ static int ll_printf(const std::string& str, color_type color)
 
 static int ll_printf(lua_State* L, color_type color)
 {
-  std::string strfmt(location(L));
   int count = lua_gettop(L);
+  std::string strfmt(luaos_is_debug() ? location(L) : "");
   lua_getglobal(L, "tostring");
 
   for (int i = 1; i <= count; i++)
@@ -664,6 +663,7 @@ static int ll_printf(lua_State* L, color_type color)
     if (i < count) strfmt.append("\t");
     lua_pop(L, 1);
   }
+
   strfmt.append("\n");
   lua_pop(L, 1);
   return ll_printf(strfmt, color);
@@ -675,7 +675,7 @@ static int color_print(lua_State* L) {
 
 static int color_trace(lua_State* L)
 {
-  return luaos_is_debug(L) ? ll_printf(L, color_type::yellow) : 0;
+  return luaos_is_debug() ? ll_printf(L, color_type::yellow) : 0;
 }
 
 static int color_error(lua_State* L) {
@@ -974,7 +974,7 @@ static int os_chdir(lua_State* L)
 {
   int result = chdir(luaL_checkstring(L, 1));
   if (result == 0) {
-    char path[1024];
+    char path[LUAOS_MAX_PATH];
     dir::current(path, (int)sizeof(path));
     luaos_trace("Switch work path to: %s\n", path);
   }
@@ -1026,7 +1026,7 @@ static int string_split(lua_State *L)
 template <typename Handler>
 bool dir_eachof(const char* dir, const char* ext, Handler handler)
 {
-  _tinydir_char_t fdir[_TINYDIR_PATH_MAX];
+  _tinydir_char_t fdir[LUAOS_MAX_PATH];
   _tinydir_strcpy(fdir, dir);
 
   size_t len = _tinydir_strlen(fdir);
@@ -1042,8 +1042,7 @@ bool dir_eachof(const char* dir, const char* ext, Handler handler)
     tinydir_readfile(&tdir, &file);
     tinydir_next(&tdir);
 
-    if (file.is_dir == 0)
-    {
+    if (file.is_dir == 0) {
       if (!ext || _tinydir_strcmp(file.extension, ext) == 0) {
         if (!handler(fdir, file)) {
           return false;
@@ -1051,17 +1050,14 @@ bool dir_eachof(const char* dir, const char* ext, Handler handler)
       }
       continue;
     }
-
     if (_tinydir_strcmp(file.name, ".") == 0) {
       continue;
     }
-
     if (_tinydir_strcmp(file.name, "..") == 0) {
       continue;
     }
-
     handler(fdir, file);
-    char newdir[_TINYDIR_PATH_MAX];
+    char newdir[LUAOS_MAX_PATH];
     sprintf(newdir, "%s%s%s", fdir, LUA_DIRSEP, file.name);
     if (!dir_eachof(newdir, ext, handler)) {
       break;
@@ -1108,13 +1104,16 @@ static int enum_files(lua_State* L)
       else {
         lua_pushstring(L, file.extension);
       }
-      int result = luaos_pcall(L, 2, 0);
+      int result = luaos_pcall(L, 2, 1);
       if (!is_success(result)) {
         luaos_error("%s\n", lua_tostring(L, -1));
         lua_pop(L, 1); //pop error from stack
         return false;
       }
-      return true;
+      if (lua_type(L, -1) == LUA_TNIL) {
+        return true;
+      }
+      return lua_toboolean(L, -1) ? true : false;
     }
   );
   return 0;
@@ -1381,10 +1380,8 @@ int luaos_close(lua_State* L)
 
 int luaos_pexec(lua_State* L, const char* filename, int n)
 {
-  lua_pushboolean(L, luaos_is_debug(L) ? 1 : 0);
-  lua_setglobal(L, "_DEBUG");
-
-  char name[256], original[256];
+  char name[LUAOS_MAX_PATH];
+  char original[LUAOS_MAX_PATH];
   filename = skip_pathroot(filename);
   size_t namelen = strlen(filename);
 
@@ -1622,6 +1619,9 @@ lua_State* luaos_newstate(lua_CFunction loader)
   luaL_openlibs(L);
   init_luapath(L);
   ll_install(L, loader);
+
+  lua_pushboolean(L, luaos_is_debug() ? 1 : 0);
+  lua_setglobal(L, "_DEBUG");
   disable_global(L, throw_error);
 
 #if defined LUA_VERSION_NUM && LUA_VERSION_NUM >= 504 
@@ -1632,7 +1632,7 @@ lua_State* luaos_newstate(lua_CFunction loader)
   alive_states[L] = os::milliseconds();
   if (!alive_thread) {
     alive_exit->restart();
-    alive_thread.reset(new std::thread(std::bind(check_thread, 300000)));
+    alive_thread.reset(new std::thread(std::bind(check_thread, 600000)));
   }
   return L;
 }

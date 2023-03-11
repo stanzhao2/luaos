@@ -20,9 +20,9 @@
 
 static void collectgarbage(lua_State* L)
 {
-#ifdef _DEBUG
-  lua_gc(L, LUA_GCCOLLECT, 0);
-#endif
+  if (luaos_is_debug()) {
+    lua_gc(L, LUA_GCCOLLECT, 0);
+  }
 }
 
 lua_socket::lua_socket(socket::ref sock, family_type type)
@@ -31,9 +31,9 @@ lua_socket::lua_socket(socket::ref sock, family_type type)
 
 lua_socket::~lua_socket()
 {
-#ifdef _DEBUG
-  luaos_print("%s\n", __FUNCTION__);
-#endif
+  if (luaos_is_debug()) {
+    luaos_print("%s\n", __FUNCTION__);
+  }
 }
 
 reactor_type lua_socket::service() const
@@ -124,7 +124,7 @@ static void on_error(const error_code& ec, int index, socket_type peer)
   }
 
   lua_pushinteger(L, ec.value());
-  lua_pushnil(L);
+  lua_pushstring (L, ec.message().c_str());
   if (luaos_pcall(L, 2, 0) != LUA_OK) {
     luaos_error("%s\n", lua_tostring(L, -1));
     lua_pop(L, 1);
