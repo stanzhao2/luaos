@@ -855,8 +855,8 @@ struct luaos_job final {
         auto wait = luaos_ionew();
         ios->post([wait]() { wait->stop(); });
         wait->run();
-        ios->stop();
       }
+      ios->stop();
     }
     if (thread && thread->joinable()) {
       thread->join();
