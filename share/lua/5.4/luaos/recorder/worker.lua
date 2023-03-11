@@ -47,6 +47,15 @@ local function close_opened()
     end
 end
 
+local function flush_to_disk()
+    for k, v in pairs(status) do
+        if k ~= "dir" then
+            v:flush();
+        end
+    end
+    luaos.scheme(5000, flush_to_disk);
+end
+
 local function make_logdir(path)
     if status.dir and status.dir == path then
         return true;
@@ -105,6 +114,7 @@ function main(topic)
         return;
     end
     
+    flush_to_disk();
 	while not luaos.stopped() do
 		local success, err = pcall(luaos.wait);
         if not success then
