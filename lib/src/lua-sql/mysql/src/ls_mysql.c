@@ -1704,6 +1704,17 @@ static int create_environment (lua_State *L) {
 	return 1;
 }
 
+static int luasql_init(lua_State* L)
+{
+	mysql_library_init(0, 0, 0);
+	return 0;
+}
+
+static int luasql_free(lua_State* L)
+{
+	mysql_library_end();
+	return 0;
+}
 
 /*
 ** Creates the metatables for the objects and registers the
@@ -1711,9 +1722,11 @@ static int create_environment (lua_State *L) {
 */
 LUASQL_API int luaopen_luasql_mysql (lua_State *L)
 { 
-    luaL_checkversion(L);
+  luaL_checkversion(L);
 	struct luaL_Reg driver[] = {
 		{"mysql", create_environment},
+		{"init", luasql_init},
+		{"free", luasql_free},
 		{NULL, NULL},
 	};
 	create_metatables (L);
