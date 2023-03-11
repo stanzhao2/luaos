@@ -1143,6 +1143,9 @@ static int local_thread(luaos_job* job, lua_value_array::value_type argv, io_han
     job->status = status;
     ios->stop();
   }
+  if (!job->ios->stopped()) {
+    job->ios->stop();
+  }
   if (!is_success(status)) {
     luaos_error("%s\n", lua_tostring(L, -1));
     lua_pop(L, 1);
