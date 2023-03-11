@@ -17,12 +17,25 @@
 
 ----------------------------------------------------------------------------
 
-local odbc = { mysql_env = nil };
+local odbc   = { mysql_env = nil };
 local luasql = require("luasql.mysql");
+local class  = require("luaos.classy")
 
-if os.pid() == 0 then
-    luasql.init();
+local libmysql = class("libmysql");
+
+function libmysql:__init()
+    if os.pid() == 0 then
+        luasql.init();
+    end
 end
+
+function libmysql:__gc()
+    if os.pid() == 0 then
+        luasql.free();
+    end
+end
+
+local mysqlenv = libmysql();
 
 ----------------------------------------------------------------------------
 

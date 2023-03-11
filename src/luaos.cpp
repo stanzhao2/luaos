@@ -226,12 +226,13 @@ lua_State* init_main_state()
 
 int main(int argc, char* argv[])
 {
-  display_logo();
+  system("clear");
 #ifndef _MSC_VER
   MallocExtension::instance()->SetMemoryReleaseRate(0);
 #else
   SetConsoleOutputCP(65001);  /* set charset to utf8 */
 #endif
+  display_logo();
 
   using namespace clipp;
   bool cmd_help      = false;
