@@ -95,10 +95,22 @@ end
 function mysql:execute(sql, ...)    
     if not self:keepalive() then
         return nil;
-    end    
-    local stmt <close> = self.conn:prepare(sql);
-    assert(stmt:bind(...));
-    return stmt:execute({});
+    end
+    local stmt = nil;
+    local result = nil;
+    try {
+        function()
+            stmt = assert(self.conn:prepare(sql));
+            assert(stmt:bind(...));
+            result = assert(stmt:execute({}));   
+        end
+    }
+    .finally {
+        function()
+            if stmt then stmt:close() end
+        end
+    }
+    return result;
 end
 
 function mysql:keepalive()

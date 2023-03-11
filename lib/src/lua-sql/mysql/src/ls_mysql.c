@@ -1628,14 +1628,12 @@ static int env_close (lua_State *L) {
 static void create_metatables (lua_State *L) {
     struct luaL_Reg environment_methods[] = {
         {"__gc",    env_gc},
-        {"__close", env_close},
         {"close",   env_close},
         {"connect", env_connect},
 		{NULL, NULL},
 	};
     struct luaL_Reg connection_methods[] = {
         {"__gc", conn_gc},
-        {"__close", conn_close},
         {"close", conn_close},
         {"ping", conn_ping},
         {"escape", escape_string},
@@ -1649,7 +1647,6 @@ static void create_metatables (lua_State *L) {
     };
     struct luaL_Reg cursor_methods[] = {
         {"__gc", cur_gc},
-        {"__close", cur_close},
         {"close", cur_close},
         {"getcolnames", cur_getcolnames},
         {"getcoltypes", cur_getcoltypes},
@@ -1662,7 +1659,6 @@ static void create_metatables (lua_State *L) {
     };
 	struct luaL_Reg stmt_methods[] = {
 		{"__gc", stmt_gc},
-		{"__close", stmt_close},
 		{"close", stmt_close},
 		{"bind", stmt_bind},
 		{"bind_time", stmt_bind_time},
@@ -1672,7 +1668,6 @@ static void create_metatables (lua_State *L) {
 	};
 	struct luaL_Reg stmt_cur_methods[] = {
 		{"__gc", stmt_cur_gc},
-		{"__close", stmt_cur_close},
 		{"close", stmt_cur_close},
 		{"getcolnames", stmt_cur_getcolnames},
 		{"getcoltypes", stmt_cur_getcoltypes},
