@@ -26,7 +26,7 @@ local format = string.format;
 
 local function on_receive_from(ec, data, from)
     if ec > 0 then
-        error(format("log receive error: %d", ec));
+        error(format("log receive error: %s", data));
         return;
     end
     local ok, packet = pcall(pack.decode, data);

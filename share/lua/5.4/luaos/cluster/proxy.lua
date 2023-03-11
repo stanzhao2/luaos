@@ -58,16 +58,24 @@ end
 
 local function luaos_publish(topic, mask, receiver, ...)
     luaos.publish(topic, mask, receiver, ...);
+    if _DEBUG then
+        print(format("topic %d is published, mask=%d, receiver=%d", topic, mask, receiver));
+    end
 end
 
 local function luaos_cancel(topic, reason)
     luaos.cancel(topic);
-    trace(format("topic %d is cancelled by %s proxy", topic, reason));
+    if _DEBUG then
+        print(format("topic %d is cancelled by %s proxy", topic, reason));
+    end
 end
 
 local function luaos_subscribe(topic, handler, reason)
-    assert(luaos.subscribe(topic, handler), format("topic %d subscribe faild!", topic));
-    trace(format("topic %d is subscribed by %s proxy", topic, reason));
+    local result = luaos.subscribe(topic, handler);
+    assert(result, format("topic %d subscribe faild!", topic));
+    if _DEBUG then
+        print(format("topic %d is subscribed by %s proxy", topic, reason));
+    end
 end
 
 ----------------------------------------------------------------------------
@@ -148,7 +156,9 @@ end
 
 local function on_remote_ready(message)
     server.ready = true;
-    print("cluster is ready");
+    if _DEBUG then
+        print("cluster ready");
+    end
 end
 
 local function on_remote_publish(message)
@@ -201,7 +211,8 @@ local switch = {
     [cmd_subscribe] = on_remote_subscribe,
 }
 
-local function on_socket_error(ec)
+local function on_socket_error(ec, msg)
+    error(msg);
     error("The connection with server has been disconnected");
     server.peer:close();
     server.peer = nil;
@@ -216,7 +227,7 @@ end
 
 local function on_socket_receive(peer, ec, data)    
     if ec > 0 then
-        on_socket_error(ec);
+        on_socket_error(ec, data);
         return;
     end
     

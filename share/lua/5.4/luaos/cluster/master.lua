@@ -92,6 +92,12 @@ local function on_publish_request(session, tb)
         end
     end
     
+    if _DEBUG then
+        local peer = session.peer;
+        local fd = peer:id();
+        print(format("session %d publish topic %d", fd, topic));
+    end
+    
     local count = #target;
     
     --only send to one session
@@ -114,6 +120,12 @@ local function on_cancel_request(session, tb)
         send_to_others(session, tb);
         session[topic] = nil;
     end
+    
+    if _DEBUG then
+        local peer = session.peer;
+        local fd = peer:id();
+        print(format("session %d cancel topic %d", fd, topic));
+    end
 end
 
 ---Subscribe to messages on a topic
@@ -121,10 +133,16 @@ local function on_subscribe_request(session, tb)
     local topic = tb.topic;
     session[topic] = true;
     send_to_others(session, tb);
+    
+    if _DEBUG then
+        local peer = session.peer;
+        local fd = peer:id();
+        print(format("session %d subscribe topic %d", fd, topic));
+    end
 end
 
 ---Called when the session has an error
-local function on_socket_error(session, ec)
+local function on_socket_error(session, ec, msg)
     local peer = session.peer;
     local fd   = peer:id();
     
@@ -143,9 +161,12 @@ local function on_socket_error(session, ec)
     end
     
     peer:close();
+    if _DEBUG then
+        print(format("session %d error: %s", fd, msg));
+    end
 end
 
-local function on_socket_dispatch(session, data)    
+local function on_socket_dispatch(session, data)
     local peer = session.peer;
     local tb = pack.decode(data);
     if type(tb) ~= "table" then
@@ -196,7 +217,7 @@ end
 ---Called when data is received from a session
 local function on_socket_receive(session, ec, data)
     if ec > 0 then
-        on_socket_error(session, ec);
+        on_socket_error(session, ec, data);
         return;
     end
     
@@ -221,9 +242,9 @@ end
 
 ---Called when a new session is established
 local function on_socket_accept(acceptor, peer)
-    local fd   = peer:id();
-    local from = peer:endpoint();
-    local tb   = {};
+    local fd = peer:id();
+    local from, port = peer:endpoint();
+    local tb = {};
     
     tb.type = cmd_subscribe;
     for k, v in pairs(sessions) do
@@ -244,6 +265,10 @@ local function on_socket_accept(acceptor, peer)
     tb.type = cmd_ready;    
     send_to_peer(peer, pack.encode(tb));    
     peer:select(luaos.read, bind(on_socket_receive, sessions[fd])); 
+    
+    if _DEBUG then
+        print(format("session %d accept: %s:%d", fd, from, port));
+    end
 end
 
 ----------------------------------------------------------------------------

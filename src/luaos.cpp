@@ -35,8 +35,13 @@ static CMiniDumper _G_dumper(true);
 
 /***********************************************************************************/
 
-static identifier  _G_;
+#ifdef _DEBUG
+static bool _G_debug = true;
+#else
 static bool _G_debug = false;
+#endif
+
+static identifier  _G_;
 static std::string _G_name;
 static eth::ip::udp::endpoint _logspeer;
 static auto logios = eth::reactor::create();
