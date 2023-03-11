@@ -25,7 +25,7 @@ function odbc.mysql(dbname, user, pwd, host, port, charset)
     local ok, luasql = pcall(require, "luasql.mysql")
     if not ok then
         throw(luasql);
-    end    
+    end
     local conf = {
         dbname  = dbname,
         user    = user,
@@ -39,6 +39,10 @@ function odbc.mysql(dbname, user, pwd, host, port, charset)
     end    
     local mysql = require("luaos.odbc.mysql")
     return mysql(odbc.mysql_env, conf);    
+end
+
+if os.pid() == 0 then
+    pcall(odbc.mysql, "init");
 end
 
 ----------------------------------------------------------------------------
