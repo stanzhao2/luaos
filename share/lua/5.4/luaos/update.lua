@@ -156,10 +156,10 @@ end
 
 ---对table数据进行签名
 ---@param data table
----@param algo function 签名算法
----@param key string 密钥
+---@param key  string 密钥
+---@param algo function(data:string, key:string)
 ---@return string
-table.sign = function(data, algo, key)
+table.sign = function(data, key, algo)
     assert(type(data) == "table")
     assert(type(algo) == "function")
     
@@ -169,19 +169,19 @@ table.sign = function(data, algo, key)
 end
 
 ---对table数据进行签名验证
----@param sign string
 ---@param data table
----@param algo function 签名算法
----@param key string 密钥
+---@param key  string 密钥
+---@param sign string
+---@param algo function(data:string, sign:string, key:string)
 ---@return string
-table.verify = function(sign, data, algo, key)
+table.verify = function(data, key, sign, algo)
     assert(type(sign) == "string")
     assert(type(data) == "table")
     assert(type(algo) == "function")
     
     local result = {};
     depth_pairs(data, result);
-    return algo(sign, concat(result), key);
+    return algo(concat(result), sign, key);
 end
 
 ----------------------------------------------------------------------------
