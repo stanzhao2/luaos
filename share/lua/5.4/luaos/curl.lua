@@ -35,10 +35,12 @@ function curl.wget(url, ...)
     local c = curl.new()
         c:setopt(curl.OPT_URL, url)
         c:setopt(curl.OPT_FOLLOWLOCATION, true)
+        c:setopt(curl.OPT_TIMEOUT, 5)
+        c:setopt(curl.OPT_CONNECTTIMEOUT, 2)
         if not cafile then
             c:setopt(curl.OPT_SSL_VERIFYPEER, false) --不验证对端证书
         else
-            c:setopt(curl.OPT_SSL_VERIFYPEER, true) --不验证对端证书
+            c:setopt(curl.OPT_SSL_VERIFYPEER, true)  --验证对端证书
             c:setopt(curl.OPT_CAINFO, cafile)
         end
         c:setopt(curl.OPT_WRITEDATA, result)
@@ -69,11 +71,13 @@ function curl.wpost(url, data, ...)
     local c = curl.new()
         c:setopt(curl.OPT_URL, url)
         c:setopt(curl.OPT_POST, true)
+        c:setopt(curl.OPT_TIMEOUT, 5)
+        c:setopt(curl.OPT_CONNECTTIMEOUT, 2)
         c:setopt(curl.OPT_FOLLOWLOCATION, true)
         if not cafile then
             c:setopt(curl.OPT_SSL_VERIFYPEER, false) --不验证对端证书
         else
-            c:setopt(curl.OPT_SSL_VERIFYPEER, true) --不验证对端证书
+            c:setopt(curl.OPT_SSL_VERIFYPEER, true)  --验证对端证书
             c:setopt(curl.OPT_CAINFO, cafile)
         end
         c:setopt(curl.OPT_POSTFIELDS, data)
