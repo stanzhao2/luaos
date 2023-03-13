@@ -25,6 +25,10 @@ int lua_packany(
   lua_State* L, int index, std::string& out
 );
 
+int lua_packany(
+  lua_State* L, int index, int count, std::string& out
+);
+
 int lua_unpackany(
   lua_State* L, const std::string& data
 );
@@ -79,6 +83,34 @@ public:
 
 /***********************************************************************************/
 
+class lua_thread final {
+  int r;
+  lua_State* L;
+
+public:
+  inline lua_thread(int v = 0)
+    : r(v), L(nullptr) {
+  }
+  inline lua_thread(const lua_thread& v)
+    :r(v.r), L(v.L){    
+  }
+  inline lua_thread(lua_State* L, int index) {
+    this->L = L;
+    lua_pushvalue(L, index);
+    r = luaL_ref(L, LUA_REGISTRYINDEX);
+  }
+  inline ~lua_thread() {
+    if (L && r) {
+      luaL_unref(L, LUA_REGISTRYINDEX, r);
+    }
+  }
+  inline void rawget(lua_State* L) const {
+    lua_rawgeti(L, LUA_REGISTRYINDEX, r);
+  }
+};
+
+/***********************************************************************************/
+
 enum struct lua_ctype {
   nil                 = 1,
   boolean             = 2,
@@ -87,7 +119,8 @@ enum struct lua_ctype {
   string              = 5,
   table               = 6,
   userdata            = 7,
-  function            = 8
+  thread              = 8,
+  function            = 9
 };
 
 class lua_value final {
@@ -99,6 +132,7 @@ class lua_value final {
     std::string   _vstr;
     lua_table     _vtbl;
     lua_method    _vfn;
+    lua_thread    _vthd;
   } _data;
   lua_ctype _type;
 
@@ -160,6 +194,9 @@ public:
   inline lua_value(lua_method v) {
     *this = v;
   }
+  inline lua_value(lua_thread v) {
+    *this = v;
+  }
   inline void operator=(const lua_value& v) {
     copy(v);
   }
@@ -206,6 +243,10 @@ public:
   inline void operator=(lua_method v) {
     _type = lua_ctype::function;
     _data._vfn = v;
+  }
+  inline void operator=(lua_thread v) {
+    _type = lua_ctype::thread;
+    _data._vthd = v;
   }
   inline void assign(const char* data, size_t size) {
     _type = lua_ctype::string;
@@ -267,12 +308,16 @@ public:
       _data._vb   = r._data._vb;
       break;
 
-    case lua_ctype::function:
-      _data._vfn  = r._data._vfn;
-      break;
-
     case lua_ctype::userdata:
       _data._ud   = r._data._ud;
+      break;
+
+    case lua_ctype::thread:
+      _data._vthd = r._data._vthd;
+      break;
+
+    case lua_ctype::function:
+      _data._vfn  = r._data._vfn;
       break;
     }
     _type = r._type;
@@ -298,6 +343,10 @@ public:
 
     case lua_ctype::function:
       _data._vfn.rawget(L);
+      return;
+
+    case lua_ctype::thread:
+      _data._vthd.rawget(L);
       return;
 
     case lua_ctype::string:
@@ -327,6 +376,10 @@ public:
       }
       case LUA_TTABLE: {
         *this = lua_table(L, index);
+        return;
+      }
+      case LUA_TTHREAD: {
+        *this = lua_thread(L, index);
         return;
       }
       case LUA_TFUNCTION: {
