@@ -39,10 +39,10 @@ SOURCE  := rapidjson/document.o \
 		   luaos_traceback.o
 		   
 #library path
-LIBDIRS := -L$(LUA_LIBDIR)
+LIBDIRS := -L$(LUA_LIBDIR) -L../3rd/gperftools/lib
 
 #include path
-INCDIRS := $(LUA_INCLUDE) -I../include
+INCDIRS := $(LUA_INCLUDE) -I../include -I../3rd/gperftools/src
 
 #precompile macro
 CC_FLAG := -DTLS_SSL_ENABLE
@@ -57,7 +57,7 @@ LIBLOADPATH := -Wl,-rpath=./ -Wl,-rpath=../lib -Wl,-rpath=L$(LUA_LIBDIR)
 LINKOPTION := -o $(OUTPUT) $(LIBLOADPATH)
 
 #dependency librarys
-LIBS := -llua -ldl -lcrypto -lssl -lpthread -ltcmalloc
+LIBS := -llua -ldl -lcrypto -lssl -lpthread -Wl,-Bstatic -ltcmalloc_minimal -Wl,-Bdynamic
 
 ########################## OPTIONS END ############################
 
