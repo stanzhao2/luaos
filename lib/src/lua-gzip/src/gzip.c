@@ -123,7 +123,8 @@ static int ldeflategz(lua_State *L)
 	}
 	uLong rlen = c_stream.total_out;
 	if (!gzip) {
-		for (uLong i = c_stream.total_out - 4, j = 0; j < 6; i--, j++) {
+		uLong i, j;
+		for (i = c_stream.total_out - 4, j = 0; j < 6; i--, j++) {
 			unsigned int* p = (unsigned int*)(output + i);
 			if (*p == 0xffff0000) {
 				rlen = i;

@@ -130,7 +130,8 @@ static void FreeParamData(stmt_param_data* data, int len)
 {
   if (data)
   {
-    for (int i = 0; i < len; i++)
+	int i;
+    for (i = 0; i < len; i++)
     {
       if (data[i].willbuffer)
       {
@@ -561,13 +562,15 @@ static int escape_string (lua_State *L) {
 
 static int getallresult(lua_State* L, MYSQL* conn, MYSQL_RES* res, unsigned int cols)
 {
-  for (int j = 0; ; j++)
+  int j, k;
+  unsigned int i;
+  for (j = 0; ; j++)
   {
     MYSQL_FIELD* fields = mysql_fetch_fields(res);
     unsigned long* lengths;
 
     lua_newtable(L);
-    for (int k = 0; ; k++)
+    for (k = 0; ; k++)
     {
       MYSQL_ROW row = mysql_fetch_row(res);
       if (row == NULL) {
@@ -577,7 +580,8 @@ static int getallresult(lua_State* L, MYSQL* conn, MYSQL_RES* res, unsigned int 
 
       lua_newtable(L);
       /* Copy values to alphanumerical indices */
-      for (unsigned int i = 0; i < cols; i++) {
+
+      for (i = 0; i < cols; i++) {
         lua_pushlstring(L, fields[i].name, fields[i].name_length);
         /* Actually push the value */
         pushvalue(L, row[i], lengths[i]);
@@ -732,8 +736,8 @@ static int stmt_bind(lua_State* L) {
     return 1;
   }
 
-  int count = lua_gettop(L);
-  for (int i = 2; i <= count; i++)
+  int i, count = lua_gettop(L);
+  for (i = 2; i <= count; i++)
   {
   if(stmt->used_bind_index >= stmt->need_bind_count)
     return luasql_failmsg(L, "error stmt bind param more need. MySQL", "");
@@ -878,9 +882,10 @@ static int create_stmt_cursor(lua_State* L, MYSQL* my_conn, MYSQL_STMT* my_stmt,
 
   if (cols)
   {
+	int i;
     stmt_cur->my_bindwill = (MYSQL_BIND*)calloc(cols, sizeof(MYSQL_BIND));
     stmt_cur->my_paramwill = (stmt_param_data*)calloc(cols, sizeof(stmt_param_data));
-    for (int i = 0; i < cols; i++)
+    for (i = 0; i < cols; i++)
     {
       //enum_field_types eft = result->fields[i].type;
       //unsigned int flags = result->fields[i].flags;
@@ -977,7 +982,9 @@ static int stmt_getallresult(lua_State* L, stmt_data* stmt, MYSQL_RES* result, u
   stmt_param_data* my_paramwill = NULL;
   unsigned int ori_cols = 0;
 
-  for(int k = 0; ; k++)
+  int j, k;
+  unsigned int i;
+  for(k = 0; ; k++)
   {
     if (my_bindwill == NULL && my_paramwill == NULL)
     {
@@ -985,7 +992,8 @@ static int stmt_getallresult(lua_State* L, stmt_data* stmt, MYSQL_RES* result, u
       my_bindwill = (MYSQL_BIND*)calloc(cols, sizeof(MYSQL_BIND));
       my_paramwill = (stmt_param_data*)calloc(cols, sizeof(stmt_param_data));
       ori_cols = cols;
-      for (unsigned int i = 0; i < cols; i++)
+	  unsigned int i;
+      for (i = 0; i < cols; i++)
       {
         MYSQL_BIND* bind = &my_bindwill[i];
         stmt_param_data* param = &my_paramwill[i];
@@ -1040,7 +1048,7 @@ static int stmt_getallresult(lua_State* L, stmt_data* stmt, MYSQL_RES* result, u
       return luasql_failmsg(L, "error cur result. MySQL: ", mysql_stmt_error(stmt->my_stmt));
     }
     lua_newtable(L);
-    for(int j = 0 ; ; j++)
+    for(j = 0 ; ; j++)
     {
       int r = mysql_stmt_fetch(stmt->my_stmt);
       if (r != 0 && r != MYSQL_DATA_TRUNCATED)
@@ -1049,7 +1057,7 @@ static int stmt_getallresult(lua_State* L, stmt_data* stmt, MYSQL_RES* result, u
       }
 
       lua_newtable(L);
-      for (unsigned int i = 0; i < cols; i++) {
+      for (i = 0; i < cols; i++) {
         lua_pushlstring(L, result->fields[i].name, result->fields[i].name_length);
         stmt_pushvalue1(L, stmt->my_stmt, &my_paramwill[i], &my_bindwill[i], i);
         lua_rawset(L, -3);
@@ -1346,6 +1354,7 @@ static int stmt_cur_seek(lua_State* L) {
 
 static int fix_stmt_cursor(lua_State* L, stmt_cur_data* stmt_cur, MYSQL_RES* result, int cols) {
   /* fix in structure */
+  int i;
   luaL_unref(L, LUA_REGISTRYINDEX, stmt_cur->colnames);
   luaL_unref(L, LUA_REGISTRYINDEX, stmt_cur->coltypes);
 
@@ -1372,7 +1381,7 @@ static int fix_stmt_cursor(lua_State* L, stmt_cur_data* stmt_cur, MYSQL_RES* res
     {
       stmt_cur->my_bindwill = (MYSQL_BIND*)calloc(cols, sizeof(MYSQL_BIND));
       stmt_cur->my_paramwill = (stmt_param_data*)calloc(cols, sizeof(stmt_param_data));
-      for (int i = 0; i < cols; i++)
+      for (i = 0; i < cols; i++)
       {
         //enum_field_types eft = result->fields[i].type;
         //unsigned int flags = result->fields[i].flags;

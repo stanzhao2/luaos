@@ -27,7 +27,7 @@ MKDIR   = mkdir -p
 RM      = rm -f
 TARGET  = luaos
 VERSION = 2.0
-INSTALLPATH = $(PREFIXPATH)/$(TARGET).$(VERSION)
+INSTALLPATH = $(PREFIXPATH)/$(TARGET)$(VERSION)
 
 all:
 	cd $(LIBLUA) && $(MAKE) linux && $(MAKE) install

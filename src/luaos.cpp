@@ -353,6 +353,7 @@ int main(int argc, char* argv[])
     logsock.reset();
     lua_close(logluaL);
   }
+  luaos_close(L);
   luaos_trace("LuaOS has exited, see you...\n\n");
   return (int)error;
 }
