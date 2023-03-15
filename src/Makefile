@@ -29,7 +29,6 @@ SOURCE  := rapidjson/document.o \
 		   luaos_pack.o \
 		   luaos_conv.o \
 		   luaos_value.o \
-		   luaos_mc.o \
 		   luaos_master.o \
 		   luaos_local.o \
 		   luaos_list.o \

@@ -128,12 +128,6 @@ local luaos = {
         return os.pid();
     end,
     
-    ---获取当前系统硬件唯一码
-    ---@return string
-    uniqueid = function()
-        return os.uniqueid();
-    end,
-    
     ---获取雪花码
     ---@param uid integer|nil
     ---@return integer

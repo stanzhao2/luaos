@@ -19,7 +19,6 @@
 #include <md5.h>
 #include "luaos.h"
 #include "luaos_master.h"
-#include "luaos_mc.h"
 #include "luaos_logo.h"
 #include "luaos_compile.h"
 

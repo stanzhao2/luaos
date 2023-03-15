@@ -29,7 +29,6 @@
 #include "luaos_list.h"
 #include "luaos_compile.h"
 #include "luaos_conv.h"
-#include "luaos_mc.h"
 #include "luaos_pack.h"
 #include "luaos_rpcall.h"
 #include "luaos_storage.h"
@@ -927,18 +926,9 @@ static int os_snowid(lua_State* L)
   static thread_local size_t tm_last = 0;
   static thread_local size_t localid = 0;
 
-  if (!lua_isnoneornil(L, 1)) {
-    localid = luaL_checkinteger(L, 1);
-    if (localid < 0 || localid > 0xffff) {
-      luaL_error(L, "range: 0 - 65535");
-    }
-  }
-  else if (localid == 0) {
-    code_generate(L);
-    size_t size = 0;
-    const char* serial = lua_tolstring(L, -1, &size);
-    localid = csum((unsigned char*)serial, (int)size);
-    lua_pop(L, 1);
+  localid = luaL_optinteger(L, 1, 0);
+  if (localid < 0 || localid > 0xffff) {
+    luaL_error(L, "range: 0 - 65535");
   }
   size_t tm_now = os::seconds();
   if (tm_now < tm_last) {
@@ -1497,7 +1487,6 @@ static int luaopen_los(lua_State* L)
     {"id",            os_id         },
     {"pid",           os_pid        },
     {"files",         enum_files    },
-    {"uniqueid",      code_generate },
     {"snowid",        os_snowid     },
     {"wait",          luaos_wait    },
     {"stopped",       luaos_stopped },

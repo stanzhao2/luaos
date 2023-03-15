@@ -11,14 +11,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\bios\bios.cpp" />
     <ClCompile Include="..\src\dumper\ifdumper.cpp" />
     <ClCompile Include="..\src\luaos.cpp" />
     <ClCompile Include="..\src\luaos_compile.cpp" />
     <ClCompile Include="..\src\luaos_conv.cpp" />
     <ClCompile Include="..\src\luaos_logo.cpp" />
     <ClCompile Include="..\src\luaos_master.cpp" />
-    <ClCompile Include="..\src\luaos_mc.cpp" />
     <ClCompile Include="..\src\luaos_pack.cpp" />
     <ClCompile Include="..\src\luaos_rpcall.cpp" />
     <ClCompile Include="..\src\luaos_socket.cpp" />
@@ -35,7 +33,6 @@
     <ClCompile Include="..\src\rapidjson\values.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\bios\bios.h" />
     <ClInclude Include="..\src\dumper\ifdumper.h" />
     <ClInclude Include="..\src\luaos.h" />
     <ClInclude Include="..\src\luaos_color.h" />
@@ -44,7 +41,6 @@
     <ClInclude Include="..\src\luaos_conv.h" />
     <ClInclude Include="..\src\luaos_logo.h" />
     <ClInclude Include="..\src\luaos_master.h" />
-    <ClInclude Include="..\src\luaos_mc.h" />
     <ClInclude Include="..\src\luaos_pack.h" />
     <ClInclude Include="..\src\luaos_rpcall.h" />
     <ClInclude Include="..\src\luaos_socket.h" />
