@@ -56,11 +56,11 @@ end
 
 ----------------------------------------------------------------------------
 
-function main(...)
+function main(host, port, wwwroot)    
     nginx.on(nginx.event.accept,  on_accept)
          .on(nginx.event.error,   on_error)
          .on(nginx.event.receive, on_receive)
-         .listen("0.0.0.0", 8899, "wwwroot", certificates);
+         .listen(host or "0.0.0.0", port or 8899, wwwroot or "wwwroot", certificates);
 
 	while not luaos.stopped() do
 		local success, err = pcall(luaos.wait);
