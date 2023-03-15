@@ -225,7 +225,7 @@ int luaos_export(lua_State* L, const char* filename, const char* key, bool all)
       data = data + strlen(permis) + 1;
       size = size - strlen(permis) - 1;
     }
-
+    name = skip_pathroot(name);
     const char* pos = strrchr(name, '.');
     if (!all && pos) {
       if (_tinydir_strcmp(pos + 1, "lua") == 0) {

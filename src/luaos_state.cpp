@@ -218,12 +218,12 @@ typedef struct {
   size_t size;      /* data length */
 } file_buffer;
 
-inline static bool is_slash(char c)
+bool is_slash(char c)
 {
   return c == '/' || c == '\\';
 }
 
-static int is_fullname(const char* filename)
+int is_fullname(const char* filename)
 {
   char c1, c2, c3;
   if (strlen(filename) < 3) {
@@ -242,7 +242,7 @@ static int is_fullname(const char* filename)
   return (c1 >= 'a' && c1 <= 'z') || (c1 >= 'A' && c1 <= 'Z');
 }
 
-static const char* skip_pathroot(const char* p)
+const char* skip_pathroot(const char* p)
 {
   if (is_fullname(p)) {
     return p;
