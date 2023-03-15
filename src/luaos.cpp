@@ -227,10 +227,8 @@ lua_State* init_main_state()
 int main(int argc, char* argv[])
 {
 #ifndef _MSC_VER
-  system("clear");
   MallocExtension::instance()->SetMemoryReleaseRate(0);
 #else
-  system("cls");
   SetConsoleOutputCP(65001);  /* set charset to utf8 */
 #endif
   display_logo();

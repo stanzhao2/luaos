@@ -59,7 +59,7 @@ public:
       break;
     }
     SetConsoleTextAttribute(_handle, print_color);
-    printf(str);
+    printf("%s", str);
     SetConsoleTextAttribute(_handle, _color);
   }
 };
