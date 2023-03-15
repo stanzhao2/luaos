@@ -203,6 +203,7 @@ static int unpackfile(const char* infile, const char* name, const char* data, si
 
 int luaos_export(lua_State* L, const char* filename, const char* key, bool all)
 {
+  fromname = filename;
   if (!decoder) {
     decoder.reset(new eth::decoder(key, key ? strlen(key) : 0));
   }
@@ -238,7 +239,7 @@ int luaos_export(lua_State* L, const char* filename, const char* key, bool all)
 #ifndef _MSC_VER
       if (permis && permis[0]) {
         if (chmod(name, unpermissions(permis))) {
-          luaos_error("Cat't set permissions: %s\n", filename);
+          luaos_error("Cat't set permissions: %s\n", name);
           return;
         }
       }
