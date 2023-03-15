@@ -7,7 +7,6 @@ COPY centos8_base.repo /etc/yum.repos.d/CentOS-Base.repo
 RUN yum clean all
 RUN yum makecache
 
-RUN yum install -y dmidecode
 RUN yum install -y curl-devel
 RUN yum install -y libuuid-devel
 RUN yum install -y zlib-devel
