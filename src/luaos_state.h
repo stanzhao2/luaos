@@ -31,6 +31,7 @@
 
 bool is_slash(char c);
 int  is_fullname(const char* filename);
+void chdir_fpath(const char* filename);
 const char* skip_pathroot(const char* p);
 
 lua_State* luaos_newstate(lua_CFunction loader);

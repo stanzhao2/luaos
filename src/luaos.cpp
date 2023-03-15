@@ -317,12 +317,6 @@ int main(int argc, char* argv[])
     luaos_export(L, filename.c_str(), password, true);
     return printf("\n");
   }
-  if (cmd_filename) {
-    replace(filename);
-    if (luaos_export(L, filename.c_str(), password, false) < 0) {
-      return printf("\n");
-    }
-  }
   if (cmd_loghosten) {
     error_code ec;
     auto port = (unsigned short)std::stoi(logport);
@@ -334,8 +328,14 @@ int main(int argc, char* argv[])
       luaos_error("%s\n", ec.message().c_str());
     }
   }
-  lua_Integer error = -1;
   luaos_trace("Starting LuaOS...\n");
+  if (cmd_filename) {
+    replace(filename);
+    if (luaos_export(L, filename.c_str(), password, false) < 0) {
+      return printf("\n");
+    }
+  }
+  lua_Integer error = -1;
   lua_pushcfunction(L, &pmain);           /* to call 'pmain' in protected mode */
   lua_pushstring(L, main_name.c_str());   /* 1st argument */
   lua_pushlightuserdata(L, cmd_params ? &luaparams : nullptr);  /* 2st argument */

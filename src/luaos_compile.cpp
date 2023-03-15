@@ -204,6 +204,8 @@ static int unpackfile(const char* infile, const char* name, const char* data, si
 int luaos_export(lua_State* L, const char* filename, const char* key, bool all)
 {
   fromname = filename;
+  chdir_fpath(filename);
+
   if (!decoder) {
     decoder.reset(new eth::decoder(key, key ? strlen(key) : 0));
   }

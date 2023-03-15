@@ -307,7 +307,7 @@ static int lua_loader(lua_State* L, const char* buff, size_t size, const char* n
   return lua_read(L, lua_reader, &fb, filename.c_str());
 }
 
-static void chdir_fpath(const char* filename)
+void chdir_fpath(const char* filename)
 {
   static bool is_main_load = true;
   if (!is_main_load) {
@@ -394,7 +394,6 @@ static int ll_fload(lua_State* L, const char* filename)
     lua_pop(L, 2);      /* remove data and romname from stack */
   }
   else {
-    chdir_fpath(romname);
     lua_remove(L, -3);  /* remove data from stack */
     lua_remove(L, -3);  /* remove romname from stack */
   }
