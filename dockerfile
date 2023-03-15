@@ -19,5 +19,4 @@ COPY share   $TARGET/share
 COPY doc     $TARGET/doc
 
 RUN ln -s $TARGET/bin/luaos /usr/bin/luaos
-CMD cd /home
-CMD /bin/bash
+WORKDIR /home
