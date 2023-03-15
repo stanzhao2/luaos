@@ -22,6 +22,7 @@
 #include <openssl/md5.h>
 #include <openssl/hmac.h>
 
+#include <string>
 #include "luaos_conv.h"
 
 /***********************************************************************************/
@@ -145,6 +146,16 @@ static int base64_decode(lua_State* L)
 {
   size_t len;
   const char* cs = luaL_checklstring(L, 1, &len);
+  size_t dn = len & 3;
+
+  std::string tmp;
+  if (dn > 0) {
+    tmp.assign(cs, len);
+    tmp.append("===", dn);
+    cs  = tmp.c_str();
+    len = tmp.size();
+  }
+
   BIO* b64 = BIO_new(BIO_f_base64());
   BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
   BIO* bio = BIO_new_mem_buf((void*)cs, (int)len);
