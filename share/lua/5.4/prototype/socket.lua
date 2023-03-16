@@ -25,7 +25,7 @@ local i_socket = {};
 ---@param host string
 ---@param port integer
 ---@param handler fun(peer:socket):void
----@return boolean|nil
+---@return boolean, port
 function i_socket:listen(host, port, handler) end;
 
 ---创建本地 UDP 绑定,成功时返回 true，否则返回 false 或 nil
@@ -40,7 +40,7 @@ function i_socket:bind(host, port, handler) end;
 ---@param host string
 ---@param port integer
 ---@param timeout integer
----@return boolean|nil
+---@return boolean, port
 function i_socket:connect(host, port, timeout) end;
 
 ---关闭一个有效的 socket

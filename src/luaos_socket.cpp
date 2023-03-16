@@ -383,8 +383,11 @@ static int lua_os_socket_bind(lua_State* L)
     lua_pushstring(L, ec.message().c_str());
     return 2;
   }
+  ip::address addr;
+  lua_sock->get_socket()->local_address(addr, &port);
   lua_pushboolean(L, 1);
-  return 1;
+  lua_pushinteger(L, port);
+  return 2;
 }
 
 static int lua_os_socket_listen(lua_State* L)
@@ -417,8 +420,11 @@ static int lua_os_socket_listen(lua_State* L)
     lua_pushstring(L, ec.message().c_str());
     return 2;
   }
+  ip::address addr;
+  lua_sock->get_socket()->local_address(addr, &port);
   lua_pushboolean(L, 1);
-  return 1;
+  lua_pushinteger(L, port);
+  return 2;
 }
 
 static int lua_os_socket_connect(lua_State* L)

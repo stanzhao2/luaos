@@ -933,7 +933,7 @@ namespace eth
       inline error_code local_endpoint(endpoint_type& local) const
       {
         error_code ec;
-        local = parent::local_endpoint(ec);
+        local = _acceptor ? _acceptor->local_endpoint(ec) : parent::local_endpoint(ec);
         return ec;
       }
 
