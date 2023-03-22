@@ -223,6 +223,149 @@ lua_State* init_main_state()
   return L;
 }
 
+/***********************************************************************************/
+
+#ifdef _BUILD_AS_DLL
+
+lua_State* luaos_create() {
+  return luaos_local.lua_state();
+}
+
+int luaos_release(lua_State* L) {
+  return luaos_close(L);
+}
+
+int luaos_do_module(lua_State* L, int argc, char* argv[])
+{
+#ifndef _MSC_VER
+  MallocExtension::instance()->SetMemoryReleaseRate(0);
+#else
+  SetConsoleOutputCP(65001);  /* set charset to utf8 */
+#endif
+
+  using namespace clipp;
+  bool cmd_help      = false;
+  bool cmd_compile   = false;
+  bool cmd_filename  = false;
+  bool cmd_key       = false;
+  bool cmd_unpack    = false;
+  bool cmd_params    = false;
+  bool cmd_loghosten = false;
+
+  std::string main_name(luaos_fmain);
+  std::string filename, filekey, loghost, logport;
+  std::vector<std::string> filestype, luaparams;
+
+  auto cmd = (
+    option("-h", "--help").set(cmd_help).doc("display this help") | (
+      (opt_value("module", main_name)),
+      (option("-f", "--file"  ).set(cmd_filename ).doc("name of image file") & value("filename", filename)),
+      (option("-d", "--debug" ).set(_G_debug     ).doc("run in debug mode")),
+      (option("-k", "--key"   ).set(cmd_key      ).doc("password of image file") & value("key", filekey)),
+      (option("-a", "--argv"  ).set(cmd_params   ).doc("parameters to be passed to lua") & repeatable(opt_value("parameters", luaparams))),
+      (option("-l", "--log"   ).set(cmd_loghosten).doc("host and port of remote log server") & value("host", loghost) & value("port", logport)),
+      (option("-p", "--pack"  ).set(cmd_compile  ).doc("package files to image file") & repeatable(opt_value("all", filestype))) |
+      (option("-u", "--unpack").set(cmd_unpack   ).doc("unpack image file"))
+      )
+    );
+
+  filestype.push_back("lua");
+  if (!parse(argc, argv, cmd) || main_name[0] == '-') {
+    cmd_help = true;
+  }
+  if (!logport.empty() && !is_integer(logport.c_str())) {
+    cmd_help = true;
+  }
+  _G_name = main_name;  /* save to global */
+
+  if (cmd_help) {
+    std::string exefname(argv[0]);
+    const char* pos = strrchr(argv[0], LUA_DIRSEP[0]);
+    if (pos) {
+      exefname = pos + 1;
+    }
+    auto fmt = doc_formatting{}
+      .first_column(5)
+      .doc_column(20);
+    std::cout << make_man_page(cmd, exefname.c_str(), fmt) << "\n";
+    return 0;
+  }
+
+  if (filename.empty()) {
+    time_t now = time(0);
+    auto ptm = localtime(&now);
+    char name[256];
+    snprintf(name, sizeof(name), "%02d%02d%02d%02d%02d%02d.img", 1900 + ptm->tm_year, ptm->tm_mon + 1, ptm->tm_mday, ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
+    filename.assign(name);
+  }
+  if (filekey.empty()) {
+    filekey = "11852234-3e57-484d-b128-cd99a6b76204";
+  }
+
+  unsigned char hash[16];
+  int size = md5::hash(filekey.c_str(), filekey.size(), hash);
+  filekey.clear();
+  for (int i = 0; i < size; i++) {
+    char hex[3];
+    sprintf(hex, "%02x", hash[i]);
+    filekey.append(hex);
+  }
+  const char* password = filekey.c_str();
+
+  if (cmd_compile) {
+    std::set<std::string> exts;
+    for (size_t i = 0; i < filestype.size(); i++) {
+      exts.insert(filestype[i]);
+    }
+    replace(filename);
+    luaos_compile(L, filename.c_str(), exts, password);
+    return printf("\n");
+  }
+  if (cmd_unpack) {
+    replace(filename);
+    luaos_export(L, filename.c_str(), password, true);
+    return printf("\n");
+  }
+  if (cmd_loghosten) {
+    error_code ec;
+    auto port = (unsigned short)std::stoi(logport);
+    auto result = eth::udp::resolve(loghost.c_str(), port, ec);
+    if (!ec) {
+      _logspeer = *result.begin();
+    }
+    else {
+      luaos_error("%s\n", ec.message().c_str());
+    }
+  }
+  luaos_trace("Starting LuaOS...\n");
+  if (cmd_filename) {
+    replace(filename);
+    if (luaos_export(L, filename.c_str(), password, false) < 0) {
+      return printf("\n");
+    }
+  }
+  lua_Integer error = -1;
+  lua_pushcfunction(L, &pmain);           /* to call 'pmain' in protected mode */
+  lua_pushstring(L, main_name.c_str());   /* 1st argument */
+  lua_pushlightuserdata(L, cmd_params ? &luaparams : nullptr);  /* 2st argument */
+  if (luaos_pcall(L, 2, 1) == LUA_OK) {   /* do the call */
+    error = lua_tointeger(L, -1);         /* get result */
+  }
+  else {
+    luaos_error("%s\n", lua_tostring(L, -1));
+    lua_pop(L, 1);
+  }
+  if (logsock && logsock->is_open()) {
+    logsock->close();
+    logsock.reset();
+    lua_close(logluaL);
+  }
+  luaos_trace("LuaOS has exited, see you...\n\n");
+  return (int)error;
+}
+
+#else
+
 int main(int argc, char* argv[])
 {
 #ifndef _MSC_VER
@@ -354,5 +497,7 @@ int main(int argc, char* argv[])
   luaos_trace("LuaOS has exited, see you...\n\n");
   return (int)error;
 }
+
+#endif
 
 /***********************************************************************************/

@@ -154,6 +154,19 @@ local function depth_pairs(t, r)
     end
 end
 
+---对table数据进行等于比较
+---@param t1 table
+---@param t2 table
+---@return boolean
+table.equal = function(t1, t2)
+    assert(type(t1) == "table")
+    assert(type(t2) == "table")
+    local r1, r2 = {}, {};
+    depth_pairs(t1, r1);
+    depth_pairs(t2, r2);
+    return (concat(r1) == concat(r2));
+end
+
 ---对table数据进行签名
 ---@param data table
 ---@param key  string 密钥

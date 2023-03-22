@@ -1,0 +1,6 @@
+
+EXPORTS
+	luaos_create
+	luaos_release
+	luaos_do_module
+	
