@@ -19,6 +19,7 @@ LUAHTTPPARSER = $(LUAEXT)/lua-http-parser
 LUARANDOM     = $(LUAEXT)/lua-random
 LUASKIPLIST   = $(LUAEXT)/lua-skiplist
 LUAUUID       = $(LUAEXT)/lua-uuid
+LUAIKCP       = $(LUAEXT)/lua-kcp
 LUAXSTRING    = $(LUAEXT)/lua-xstring
 LUAMYSQL      = $(LUAEXT)/lua-sql/mysql
 
@@ -47,6 +48,7 @@ all:
 	cd $(LUARANDOM) && $(MAKE)
 	cd $(LUASKIPLIST) && $(MAKE)
 	cd $(LUAUUID) && $(MAKE)
+	cd $(LUAIKCP) && $(MAKE)
 	cd $(LUAXSTRING) && $(MAKE)
 	cd $(LUAMYSQL) && $(MAKE)
 	
@@ -65,6 +67,7 @@ clean:
 	cd $(LUARANDOM) && $(MAKE) clean
 	cd $(LUASKIPLIST) && $(MAKE) clean
 	cd $(LUAUUID) && $(MAKE) clean
+	cd $(LUAIKCP) && $(MAKE) clean
 	cd $(LUAXSTRING) && $(MAKE) clean
 	cd $(LUAMYSQL) && $(MAKE) clean
 	
