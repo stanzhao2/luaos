@@ -1127,19 +1127,18 @@ static int local_thread(luaos_job* job, lua_value_array::value_type argv, io_han
 
   lua_pushcfunction(L, local_pthread);
   lua_pushstring(L, job->name.c_str());
-  int status = luaos_pcall(L, (int)argv->push(L) + 1, 0);
+  job->status = luaos_pcall(L, (int)argv->push(L) + 1, 0);
   if (!ios->stopped()) {
-    job->status = status;
     ios->stop();
   }
   if (!job->ios->stopped()) {
     job->ios->stop();
   }
-  if (!is_success(status)) {
+  if (!is_success(job->status)) {
     luaos_error("%s\n", lua_tostring(L, -1));
     lua_pop(L, 1);
   }
-  return status;
+  return job->status;
 }
 
 static luaos_job* check_jobself(lua_State* L)
@@ -1354,17 +1353,20 @@ static int init_luapath(lua_State* L)
 
 int luaos_close(lua_State* L)
 {
-  auto removeL = [L]() {
+  size_t remainder = 0;
+  auto removeL = [&]() {
     std::unique_lock<std::mutex> lock(alive_mutex);
-    if (alive_states.erase(L)) {
-      lua_close(L);
-    }
-    return alive_states.size();
+    size_t removed = alive_states.erase(L);
+    remainder = alive_states.size();
+    return removed;
   };
-  if (removeL() == 0) {
+  if (removeL()) {
+    lua_close(L);
+  }
+  if (remainder == 0) {
     alive_exit->stop();
     if (alive_thread && alive_thread->joinable()) {
-      alive_thread->join();
+      alive_thread->detach();
       alive_thread.reset();
     }
   }
