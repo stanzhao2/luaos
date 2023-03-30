@@ -1361,14 +1361,14 @@ int luaos_close(lua_State* L)
     return removed;
   };
   if (removeL()) {
-    lua_close(L);
-  }
-  if (remainder == 0) {
-    alive_exit->stop();
-    if (alive_thread && alive_thread->joinable()) {
-      alive_thread->detach();
-      alive_thread.reset();
+    if (remainder == 0) {
+      if (alive_thread && alive_thread->joinable()) {
+        alive_exit->stop();
+        alive_thread->detach();
+        alive_thread.reset();
+      }
     }
+    lua_close(L);
   }
   return LUA_OK;
 }
