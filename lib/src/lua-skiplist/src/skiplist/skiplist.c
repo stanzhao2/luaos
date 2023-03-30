@@ -264,7 +264,7 @@ int slGetRank(sl_t *sl, slNode_t *node, void *ctx)
 			traversed += (int)p->level[i].span;
 			p = p->level[i].next;
 		}
-		if (sl->comp(p, node, sl, ctx) == 0) {
+		if (p->udata && sl->comp(p, node, sl, ctx) == 0) {
 			return traversed;
 		}
 	}
