@@ -279,31 +279,10 @@ static const char* lua_reader(lua_State* L, void* ud, size_t* size)
 
 static int lua_loader(lua_State* L, const char* buff, size_t size, const char* name)
 {
-  std::string temp(name), filename(name);
-  auto n = filename.find("..");
-  while (n != std::string::npos)
-  {
-    const char c = LUA_DIRSEP[0];
-    if (n < 2) {
-      break;
-    }
-    auto a = temp.rfind(c, n - 2);
-    if (a == std::string::npos) {
-      break;
-    }
-    auto b = temp.find(c, n);
-    if (b == std::string::npos) {
-      break;
-    }
-    filename.clear();
-    filename += temp.substr(0, a);
-    filename += temp.substr(b);
-    n = filename.find("..");
-  }
   file_buffer fb;
   fb.data = buff;
   fb.size = size;
-  return lua_read(L, lua_reader, &fb, filename.c_str());
+  return lua_read(L, lua_reader, &fb, name);
 }
 
 void chdir_fpath(const char* filename)
@@ -322,7 +301,7 @@ void chdir_fpath(const char* filename)
     if (path[strlen(path) - 1] != LUA_DIRSEP[0]) {
       strcat(path, LUA_DIRSEP);
     }
-    strcat(path, skip_pathroot(filename));
+    strcat(path, filename);
   }
   char* finded = strrchr(path, '/');
   if (!finded) {
@@ -399,9 +378,35 @@ static int ll_fload(lua_State* L, const char* filename)
   return result;
 }
 
-static int ll_fread(lua_State* L, const char* filename)
+static void normalize(const char* filename, char* of)
 {
-  filename = skip_pathroot(filename);
+  assert(filename && of);
+  int i = 0, n = 0;
+  char f[256], *x = 0;
+  const char* p = filename;
+  do {
+    if (*p && *p != '/' && *p != '\\') {
+      f[i++] = *p;
+      continue;
+    }
+    i = f[i] = 0;
+    if (strcmp(f, "..") == 0) {
+      x = strrchr(of, LUA_DIRSEP[0]);
+      *(x ? x : of) = 0;
+      continue;
+    }
+    if (f[0] && strcmp(f, ".")) {
+      if (n++ == 0) *of = 0;
+      if (*of) strcat(of, LUA_DIRSEP);
+      strcat(of, f);  /* save the directory */
+    }
+  } while (*p++);
+}
+
+static int ll_fread(lua_State* L, const char* filefind)
+{
+  char filename[LUAOS_MAX_PATH];
+  normalize(filefind, filename);
   int result, topidx = lua_gettop(L);
   FILE* fp = fopen(filename, "r");
   if (fp == nullptr) {
@@ -445,16 +450,12 @@ static int ll_require(lua_State* L)
   char filename[LUAOS_MAX_PATH];
   size_t namelen = 0;
   const char* name = luaL_checklstring(L, 1, &namelen);
-  name = skip_pathroot(name);
+
+  char temp[LUAOS_MAX_PATH];
+  normalize(name, temp);
+  name = temp;
   namelen = strlen(name);
 
-  std::string temp(name, namelen);
-  for (size_t i = 0; i < temp.size(); i++) {
-    if (is_slash(temp[i])) {
-      temp[i] = LUA_DIRSEP[0];
-    }
-  }
-  name = temp.c_str();
   if (is_fullname(name))
   {
     strcpy(filename, name);
@@ -465,13 +466,11 @@ static int ll_require(lua_State* L)
     }
     return result;
   }
-  for (size_t i = 0; i < temp.size(); i++) {
+  for (size_t i = 0; i < namelen; i++) {
     if (temp[i] == '.') {
       temp[i] = LUA_DIRSEP[0];
     }
   }
-  name = temp.c_str();
-
   char path[LUAOS_MAX_PATH];
   lua_getglobal(L, LUA_LOADLIBNAME);
   lua_getfield(L, -1, "path");
@@ -1377,11 +1376,10 @@ int luaos_pexec(lua_State* L, const char* filename, int n)
 {
   char name[LUAOS_MAX_PATH];
   char original[LUAOS_MAX_PATH];
-  filename = skip_pathroot(filename);
-  size_t namelen = strlen(filename);
+  normalize(filename, original);
 
-  strcpy(name, filename);
-  strcpy(original, name);
+  strcpy(name, original);
+  size_t namelen = strlen(original);
   luaos_trace("Start module '%s' in protected mode\n", original);
 
   if (!is_fullname(name)) {
