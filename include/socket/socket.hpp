@@ -72,10 +72,10 @@ namespace eth
 
     inline int id() const { return _id.value(); }
 
-    template <typename Handler> inline void post(Handler handler) {
+    template <typename Handler> inline void post(Handler&& handler) {
       asio::post(*this, handler);
     }
-    template <typename Handler> inline void dispatch(Handler handler) {
+    template <typename Handler> inline void dispatch(Handler&& handler) {
       asio::dispatch(*this, handler);
     }
 
@@ -400,14 +400,14 @@ namespace eth
 
     public:
       template <typename Handler>
-      void async_connect(const endpoint_type& peer, Handler handler)
+      void async_connect(const endpoint_type& peer, Handler&& handler)
       {
         assert(!is_open());
         parent::async_connect(peer, handler);
       }
 
       template <typename Handler>
-      void async_connect(const char* host, unsigned short port, Handler handler)
+      void async_connect(const char* host, unsigned short port, Handler&& handler)
       {
         assert(host && port);
         error_code ec;
@@ -432,7 +432,7 @@ namespace eth
       }
 
       template <typename Handler>
-      void async_send(const std::string& data, Handler handler)
+      void async_send(const std::string& data, Handler&& handler)
       {
         service()->post(
           std::bind(
@@ -442,14 +442,14 @@ namespace eth
       }
 
       template <typename Handler>
-      void async_send(const char* data, size_t size, Handler handler)
+      void async_send(const char* data, size_t size, Handler&& handler)
       {
         std::string packet(data, size);
         async_send(packet, handler);
       }
 
       template <typename Handler>
-      void async_send_to(const std::string& data, const endpoint_type& peer, Handler handler)
+      void async_send_to(const std::string& data, const endpoint_type& peer, Handler&& handler)
       {
         service()->post(
           std::bind(
@@ -459,20 +459,20 @@ namespace eth
       }
 
       template <typename Handler>
-      void async_send_to(const char* data, size_t size, const endpoint_type& peer, Handler handler)
+      void async_send_to(const char* data, size_t size, const endpoint_type& peer, Handler&& handler)
       {
         std::string packet(data, size);
         async_send_to(packet, peer, handler);
       }
 
       template <typename Handler>
-      void async_wait(wait_type what, Handler handler)
+      void async_wait(wait_type what, Handler&& handler)
       {
         async_wait(what, true, handler);
       }
 
       template <typename Handler>
-      void async_wait(wait_type what, bool keep_on, Handler handler)
+      void async_wait(wait_type what, bool keep_on, Handler&& handler)
       {
         if (what == socket::wait_write) {
           _notify = handler;
@@ -501,7 +501,7 @@ namespace eth
       ssl_stream *_stream;
 
       template <typename Handler>
-      inline void handshake(Handler handler)
+      inline void handshake(Handler&& handler)
       {
         error_code ec;
         post(
@@ -534,7 +534,7 @@ namespace eth
       }
 
       template <typename Handler>
-      inline void async_handshake(handshake_type type, Handler handler) {
+      inline void async_handshake(handshake_type type, Handler&& handler) {
         _stream ? _stream->async_handshake(type, handler) : handshake(handler);
       }
 
@@ -544,7 +544,7 @@ namespace eth
       }
 
       template <typename MutableBuffers, typename Handler>
-      inline void async_receive(const MutableBuffers& buffers, Handler handler) {
+      inline void async_receive(const MutableBuffers& buffers, Handler&& handler) {
         _stream ? _stream->async_read_some(buffers, handler) : async_read_some(buffers, handler);
       }
 
@@ -554,7 +554,7 @@ namespace eth
       }
 
       template <typename MutableBuffers, typename Handler>
-      inline void async_send(const MutableBuffers& buffers, Handler handler) {
+      inline void async_send(const MutableBuffers& buffers, Handler&& handler) {
         _stream ? async_write(*_stream, buffers, handler) : async_write(*this, buffers, handler);
       }
     };
@@ -580,7 +580,7 @@ namespace eth
       }
 
       template <typename Handler>
-      inline void async_handshake(handshake_type type, Handler handler) {
+      inline void async_handshake(handshake_type type, Handler&& handler) {
         error_code ec;
         post(
           get_executor(),
@@ -594,7 +594,7 @@ namespace eth
       }
 
       template <typename MutableBuffers, typename Handler>
-      inline void async_send(const MutableBuffers& buffers, Handler handler) {
+      inline void async_send(const MutableBuffers& buffers, Handler&& handler) {
         async_write(*this, buffers, handler);
       }
     };
@@ -1078,7 +1078,7 @@ namespace eth
       }
 
       template <typename Handler>
-      void async_connect(const endpoint_type& peer, Handler handler)
+      void async_connect(const endpoint_type& peer, Handler&& handler)
       {
         assert(!_acceptor);
         assert(!is_open());
@@ -1086,7 +1086,7 @@ namespace eth
       }
 
       template <typename Handler>
-      void async_connect(const char* host, unsigned short port, Handler handler)
+      void async_connect(const char* host, unsigned short port, Handler&& handler)
       {
         assert(host && port);
         error_code ec;
@@ -1103,14 +1103,14 @@ namespace eth
       }
 
       template <typename Handler>
-      void async_accept(socket::ref peer, Handler handler)
+      void async_accept(socket::ref peer, Handler&& handler)
       {
         assert(_acceptor && peer);
         _acceptor->async_accept(*peer, handler);
       }
 
       template <typename Handler>
-      void async_send(const std::string& data, Handler handler)
+      void async_send(const std::string& data, Handler&& handler)
       {
         service()->post(
           std::bind(
@@ -1120,20 +1120,20 @@ namespace eth
       }
 
       template <typename Handler>
-      void async_send(const char* data, size_t bytes, Handler handler)
+      void async_send(const char* data, size_t bytes, Handler&& handler)
       {
         std::string packet(data, bytes);
         async_send(packet, handler);
       }
 
       template <typename Handler>
-      void async_wait(wait_type what, Handler handler)
+      void async_wait(wait_type what, Handler&& handler)
       {
         async_wait(what, true, handler);
       }
 
       template <typename Handler>
-      void async_wait(wait_type what, bool keep_on, Handler handler)
+      void async_wait(wait_type what, bool keep_on, Handler&& handler)
       {
         if (what == socket::wait_write) {
           _notify = handler;
@@ -1584,7 +1584,7 @@ namespace eth
 
     //Handler: void(const error_code& /* ec */, size_t /* size */);
     template <typename Handler>
-    error_code bind(unsigned short port, const char* host, Handler handler)
+    error_code bind(unsigned short port, const char* host, Handler&& handler)
     {
       assert(_udp);
       error_code ec;
@@ -1597,7 +1597,7 @@ namespace eth
 
     //Handler: void(const error_code& /* ec */, socket_type /* peer */);
     template <typename Handler>
-    error_code listen(unsigned short port, const char* host, int backlog, Handler handler)
+    error_code listen(unsigned short port, const char* host, int backlog, Handler&& handler)
     {
       assert(_tcp);
       error_code ec;
@@ -1610,7 +1610,7 @@ namespace eth
 
     //Handler: void(const error_code& /* ec */);
     template <typename Handler>
-    void async_connect(const ip::tcp::endpoint& peer, Handler handler)
+    void async_connect(const ip::tcp::endpoint& peer, Handler&& handler)
     {
       assert(_tcp);
       _tcp->async_connect(peer, handler);
@@ -1618,7 +1618,7 @@ namespace eth
 
     //Handler: void(const error_code& /* ec */);
     template <typename Handler>
-    void async_connect(const ip::udp::endpoint& peer, Handler handler)
+    void async_connect(const ip::udp::endpoint& peer, Handler&& handler)
     {
       assert(_udp);
       _udp->async_connect(peer, handler);
@@ -1626,7 +1626,7 @@ namespace eth
 
     //Handler: void(const error_code& /* ec */);
     template <typename Handler>
-    void async_connect(const char* host, unsigned short port, Handler handler)
+    void async_connect(const char* host, unsigned short port, Handler&& handler)
     {
       assert(host && port);
       _tcp ? _tcp->async_connect(host, port, handler) : _udp->async_connect(host, port, handler);
@@ -1634,7 +1634,7 @@ namespace eth
 
     //Handler: void(const error_code& /* ec */, socket_type /* peer */);
     template <typename Handler>
-    void async_accept(Handler handler)
+    void async_accept(Handler&& handler)
     {
       assert(_tcp);
       auto peer = create(service(), family::sock_stream);
@@ -1643,7 +1643,7 @@ namespace eth
 
     //Handler: void(const error_code& /* ec */, socket_type /* peer */);
     template <typename Handler>
-    void async_accept(bool keep_on, Handler handler)
+    void async_accept(bool keep_on, Handler&& handler)
     {
       assert(_tcp);
       auto peer = create(service(), family::sock_stream);
@@ -1652,7 +1652,7 @@ namespace eth
 
     //Handler: void(const error_code& /* ec */, socket_type /* peer */);
     template <typename Handler>
-    void async_accept(socket::ref peer, bool keep_on, Handler handler)
+    void async_accept(socket::ref peer, bool keep_on, Handler&& handler)
     {
       assert(_tcp);
       assert(peer->_tcp);
@@ -1667,7 +1667,7 @@ namespace eth
 
     //Handler: void(const error_code& /* ec */);
     template <typename Handler>
-    void async_handshake(Handler handler)
+    void async_handshake(Handler&& handler)
     {
       assert(_tcp);
       _tcp->async_handshake((_is_server ? tls::handshake_type::server : tls::handshake_type::client), handler);
@@ -1675,14 +1675,14 @@ namespace eth
 
     //Handler: void(const error_code& /* ec */, size_t /* size */);
     template <typename Handler>
-    void async_wait(wait_type what, Handler handler)
+    void async_wait(wait_type what, Handler&& handler)
     {
       async_wait(what, true, handler);
     }
 
     //Handler: void(const error_code& /* ec */, size_t /* size */);
     template <typename Handler>
-    void async_wait(wait_type what, bool keep_on, Handler handler)
+    void async_wait(wait_type what, bool keep_on, Handler&& handler)
     {
       _tcp ? _tcp->async_wait(
         (tcp::socket::wait_type)what, keep_on, handler
@@ -1693,7 +1693,7 @@ namespace eth
 
     //Handler: void(const char* /* data */, size_t /* size */, const header*);
     template <typename Handler>
-    size_t decode(size_t size, int& err, Handler handler)
+    size_t decode(size_t size, int& err, Handler&& handler)
     {
       receive(_decoder, size);
       err = _decoder.decode(handler);
@@ -1702,7 +1702,7 @@ namespace eth
 
     //Handler: void(const char* /* data */, size_t /* size */, const header*);
     template <typename Handler>
-    size_t decode(const char* data, size_t size, int& err, Handler handler)
+    size_t decode(const char* data, size_t size, int& err, Handler&& handler)
     {
       _decoder.write(data, size);
       err = _decoder.decode(handler);
@@ -1711,7 +1711,7 @@ namespace eth
 
     //Handler: void(const char* /* data */, size_t /* size */);
     template <typename Handler>
-    void encode(int opcode, const char* data, size_t size, bool encrypt, bool compress, Handler handler)
+    void encode(int opcode, const char* data, size_t size, bool encrypt, bool compress, Handler&& handler)
     {
       assert(opcode);
       _encoder.encode(opcode, data, size, encrypt, compress, handler);
@@ -1719,14 +1719,14 @@ namespace eth
 
     //Handler: void(const error_code& /* ec */, size_t /* size */);
     template <typename Handler>
-    void async_send(const std::string& data, Handler handler)
+    void async_send(const std::string& data, Handler&& handler)
     {
       _tcp ? _tcp->async_send(data, handler) : _udp->async_send(data, handler);
     }
 
     //Handler: void(const error_code& /* ec */, size_t /* size */);
     template <typename Handler>
-    void async_send(const char* data, size_t bytes, Handler handler)
+    void async_send(const char* data, size_t bytes, Handler&& handler)
     {
       assert(data);
       _tcp ? _tcp->async_send(data, bytes, handler) : _udp->async_send(data, bytes, handler);
@@ -1734,7 +1734,7 @@ namespace eth
 
     //Handler: void(const error_code& /* ec */, size_t /* size */);
     template <typename Handler>
-    void async_send_to(const std::string& data, const ip::address& addr, unsigned short port, Handler handler)
+    void async_send_to(const std::string& data, const ip::address& addr, unsigned short port, Handler&& handler)
     {
       assert(_udp);
       ip::udp::endpoint peer(addr, port);
@@ -1743,7 +1743,7 @@ namespace eth
 
     //Handler: void(const error_code& /* ec */, size_t /* size */);
     template <typename Handler>
-    void async_send_to(const std::string& data, const ip::udp::endpoint& peer, Handler handler)
+    void async_send_to(const std::string& data, const ip::udp::endpoint& peer, Handler&& handler)
     {
       assert(_udp);
       async_send_to(data.c_str(), data.size(), peer, handler);
@@ -1751,7 +1751,7 @@ namespace eth
 
     //Handler: void(const error_code& /* ec */, size_t /* size */);
     template <typename Handler>
-    void async_send_to(const char* data, size_t bytes, const ip::address& addr, unsigned short port, Handler handler)
+    void async_send_to(const char* data, size_t bytes, const ip::address& addr, unsigned short port, Handler&& handler)
     {
       assert(_udp);
       assert(data);
@@ -1761,7 +1761,7 @@ namespace eth
 
     //Handler: void(const error_code& /* ec */, size_t /* size */);
     template <typename Handler>
-    void async_send_to(const char* data, size_t bytes, const ip::udp::endpoint& peer, Handler handler)
+    void async_send_to(const char* data, size_t bytes, const ip::udp::endpoint& peer, Handler&& handler)
     {
       assert(_udp);
       assert(data);
