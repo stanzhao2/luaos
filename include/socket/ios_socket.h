@@ -6,6 +6,7 @@
 
 #include "ios.h"
 #include <asio/ssl.hpp>
+#include <functional>
 
 /********************************************************************************/
 namespace openssl {
@@ -101,11 +102,23 @@ static results_type resolve(
 
 /********************************************************************************/
 
-class socket : public ip::tcp::socket {
+class socket : public ip::tcp::socket
+  , public std::enable_shared_from_this<socket> {
   typedef ip::tcp::socket parent;
   typedef ssl::stream<parent&> ssl_stream;
+  typedef std::function<
+    void(const error_code&, size_t)
+  > send_callback_t;
+
+  typedef struct {
+    std::string data;
+    send_callback_t handler;
+  } cache_node;
   friend class acceptor;
 
+  bool _sending = false;
+  bool _closing = false;
+  std::list<cache_node> _sendcache;
   io::service::value _ios;
   context::value _context;
   std::shared_ptr<ssl_stream> _stream;
@@ -174,9 +187,19 @@ public:
     return write_some(buffer(data, size), ec);
   }
 
+  void async_close() {
+    post(get_executor(),
+      std::bind(&socket::on_async_close, shared_from_this())
+    );
+  }
+
   error_code close() {
     error_code ec;
-    if (is_open()) parent::close(ec);
+    if (is_open()) {
+      parent::shutdown(shutdown_type::shutdown_both, ec);
+      parent::close(ec);
+    }
+    _closing = false;
     return ec;
   }
 
@@ -231,6 +254,19 @@ public:
     async_connect(remote, remote.begin(), handler);
   }
 
+  template <typename Handler>
+  void async_send(const std::string& data, Handler handler) {
+    post(get_executor(),
+      std::bind(&socket::on_async_send, shared_from_this(), data, handler)
+    );
+  }
+
+  template <typename Handler>
+  void async_send(const char* data, size_t size, Handler handler) {
+    const std::string packet(data, size);
+    async_send(packet, handler);
+  }
+
   template<typename MutableBufferSequence>
   size_t read_some(const MutableBufferSequence& buffers, error_code& ec) {
     return _stream ? _stream->read_some(buffers, ec) : parent::read_some(buffers, ec);
@@ -262,6 +298,65 @@ public:
   }
 
 private:
+  void async_flush() {
+    const std::string& packet = _sendcache.front().data;
+    const char* data = packet.c_str();
+    size_t size = packet.size();
+
+    async_write(*this,
+      buffer(data, size),
+      std::bind(&socket::on_async_write, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
+    );
+    _sending = true;
+  }
+
+  void on_async_send(std::string& data, send_callback_t&& handler) {
+    if (_closing) {
+      return;
+    }
+    if (!is_open()) {
+      return;
+    }
+    cache_node _node;
+    _node.handler = handler;
+    _node.data    = std::move(data);
+    _sendcache.push_back(_node);
+
+    if (!_sending) {
+      async_flush();  //flush send cache
+    }
+  }
+
+  void on_async_close() {
+    if (_closing) {
+      return;
+    }
+    if (!is_open()) {
+      return;
+    }
+    error_code ec;
+    parent::shutdown(shutdown_type::shutdown_receive, ec);
+    if (ec) {
+      close();
+      return;
+    }
+    _closing = true;
+  }
+
+  void on_async_write(const error_code& ec, size_t transbytes) {
+    _sendcache.front().handler(ec, transbytes);
+    _sendcache.pop_front();
+    if (!ec && !_sendcache.empty()) {
+      async_flush();  //flush send cache
+      return;
+    }
+    if (_closing) {
+      close();
+    }
+    _sending = false;
+    _sendcache.clear();
+  }
+
   template <typename Handler>
   void async_handshake(handshake_type what, Handler&& handler) {
     _stream ? _stream->async_handshake(what, handler) : dispatch(
@@ -283,27 +378,6 @@ private:
     );
   }
 };
-
-/********************************************************************************/
-
-template<typename ConstBufferSequence>
-static size_t write(socket::value stream, const ConstBufferSequence& buffers, error_code& ec) {
-  return asio::write(*stream, buffers, ec);
-}
-
-static size_t write(socket::value stream, const char* data, size_t size, error_code& ec) {
-  return write(stream, buffer(data, size), ec);
-}
-
-template<typename ConstBufferSequence, typename Handler>
-static void async_write(socket::value stream, const ConstBufferSequence& buffers, Handler&& handler) {
-  asio::async_write(*stream, buffers, handler);
-}
-
-template<typename Handler>
-static void async_write(socket::value stream, const char* data, size_t size, Handler&& handler) {
-  async_write(*stream, buffer(data, size), handler);
-}
 
 /********************************************************************************/
 
