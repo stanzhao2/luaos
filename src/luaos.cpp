@@ -227,15 +227,15 @@ lua_State* init_main_state()
 
 #ifdef _BUILD_AS_DLL
 
-lua_State* luaos_create() {
+extern "C" lua_State * luaos_create() {
   return luaos_local.lua_state();
 }
 
-int luaos_release(lua_State* L) {
+extern "C" int luaos_release(lua_State* L) {
   return luaos_close(L);
 }
 
-int luaos_do_module(lua_State* L, int argc, char* argv[])
+extern "C" int luaos_do_module(lua_State* L, int argc, char* argv[])
 {
 #ifndef _MSC_VER
   MallocExtension::instance()->SetMemoryReleaseRate(0);
