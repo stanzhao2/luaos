@@ -171,10 +171,36 @@ public:
     return _socket->connect(host, port);
   }
 
-  error_code local_address(address_t& local) {
+  error_code local_endpoint(tcp::endpoint& local) {
+    /*tcp or acceptor socket*/
+    assert(!is_open());
+    error_code ec;
+    if (_socket) {
+      local = _socket->local_endpoint(ec);
+      return ec;
+    }
+    if (_acceptor) {
+      local = _acceptor->local_endpoint(ec);
+      return ec;
+    }
+    return error::not_socket;
+  }
+
+  error_code local_endpoint(udp::endpoint& local) {
+    /*udp socket only*/
+    assert(is_open());
+    assert(!_socket);
+    assert(!_acceptor);
+    error_code ec;
+    local = parent::local_endpoint(ec);
+    return ec;
+  }
+
+  error_code local_endpoint(address_t& local) {
     /*tcp/udp/acceptor socket*/
     error_code ec;
-    if (is_open()) {
+    if (is_open())
+    { /*udp*/
       udp::endpoint end;
       end = parent::local_endpoint(ec);
       if (!ec) {
@@ -183,50 +209,58 @@ public:
       }
       return ec;
     }
-    if (_socket) {
-      tcp::endpoint end;
-      end = _socket->local_endpoint(ec);
-      if (!ec) {
-        local.addr = end.address().to_string();
-        local.port = end.port();
-      }
-      return ec;
+    tcp::endpoint end;
+    ec = local_endpoint(end);
+    if (!ec) {
+      local.addr = end.address().to_string();
+      local.port = end.port();
     }
-    if (_acceptor) {
-      tcp::endpoint end;
-      end = _acceptor->local_endpoint(ec);
-      if (!ec) {
-        local.addr = end.address().to_string();
-        local.port = end.port();
-      }
+    return ec;
+  }
+
+  error_code remote_endpoint(tcp::endpoint& local) {
+    /*tcp socket only*/
+    assert(!is_open());
+    assert(!_acceptor);
+    error_code ec;
+    if (_socket) {
+      local = _socket->remote_endpoint(ec);
       return ec;
     }
     return error::not_socket;
   }
 
-  error_code remote_address(address_t& remote) {
+  error_code remote_endpoint(udp::endpoint& local) {
+    /*udp socket only*/
+    assert(is_open());
+    assert(!_socket);
+    assert(!_acceptor);
+    error_code ec;
+    local = parent::remote_endpoint(ec);
+    return ec;
+  }
+
+  error_code remote_endpoint(address_t& remote) {
     /*tcp or udp socket*/
     assert(!_acceptor);
     error_code ec;
-    if (is_open()) {
+    if (is_open())
+    { /*udp*/
       udp::endpoint end;
-      end = parent::remote_endpoint(ec);
+      ec = remote_endpoint(end);
       if (!ec) {
         remote.addr = end.address().to_string();
         remote.port = end.port();
       }
       return ec;
     }
-    if (_socket) {
-      tcp::endpoint end;
-      end = _socket->remote_endpoint(ec);
-      if (!ec) {
-        remote.addr = end.address().to_string();
-        remote.port = end.port();
-      }
-      return ec;
+    tcp::endpoint end;
+    ec = remote_endpoint(end);
+    if (!ec) {
+      remote.addr = end.address().to_string();
+      remote.port = end.port();
     }
-    return error::not_socket;
+    return ec;
   }
 
   error_code available(size_t* size) const {
