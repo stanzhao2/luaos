@@ -251,6 +251,7 @@ public:
       post(get_executor(), handler);
       return;
     }
+    set_server_name(host);
     async_connect(remote, remote.begin(), handler);
   }
 
