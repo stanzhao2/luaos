@@ -4,160 +4,79 @@
 
 /********************************************************************************/
 
-#include "ios.h"
-#include <asio/ssl.hpp>
-#include <functional>
-
-/********************************************************************************/
-namespace openssl {
-/********************************************************************************/
-
-typedef ssl::stream_base::handshake_type handshake_type;
-
-class context : public ssl::context {
-  typedef ssl::context parent;
-
-private:
-  context(method what = ssl::context::tlsv12)
-    : parent(what) {
-    set_options(default_workarounds
-      | no_sslv2
-      | no_sslv3
-      | no_tlsv1
-      | single_dh_use
-    );
-  }
-
-  error_code set_password(const std::string& pwd) {
-    error_code ec;
-    parent::set_password_callback(
-      std::bind([pwd](size_t, password_purpose) {
-        return pwd.c_str();
-        }, std::placeholders::_1, std::placeholders::_2), ec
-    );
-    return ec;
-  }
-
-public:
-  template <typename Handler>
-  void use_sni_callback(Handler handler) {
-    SSL_CTX_set_tlsext_servername_callback(
-      native_handle(),
-      [handler](SSL* ssl, int* al, void* arg) {
-        handler(SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name));
-      }
-    );
-  }
-
-  error_code load_verify_file(const char* filename) {
-    assert(filename);
-    error_code ec;
-    parent::load_verify_file(filename, ec);
-    if (!ec) {
-      set_verify_mode(ssl::verify_peer);
-      set_verify_mode(ssl::verify_fail_if_no_peer_cert);
-    }
-    return ec;
-  }
-
-  error_code use_certificate_chain(const char* cert, size_t size) {
-    assert(cert && size);
-    error_code ec;
-    set_default_verify_paths(ec);
-    if (!ec) {
-      parent::use_certificate_chain(buffer(cert, size), ec);
-    }
-    return ec;
-  }
-
-  error_code use_private_key(const char* key, size_t size, const char* pwd = nullptr) {
-    assert(key && size);
-    error_code ec;
-    parent::use_private_key(buffer(key, size), ssl::context::pem, ec);
-    if (pwd && !ec) {
-      ec = set_password(pwd);
-    }
-    return ec;
-  }
-
-  typedef std::shared_ptr<context> value;
-  static value create() { return value(new context()); }
-};
+#include "ios_ssl.h"
 
 /********************************************************************************/
 
-typedef ip::tcp::resolver::results_type results_type;
-
-static results_type resolve(
-  const char* host, unsigned short port, error_code& ec) {
-  char service[8];
-  sprintf(service, "%u", port);
-  if (!host || !host[0]) {
-    host = "::";
-  }
-  io_context ios;
-  ip::tcp::resolver resolver(ios);
-  return resolver.resolve(host, service, ec);
-}
-
+/********************************************************************************/
+namespace asio {
+/********************************************************************************/
+namespace ip {
 /********************************************************************************/
 
-class socket : public ip::tcp::socket
-  , public std::enable_shared_from_this<socket> {
-  typedef ip::tcp::socket parent;
-  typedef ssl::stream<parent&> ssl_stream;
-  typedef std::function<
-    void(const error_code&, size_t)
-  > send_callback_t;
+class socket final : public udp::socket {
+  typedef udp::socket parent;
+  typedef ip::udp::resolver::results_type results_type;
 
-  typedef struct {
-    std::string data;
-    send_callback_t handler;
-  } cache_node;
-  friend class acceptor;
-
-  io::identifier _id;
-  bool _sending = false;
-  bool _closing = false;
-  std::list<cache_node> _sendqueue;
-  io::service::value _ios;
-  context::value _context;
-  std::shared_ptr<ssl_stream> _stream;
-
-private:
-  inline socket(io::service::value ios)
-    : parent(*ios)
-    , _ios(ios) {
+  socket(io::service::value ios)
+    : _ios(ios)
+    , parent(*ios) {
   }
 
-  inline socket(io::service::value ios, context::value ctx)
-    : parent(*ios)
-    , _ios(ios)
+  socket(io::service::value ios, openssl::context::value ctx)
+    : _ios(ios)
     , _context(ctx)
-    , _stream(nullptr)
-  {
-    assign(ctx);
+    , parent(*ios) {
   }
 
-  socket(const socket&) = delete;
-
-  error_code handshake(handshake_type what) {
-    error_code ec;
-    _stream ? _stream->handshake(what, ec) : void();
-    return ec;
+  void init_socket(openssl::context::value ctx = nullptr) {
+    if (_socket)
+      return;
+    _socket = ctx ? openssl::socket::create(_ios, ctx) : openssl::socket::create(_ios);
   }
 
-  void set_server_name(const char* server_name) {
-    if (_stream) {
-      auto handle = _stream->native_handle();
-      SSL_set_tlsext_host_name(handle, server_name);
+  void init_acceptor() {
+    if (_acceptor)
+      return;
+    _acceptor = openssl::acceptor::create(_ios);
+  }
+
+  static results_type resolve(
+    const char* host, unsigned short port, error_code& ec) {
+    char service[8];
+    sprintf(service, "%u", port);
+    if (!host || !host[0]) {
+      host = "::";
     }
+    io_context ios;
+    ip::udp::resolver resolver(ios);
+    return resolver.resolve(host, service, ec);
   }
+
+private:
+  socket(const socket&) = delete;
+  io::identifier            _id;
+  openssl::context::value   _context;
+  io::service::value        _ios;
+  openssl::socket::value    _socket;
+  openssl::acceptor::value  _acceptor;
 
 public:
+  typedef struct {
+    std::string addr;
+    unsigned short port;
+  } address_t;
+
   typedef std::shared_ptr<socket> value;
-  virtual ~socket() {
-    close();
+  typedef openssl::socket::wait_type wait_type;
+  typedef openssl::context ssl_context;
+
+  static value create(io::service::value ios) {
+    return value(new socket(ios));
+  }
+
+  static value create(io::service::value ios, ssl_context::value ctx) {
+    return value(new socket(ios, ctx));
   }
 
   inline io::service::value service() const {
@@ -165,264 +84,54 @@ public:
   }
 
   inline int id() const {
-    return _id.value();
+    return (int)_id.value();
   }
 
-  inline context::value context() const {
+  inline ssl_context::value context() const {
     return _context;
   }
 
-  static value create(io::service::value ios) {
-    return value(new socket(ios));
-  }
-
-  static value create(io::service::value ios, context::value ctx) {
-    return value(new socket(ios, ctx));
-  }
-
-  void assign(context::value ctx) {
-    if (!_stream) {
-      _stream.reset(new ssl_stream(*this, *ctx));
-      return;
-    }
-    auto handle = _stream->native_handle();
-    SSL_set_SSL_CTX(handle, ctx->native_handle());
-    _context = ctx;
-  }
-
-  void async_send(const char* data, size_t size) {
-    assert(data);
-    async_send(data, size, [](const error_code&, size_t) {});
-  }
-
-  size_t read_some(char* buff, size_t size, error_code& ec) {
-    return read_some(buffer(buff, size), ec);
-  }
-
-  size_t write_some(const char* data, size_t size, error_code& ec) {
-    return write_some(buffer(data, size), ec);
-  }
-
-  void async_close() {
-    post(get_executor(),
-      std::bind(&socket::on_async_close, shared_from_this())
-    );
-  }
-
-  error_code close() {
-    error_code ec;
+  void close(bool linger = false) {
+    /*udp socket*/
     if (is_open()) {
-      parent::shutdown(shutdown_type::shutdown_both, ec);
+      error_code ec;
       parent::close(ec);
     }
-    _closing = false;
-    return ec;
-  }
-
-  error_code wait(wait_type what) {
-    error_code ec;
-    parent::wait(what, ec);
-    return ec;
-  }
-
-  error_code shutdown(shutdown_type what) {
-    error_code ec;
-    parent::shutdown(what, ec);
-    return ec;
-  }
-
-  error_code connect(const endpoint_type& remote) {
-    assert(!is_open());
-    error_code ec;
-    parent::connect(remote, ec);
-    ec = ec ? ec : handshake(handshake_type::client);
-    return ec;
-  }
-
-  error_code connect(const char* host, unsigned short port) {
-    error_code ec;
-    auto remote = resolve(host, port, ec);
-    if (!ec) {
-      auto iter = remote.begin();
-      for (; iter != remote.end(); iter++) {
-        if (!(ec = connect(*iter))) {
-          set_server_name(host);
-          break;
-        }
-      }
+    /*acceptor*/
+    if (_acceptor) {
+      _acceptor->close();
     }
-    return ec;
+    /*tcp socket*/
+    if (_socket) {
+      linger ? _socket->async_close() : _socket->close();
+    }
   }
 
-public:
-  template <typename Handler>
-  void async_connect(const endpoint_type& peer, Handler&& handler) {
+  void assign(ssl_context::value ctx) {
+    /*tcp socket only*/
     assert(!is_open());
-    parent::async_connect(peer,
-      [handler](const error_code& ec) {
-        ec ? handler(ec) : async_handshake(handshake_type::client, handler);
-      }
-    );
+    assert(!_acceptor);
+    if (!_socket) {
+      init_socket(ctx);
+      return;
+    }
+    _context = ctx;
+    _socket->assign(ctx);
   }
 
-  template <typename Handler>
-  void async_connect(const char* host, unsigned short port, Handler&& handler) {
+  error_code bind(unsigned short port, const char* host = nullptr) {
+    /*udp socket only*/
     assert(!is_open());
-    assert(host && port);
+    assert(!_socket);
+    assert(!_acceptor);
     error_code ec;
-    auto remote = resolve(host, port, ec);
+    auto local = resolve(host, port, ec);
     if (ec) {
-      post(get_executor(), handler);
-      return;
+      return ec;
     }
-    set_server_name(host);
-    async_connect(remote, remote.begin(), handler);
-  }
-
-  template <typename Handler>
-  void async_wait(wait_type what, Handler&& handler) {
-    parent::async_wait(what, handler);
-  }
-
-  template <typename Handler>
-  void async_send(const std::string& data, Handler handler) {
-    post(get_executor(),
-      std::bind(&socket::on_async_send, shared_from_this(), data, handler)
-    );
-  }
-
-  template <typename Handler>
-  void async_send(const char* data, size_t size, Handler handler) {
-    assert(data);
-    const std::string packet(data, size);
-    async_send(packet, handler);
-  }
-
-  template<typename MutableBufferSequence>
-  size_t read_some(const MutableBufferSequence& buffers, error_code& ec) {
-    return _stream ? _stream->read_some(buffers, ec) : parent::read_some(buffers, ec);
-  }
-
-  template<typename ConstBufferSequence>
-  size_t write_some(const ConstBufferSequence& buffers, error_code& ec) {
-    return _stream ? _stream->write_some(buffers, ec) : parent::write_some(buffers, ec);
-  }
-
-  template<typename MutableBufferSequence, typename Handler>
-  void async_read_some(const MutableBufferSequence& buffers, Handler&& handler) {
-    _stream ? _stream->async_read_some(buffers, handler) : parent::async_read_some(buffers, handler);
-  }
-
-  template<typename Handler>
-  void async_read_some(char* buff, size_t size, Handler&& handler) {
-    assert(buff);
-    async_read_some(buffer(buff, size), handler);
-  }
-
-  template<typename ConstBufferSequence, typename Handler>
-  void async_write_some(const ConstBufferSequence& buffers, Handler&& handler) {
-    _stream ? _stream->async_write_some(buffers, handler) : parent::async_write_some(buffers, handler);
-  }
-
-  template<typename Handler>
-  void async_write_some(const char* data, size_t size, Handler&& handler) {
-    assert(data);
-    async_write_some(buffer(data, size), handler);
-  }
-
-private:
-  void async_flush() {
-    const std::string& packet = _sendqueue.front().data;
-    const char* data = packet.c_str();
-    size_t size = packet.size();
-
-    async_write(*this,
-      buffer(data, size),
-      std::bind(&socket::on_async_write, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
-    );
-    _sending = true;
-  }
-
-  void on_async_send(std::string& data, send_callback_t&& handler) {
-    if (_closing) {
-      return;
-    }
-    if (!is_open()) {
-      return;
-    }
-    cache_node _node;
-    _node.handler = handler;
-    _node.data    = std::move(data);
-    _sendqueue.push_back(_node);
-
-    if (!_sending) {
-      async_flush();  //flush send cache
-    }
-  }
-
-  void on_async_close() {
-    if (_closing) {
-      return;
-    }
-    if (!is_open()) {
-      return;
-    }
-    error_code ec;
-    parent::shutdown(shutdown_type::shutdown_receive, ec);
-    if (ec) {
-      close();
-      return;
-    }
-    _closing = true;
-  }
-
-  void on_async_write(const error_code& ec, size_t transbytes) {
-    _sendqueue.front().handler(ec, transbytes);
-    _sendqueue.pop_front();
-    if (!ec && !_sendqueue.empty()) {
-      async_flush();  //flush send queue
-      return;
-    }
-    if (_closing) {
-      close();
-    }
-    _sending = false;
-    _sendqueue.clear();
-  }
-
-  template <typename Handler>
-  void async_handshake(handshake_type what, Handler&& handler) {
-    _stream ? _stream->async_handshake(what, handler) : dispatch(
-      get_executor(),
-      std::bind([handler](const error_code& ec) { handler(ec); }, error_code())
-    );
-  }
-
-  template <typename Handler>
-  void async_connect(const results_type& remote, results_type::const_iterator& iter, Handler&& handler) {
-    async_connect(*iter,
-      [remote, iter, handler](const error_code& ec) {
-        if (!ec) {
-          handler(ec);
-          return;
-        }
-        async_connect(remote, ++iter, handler);
-      }
-    );
-  }
-};
-
-/********************************************************************************/
-
-class acceptor : public ip::tcp::acceptor {
-  typedef ip::tcp::acceptor parent;
-  inline acceptor(io::service::value ios)
-    : parent(*ios)
-    , _ios(ios) {
-  }
-
-  error_code bind(const endpoint_type& local) {
-    error_code ec = open(local.protocol());
+    auto begin = *local.begin();
+    auto endpoint = begin.endpoint();
+    open(endpoint.protocol(), ec);
     if (ec) {
       return ec;
     }
@@ -433,92 +142,283 @@ class acceptor : public ip::tcp::acceptor {
       return ec;
     }
 #endif
-    parent::bind(local, ec);
+    parent::bind(endpoint, ec);
     return ec;
   }
 
-  error_code open(const protocol_type& protocol) {
+  error_code listen(unsigned short port, const char* host = nullptr, int backlog = 16) {
+    /*acceptor only*/
+    assert(!is_open());
+    assert(!_socket);
+    assert(!_acceptor);
+    init_acceptor();
+    return _acceptor->listen(port, host, backlog);
+  }
+
+  error_code connect(const char* host, unsigned short port) {
+    /*tcp or udp socket*/
+    assert(!is_open());
+    assert(!_acceptor);
+    if (is_open()) {
+      error_code ec;
+      auto remote = resolve(host, port, ec);
+      if (!ec) {
+        parent::connect(*remote.begin(), ec);
+      }
+      return ec;
+    }
+    init_socket(_context);
+    return _socket->connect(host, port);
+  }
+
+  error_code local_address(address_t& local) {
+    /*tcp/udp/acceptor socket*/
     error_code ec;
-    parent::open(protocol, ec);
-    return ec;
+    if (is_open()) {
+      udp::endpoint end;
+      end = parent::local_endpoint(ec);
+      if (!ec) {
+        local.addr = end.address().to_string();
+        local.port = end.port();
+      }
+      return ec;
+    }
+    if (_socket) {
+      tcp::endpoint end;
+      end = _socket->local_endpoint(ec);
+      if (!ec) {
+        local.addr = end.address().to_string();
+        local.port = end.port();
+      }
+      return ec;
+    }
+    if (_acceptor) {
+      tcp::endpoint end;
+      end = _acceptor->local_endpoint(ec);
+      if (!ec) {
+        local.addr = end.address().to_string();
+        local.port = end.port();
+      }
+      return ec;
+    }
+    return error::not_socket;
   }
 
-  io::identifier _id;
-  io::service::value _ios;
-  acceptor(const acceptor&) = delete;
-
-public:
-  typedef std::shared_ptr<acceptor> value;
-  virtual ~acceptor() {
-    close();
-  }
-
-  static value create(io::service::value ios) {
-    return value(new acceptor(ios));
-  }
-
-  inline io::service::value service() const {
-    return _ios;
-  }
-
-  inline int id() const {
-    return _id.value();
-  }
-
-  error_code close() {
+  error_code remote_address(address_t& remote) {
+    /*tcp or udp socket*/
+    assert(!_acceptor);
     error_code ec;
-    if (is_open()) parent::close(ec);
+    if (is_open()) {
+      udp::endpoint end;
+      end = parent::remote_endpoint(ec);
+      if (!ec) {
+        remote.addr = end.address().to_string();
+        remote.port = end.port();
+      }
+      return ec;
+    }
+    if (_socket) {
+      tcp::endpoint end;
+      end = _socket->remote_endpoint(ec);
+      if (!ec) {
+        remote.addr = end.address().to_string();
+        remote.port = end.port();
+      }
+      return ec;
+    }
+    return error::not_socket;
+  }
+
+  error_code available(size_t* size) const {
+    /*tcp or udp socket*/
+    assert(!_acceptor);
+    error_code ec;
+    size_t n = 0;
+    if (_socket) {
+      n = _socket->available(ec);
+    }
+    else if (is_open()) {
+      n = parent::available(ec);
+    }
+    if (size) *size = n;
     return ec;
   }
 
   error_code accept(socket::value peer) {
+    /*acceptor only*/
+    assert(peer);
+    assert(_acceptor);
+    assert(!peer->is_open());
+    peer->init_socket();
+    return _acceptor->accept(peer->_socket);
+  }
+
+  error_code wait(wait_type what) {
+    /*tcp or udp socket*/
+    assert(!_acceptor);
+    if (_socket) {
+      return _socket->wait(what);
+    }
     error_code ec;
-    parent::accept(*peer, ec);
-    if (!ec) {
-      ec = peer->handshake(handshake_type::server);
+    if (is_open()) {
+      parent::wait(what, ec);
     }
     return ec;
   }
 
-  error_code listen(const endpoint_type& local, int backlog = 16) {
-    error_code ec = bind(local);
+  error_code receive(char* data, size_t size, size_t* bytes) {
+    /*tcp or udp socket*/
+    assert(!_acceptor);
+    error_code ec;
+    size_t n = 0;
+    if (_socket) {
+      n = _socket->read_some(buffer(data, size), ec);
+    }
+    else if (is_open()) {
+      n = parent::receive(buffer(data, size), 0, ec);
+    }
+    if (bytes) *bytes = n;
+    return ec;
+  }
+
+  error_code receive_from(char* data, size_t size, address_t& remote, size_t* bytes) {
+    /*udp socket only*/
+    udp::endpoint peer;
+    error_code ec = receive_from(data, size, peer, bytes);
     if (!ec) {
-      parent::listen(backlog);
+      remote.addr = peer.address().to_string();
+      remote.port = peer.port();
     }
     return ec;
   }
 
-  error_code listen(unsigned short port, int backlog = 16, const char* host = 0) {
+  error_code receive_from(char* data, size_t size, udp::endpoint& remote, size_t* bytes) {
+    /*udp socket only*/
+    assert(is_open());
+    assert(!_socket);
+    assert(!_acceptor);
     error_code ec;
-    auto local = resolve(host, port, ec);
-    if (!ec) {
-      ec = listen(*local.begin(), backlog);
-    }
+    size_t n = parent::receive_from(buffer(data, size), remote, 0, ec);
+    if (bytes) *bytes = n;
     return ec;
+  }
+
+  error_code send(const char* data, size_t size, size_t* bytes) {
+    /*tcp or udp socket*/
+    assert(!_acceptor);
+    error_code ec;
+    size_t n = 0;
+    if (_socket) {
+      n = write(*_socket, buffer(data, size), ec);
+    }
+    else if (is_open()) {
+      n = parent::send(buffer(data, size), 0, ec);
+    }
+    if (bytes) *bytes = n;
+    return ec;
+  }
+
+  error_code send_to(const char* data, size_t size, const address_t& remote, size_t* bytes) {
+    /*udp socket only*/
+    error_code ec;
+    auto peer = resolve(remote.addr.c_str(), remote.port, ec);
+    if (ec) {
+      return ec;
+    }
+    return send_to(data, size, *peer.begin(), bytes);
+  }
+
+  error_code send_to(const char* data, size_t size, const udp::endpoint& remote, size_t* bytes) {
+    /*udp socket only*/
+    assert(is_open());
+    assert(!_socket);
+    assert(!_acceptor);
+    error_code ec;
+    size_t n = parent::send_to(buffer(data, size), remote, 0, ec);
+    if (bytes) *bytes = n;
+    return ec;
+  }
+
+public:
+  template <typename Handler>
+  void async_accept(socket::value peer, Handler&& handler) {
+    /*acceptor only*/
+    assert(peer);
+    assert(_acceptor);
+    assert(!peer->is_open());
+    peer->init_socket();
+    _acceptor->async_accept(peer->_socket, handler);
   }
 
   template <typename Handler>
-  void async_accept(socket::value peer, Handler&& handler) {
-    parent::async_accept(*peer,
-      std::bind([handler](const error_code& ec, socket::value peer) {
-        ec ? handler(ec) : peer->async_handshake(handshake_type::server, handler);
-      }, std::placeholders::_1, peer)
-    );
+  void async_connect(const char* host, unsigned short port, Handler&& handler) {
+    /*tcp socket only*/
+    assert(!is_open());
+    assert(!_acceptor);
+    init_socket(_context);
+    _socket->async_connect(host, port, handler);
+  }
+
+  template <typename Handler>
+  void async_wait(wait_type what, Handler&& handler) {
+    /*tcp or udp socket*/
+    assert(!_acceptor);
+    if (_socket) {
+      _socket->async_wait(what, handler);
+      return;
+    }
+    if (is_open()) {
+      parent::async_wait(what, handler);
+    }
+  }
+
+  template <typename Handler>
+  void async_receive(char* data, size_t size, Handler&& handler) {
+    /*tcp or udp socket*/
+    assert(!_acceptor);
+    if (_socket) {
+      _socket->async_read_some(buffer(data, size), handler);
+      return;
+    }
+    if (is_open()) {
+      parent::async_receive(buffer(data, size), handler);
+    }
+  }
+
+  template <typename Handler>
+  void async_receive_from(char* data, size_t size, udp::endpoint& remote, Handler&& handler) {
+    /*udp socket only*/
+    assert(is_open());
+    assert(!_socket);
+    assert(!_acceptor);
+    parent::async_receive_from(buffer(data, size), remote, handler);
+  }
+
+  template <typename Handler>
+  void async_send(const char* data, size_t size, Handler&& handler) {
+    /*tcp or udp socket*/
+    assert(!_acceptor);
+    if (_socket) {
+      _socket->async_send(data, size, handler);
+      return;
+    }
+    if (is_open()) {
+      parent::async_send(buffer(data, size), handler);
+    }
+  }
+
+  template <typename Handler>
+  void async_send_to(const char* data, size_t size, const udp::endpoint& remote, Handler&& handler) {
+    /*udp socket only*/
+    assert(is_open());
+    assert(!_socket);
+    assert(!_acceptor);
+    parent::async_send_to(buffer(data, size), remote, handler);
   }
 };
 
 /********************************************************************************/
-} //end of namespace openssl
+} //end of namespace ip
 /********************************************************************************/
-
-namespace asio {
-  namespace ip {
-    namespace ssl {
-      typedef openssl::context    context;
-      typedef openssl::socket     socket;
-      typedef openssl::acceptor   acceptor;
-    }
-  }
-}
-
+} //end of namespace asio
 /********************************************************************************/
