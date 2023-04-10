@@ -395,9 +395,12 @@ static void normalize(const char* filename, char* of)
       *(x ? x : of) = 0;
       continue;
     }
-    if (f[0] && strcmp(f, ".")) {
-      if (n++ == 0) *of = 0;
-      if (*of) strcat(of, LUA_DIRSEP);
+    if (n++ == 0) *of = 0;
+    if (strcmp(f, ".")) {
+      size_t k = strlen(of);
+      if (*f == 0 || (k && of[k - 1] != LUA_DIRSEP[0])) {
+        strcat(of, LUA_DIRSEP);
+      }
       strcat(of, f);  /* save the directory */
     }
   } while (*p++);
