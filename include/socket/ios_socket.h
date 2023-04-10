@@ -179,6 +179,11 @@ public:
     }
   }
 
+  void async_send(const char* data, size_t size) {
+    assert(data);
+    async_send(data, size, [](const error_code&, size_t) {});
+  }
+
   size_t read_some(char* buff, size_t size, error_code& ec) {
     return read_some(buffer(buff, size), ec);
   }
@@ -388,6 +393,26 @@ class acceptor : public ip::tcp::acceptor {
     : parent(*ios)
     , _ios(ios) {
   }
+  error_code bind(const endpoint_type& local) {
+    error_code ec = open(local.protocol());
+    if (ec) {
+      return ec;
+    }
+#ifndef _MSC_VER
+    reuse_address option(true);
+    set_option(option, ec);
+    if (ec) {
+      return ec;
+    }
+#endif
+    parent::bind(local, ec);
+    return ec;
+  }
+  error_code open(const protocol_type& protocol) {
+    error_code ec;
+    parent::open(protocol, ec);
+    return ec;
+  }
   io::service::value _ios;
 
 public:
@@ -420,13 +445,9 @@ public:
   }
 
   error_code listen(const endpoint_type& local, int backlog = 16) {
-    error_code ec;
-    open(local.protocol(), ec);
+    error_code ec = bind(local);
     if (!ec) {
-      bind(local, ec);
-      if (!ec) {
-        parent::listen(backlog);
-      }
+      parent::listen(backlog);
     }
     return ec;
   }
