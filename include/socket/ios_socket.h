@@ -119,7 +119,7 @@ class socket : public ip::tcp::socket
   io::identifier _id;
   bool _sending = false;
   bool _closing = false;
-  std::list<cache_node> _sendcache;
+  std::list<cache_node> _sendqueue;
   io::service::value _ios;
   context::value _context;
   std::shared_ptr<ssl_stream> _stream;
@@ -133,9 +133,13 @@ private:
   inline socket(io::service::value ios, context::value ctx)
     : parent(*ios)
     , _ios(ios)
-    , _context(ctx) {
-    _stream.reset(new ssl_stream(*this, *ctx));
+    , _context(ctx)
+    , _stream(nullptr)
+  {
+    assign(ctx);
   }
+
+  socket(const socket&) = delete;
 
   error_code handshake(handshake_type what) {
     error_code ec;
@@ -177,11 +181,13 @@ public:
   }
 
   void assign(context::value ctx) {
-    if (_stream) {
-      auto handle = _stream->native_handle();
-      SSL_set_SSL_CTX(handle, ctx->native_handle());
-      _context = ctx;
+    if (!_stream) {
+      _stream.reset(new ssl_stream(*this, *ctx));
+      return;
     }
+    auto handle = _stream->native_handle();
+    SSL_set_SSL_CTX(handle, ctx->native_handle());
+    _context = ctx;
   }
 
   void async_send(const char* data, size_t size) {
@@ -210,6 +216,12 @@ public:
       parent::close(ec);
     }
     _closing = false;
+    return ec;
+  }
+
+  error_code wait(wait_type what) {
+    error_code ec;
+    parent::wait(what, ec);
     return ec;
   }
 
@@ -255,6 +267,8 @@ public:
 
   template <typename Handler>
   void async_connect(const char* host, unsigned short port, Handler&& handler) {
+    assert(!is_open());
+    assert(host && port);
     error_code ec;
     auto remote = resolve(host, port, ec);
     if (ec) {
@@ -266,6 +280,11 @@ public:
   }
 
   template <typename Handler>
+  void async_wait(wait_type what, Handler&& handler) {
+    parent::async_wait(what, handler);
+  }
+
+  template <typename Handler>
   void async_send(const std::string& data, Handler handler) {
     post(get_executor(),
       std::bind(&socket::on_async_send, shared_from_this(), data, handler)
@@ -274,6 +293,7 @@ public:
 
   template <typename Handler>
   void async_send(const char* data, size_t size, Handler handler) {
+    assert(data);
     const std::string packet(data, size);
     async_send(packet, handler);
   }
@@ -295,6 +315,7 @@ public:
 
   template<typename Handler>
   void async_read_some(char* buff, size_t size, Handler&& handler) {
+    assert(buff);
     async_read_some(buffer(buff, size), handler);
   }
 
@@ -305,12 +326,13 @@ public:
 
   template<typename Handler>
   void async_write_some(const char* data, size_t size, Handler&& handler) {
+    assert(data);
     async_write_some(buffer(data, size), handler);
   }
 
 private:
   void async_flush() {
-    const std::string& packet = _sendcache.front().data;
+    const std::string& packet = _sendqueue.front().data;
     const char* data = packet.c_str();
     size_t size = packet.size();
 
@@ -331,7 +353,7 @@ private:
     cache_node _node;
     _node.handler = handler;
     _node.data    = std::move(data);
-    _sendcache.push_back(_node);
+    _sendqueue.push_back(_node);
 
     if (!_sending) {
       async_flush();  //flush send cache
@@ -355,17 +377,17 @@ private:
   }
 
   void on_async_write(const error_code& ec, size_t transbytes) {
-    _sendcache.front().handler(ec, transbytes);
-    _sendcache.pop_front();
-    if (!ec && !_sendcache.empty()) {
-      async_flush();  //flush send cache
+    _sendqueue.front().handler(ec, transbytes);
+    _sendqueue.pop_front();
+    if (!ec && !_sendqueue.empty()) {
+      async_flush();  //flush send queue
       return;
     }
     if (_closing) {
       close();
     }
     _sending = false;
-    _sendcache.clear();
+    _sendqueue.clear();
   }
 
   template <typename Handler>
@@ -423,6 +445,7 @@ class acceptor : public ip::tcp::acceptor {
 
   io::identifier _id;
   io::service::value _ios;
+  acceptor(const acceptor&) = delete;
 
 public:
   typedef std::shared_ptr<acceptor> value;

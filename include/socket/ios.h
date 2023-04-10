@@ -72,6 +72,7 @@ public:
     _pool->push(_id);
   }
 
+  typedef int value_type;
   inline int value() const { return _id; }
 };
 
@@ -87,6 +88,7 @@ class service : public io_context {
     : parent()
     , _work_guard(make_work_guard(*this)) {
   }
+  service(const service&) = delete;
 
 public:
   template <typename Handler>
