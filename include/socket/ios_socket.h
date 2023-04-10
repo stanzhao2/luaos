@@ -116,6 +116,7 @@ class socket : public ip::tcp::socket
   } cache_node;
   friend class acceptor;
 
+  io::identifier _id;
   bool _sending = false;
   bool _closing = false;
   std::list<cache_node> _sendcache;
@@ -157,6 +158,10 @@ public:
 
   inline io::service::value service() const {
     return _ios;
+  }
+
+  inline int id() const {
+    return _id.value();
   }
 
   inline context::value context() const {
@@ -393,6 +398,7 @@ class acceptor : public ip::tcp::acceptor {
     : parent(*ios)
     , _ios(ios) {
   }
+
   error_code bind(const endpoint_type& local) {
     error_code ec = open(local.protocol());
     if (ec) {
@@ -408,11 +414,14 @@ class acceptor : public ip::tcp::acceptor {
     parent::bind(local, ec);
     return ec;
   }
+
   error_code open(const protocol_type& protocol) {
     error_code ec;
     parent::open(protocol, ec);
     return ec;
   }
+
+  io::identifier _id;
   io::service::value _ios;
 
 public:
@@ -427,6 +436,10 @@ public:
 
   inline io::service::value service() const {
     return _ios;
+  }
+
+  inline int id() const {
+    return _id.value();
   }
 
   error_code close() {
