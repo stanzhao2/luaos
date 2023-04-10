@@ -331,29 +331,7 @@ end
 ----------------------------------------------------------------------------
 
 local function parse_url_params(params)
-    if not params then
-        return nil
-    end
-    local result
-    local argvs = string_split(params, '&')
-    for i = 1, #argvs do
-        local x = string_split(argvs[i], '=')
-        if not result then
-            result = {}
-        end
-        local key;
-        if x[1] then
-            key = string_trim(x[1])
-        end
-        local value
-        if x[2] then
-            value = string_trim(x[2])
-        end
-        if key and value then
-            result[key] = value
-        end
-    end
-    return result
+    return conv.url.parse_params(params);
 end
 
 local function url_to_filename(url)

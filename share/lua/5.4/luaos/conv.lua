@@ -31,7 +31,9 @@ local x_url = {};
 --- 'str' 待编码的字符串
 ---@param str string
 ---@return string
-function x_url.escape(str) end
+function x_url.escape(str)
+    return curl.escape(str);
+end
 
 --- url解码字符串
 ---
@@ -40,7 +42,38 @@ function x_url.escape(str) end
 --- 'str' 待解码的字符串
 ---@param str string
 ---@return string
-function x_url.unescape(str) end
+function x_url.unescape(str)
+    return curl.unescape(str);
+end
+
+--- 解析url参数列表
+---@params string
+---@return table
+function x_url.parse_params(params)
+    if not params then
+        return nil
+    end
+    local result
+    local argvs = string_split(params, '&')
+    for i = 1, #argvs do
+        local x = string_split(argvs[i], '=')
+        if not result then
+            result = {}
+        end
+        local key;
+        if x[1] then
+            key = string_trim(x[1])
+        end
+        local value
+        if x[2] then
+            value = string_trim(x[2])
+        end
+        if key and value then
+            result[key] = value
+        end
+    end
+    return result
+end
 
 ----------------------------------------------------------------------------
 ---@class json
@@ -410,7 +443,7 @@ function x_rsa.decrypt(data, key) end
 ---@class conv
 local x = {
     ---@type url
-    url = curl,
+    url = x_url,
     ---@type json
     json = json,
     ---@type pack
