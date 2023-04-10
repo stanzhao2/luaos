@@ -16,10 +16,11 @@
 *********************************************************************************
 ]]--
 
-local pack = require("msgpack");
-local conv = require("openssl");
-local curl = require("curl");
-local json = require("rapidjson");
+local pack    = require("msgpack");
+local conv    = require("openssl");
+local curl    = require("curl");
+local json    = require("rapidjson");
+local unicode = require("luaos.unicode");
 
 ----------------------------------------------------------------------------
 ---@class url
@@ -47,7 +48,7 @@ function x_url.unescape(str)
 end
 
 --- 解析url参数列表
----@params string
+---@params params string
 ---@return table
 function x_url.parse_params(params)
     if not params then
@@ -442,6 +443,7 @@ function x_rsa.decrypt(data, key) end
 
 ---@class conv
 local x = {
+    unicode = {},
     ---@type url
     url = x_url,
     ---@type json
@@ -457,8 +459,22 @@ local x = {
     ---@type aes
     aes = conv.aes,
     ---@type rsa
-    rsa = conv.rsa,
+    rsa = conv.rsa,    
 }
+
+---将 utf8 格式的字符串编码为 unicode 字符串
+---@param str string
+---@return string
+function x.unicode.encode(str)
+    return unicode.utf8_to_unicode(str);
+end
+
+---将 unicode 格式的字符串解码为 utf8 字符串
+---@param str string
+---@return string
+function x.unicode.decode(str)
+    return unicode.unicode_to_utf8(str);
+end
 
 ----------------------------------------------------------------------------
 --- 将json字符串反序列成LUA的变量
