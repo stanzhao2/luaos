@@ -593,26 +593,10 @@ static void ll_savelog(const char* data, size_t size, color_type color)
   }
 }
 
-static int ll_output(const std::string& str, color_type color)
+static void printf_info(const char* msg, color_type color)
 {
   static std::mutex _mutex;
-  size_t size = str.size();
-  const char* msg = str.c_str();
-
-#ifdef _MSC_VER
-  std::string data(str);
-  if (!is_utf8(str.c_str(), str.size())) {
-    data = mbs_to_utf8(str);
-    msg  = data.c_str();
-    size = data.size();
-  }
-#endif
-
   std::unique_lock<std::mutex> lock(_mutex);
-  if (color != color_type::yellow) {
-    ll_savelog(msg, size, color);
-  }
-
 #ifdef _MSC_VER
   console::instance()->print(msg, color);
 #else
@@ -626,6 +610,37 @@ static int ll_output(const std::string& str, color_type color)
     printf("\033[1;36m%s\033[0m", msg);  //缺省色(青色)
   }
 #endif
+}
+
+static int ll_output(const std::string& str, color_type color)
+{
+  size_t size = str.size();
+  const char* msg = str.c_str();
+
+#ifdef _MSC_VER
+  std::string data(str);
+  if (!is_utf8(str.c_str(), str.size())) {
+    data = mbs_to_utf8(str);
+    msg  = data.c_str();
+    size = data.size();
+  }
+#endif
+
+  if (color != color_type::yellow) {
+    ll_savelog(msg, size, color);
+  }
+
+  if (luaos_is_debug()) {
+    printf_info(msg, color);
+    return 0;
+  }
+
+  if (alive_exit && !alive_exit->stopped()) {
+    std::string info(msg);
+    alive_exit->post(std::bind([](const std::string& msg, color_type color) {
+      printf_info(msg.c_str(), color);
+    }, info, color));
+  }
   return 0;
 }
 
@@ -1365,6 +1380,7 @@ int luaos_close(lua_State* L)
   if (removeL()) {
     if (remainder == 0) {
       if (alive_thread && alive_thread->joinable()) {
+        alive_exit->poll();
         alive_exit->stop();
         alive_thread->detach();
         alive_thread.reset();
