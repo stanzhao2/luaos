@@ -27,7 +27,7 @@ local string_split  = function(str, delimiter)
     local result = string.split(str, delimiter);
     for i = 1, #result do
         if #result[i] > 0 then
-            table_insert(splited, result[i]);
+            table.insert(splited, result[i]);
         end
     end
     return splited;
