@@ -86,7 +86,7 @@ public:
 
   typedef std::shared_ptr<socket> value;
   typedef openssl::socket::wait_type wait_type;
-  typedef openssl::context ssl_context;
+  typedef openssl::context context;
 
   static value create(io::service::value ios) {
     return value(new socket(ios, family::sock_stream));
@@ -96,11 +96,11 @@ public:
     return value(new socket(ios, type));
   }
 
-  static value create(io::service::value ios, ssl_context::value ctx) {
+  static value create(io::service::value ios, context::value ctx) {
     return value(new socket(ios, ctx, family::sock_stream));
   }
 
-  static value create(io::service::value ios, ssl_context::value ctx, family type) {
+  static value create(io::service::value ios, context::value ctx, family type) {
     return value(new socket(ios, ctx, type));
   }
 
@@ -116,7 +116,7 @@ public:
     return _family;
   }
 
-  inline ssl_context::value context() const {
+  inline context::value ssl_context() const {
     return _context;
   }
 
@@ -167,7 +167,7 @@ public:
     return false;
   }
 
-  void assign(ssl_context::value ctx)
+  void assign(context::value ctx)
   {
     assert(ctx);
     if (is_udp_socket()) {
