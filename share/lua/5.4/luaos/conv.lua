@@ -74,11 +74,11 @@ function x_url.parse_params(params)
         end
         local key;
         if x[1] then
-            key = string_trim(x[1])
+            key = string.trim(x[1])
         end
         local value
         if x[2] then
-            value = string_trim(x[2])
+            value = string.trim(x[2])
         end
         if key and value then
             result[key] = value
