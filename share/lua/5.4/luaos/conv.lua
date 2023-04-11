@@ -22,6 +22,17 @@ local curl    = require("curl");
 local json    = require("rapidjson");
 local unicode = require("luaos.unicode");
 
+local string_split  = function(str, delimiter)
+    local splited = {};
+    local result = string.split(str, delimiter);
+    for i = 1, #result do
+        if #result[i] > 0 then
+            table_insert(splited, result[i]);
+        end
+    end
+    return splited;
+end
+
 ----------------------------------------------------------------------------
 ---@class url
 local x_url = {};
