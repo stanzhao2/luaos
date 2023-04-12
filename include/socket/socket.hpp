@@ -497,7 +497,7 @@ namespace eth
     class socket : public ip::tcp::socket
     {
       typedef ip::tcp::socket parent;
-      typedef ssl::stream<socket&> ssl_stream;
+      typedef ssl::stream<parent&> ssl_stream;
       ssl_stream *_stream;
 
       template <typename Handler>
@@ -711,24 +711,21 @@ namespace eth
         return ec;
       }
 
+      void on_wait(const error_code& ec, size_t n, bool keep_on, handler_t handler)
+      {
+        handler(ec, n);
+        if (keep_on && !ec) {
+          async_wait(socket::wait_read, handler);
+        }
+      }
+
       void dequeue(const error_code& ec, bool keep_on, handler_t handler)
       {
         error_code _ec;
-        size_t bytes = 0;
-        if (ec) {
-          _ec = ec;
-        }
-        else {
-          bytes = available(_ec);
-        }
-        if (bytes == 0) {
-          _ec = error::connection_reset;
-        }
         _tmrecv = 0;
-        if (_ec || bytes > 0) {
-          handler(_ec, bytes);
-        }
-        if (keep_on && !_ec) {
+        handler(ec, available(_ec));
+
+        if (keep_on && !ec) {
           async_wait(socket::wait_read, handler);
         }
       }
@@ -835,6 +832,7 @@ namespace eth
       bool               _sending;
       bool               _closed;
       int                _widx;
+      char               _recved[8192];
       circular_buffer    _buffers[2];
 
     public:
@@ -1046,6 +1044,11 @@ namespace eth
         return parent::send(buffer(data, size), 0, ec);
       }
 
+      const char* receive() const
+      {
+        return _recved;;
+      }
+
       size_t receive(char* buf, size_t size)
       {
         assert(buf);
@@ -1055,8 +1058,9 @@ namespace eth
 
       size_t receive(char* buf, size_t size, error_code& ec)
       {
-        assert(buf);
-        return parent::receive(buffer(buf, size), 0, ec);
+        ec.clear();
+        memcpy(buf, _recved, size);
+        return size;;
       }
 
       void async_send(const std::string& data)
@@ -1139,12 +1143,20 @@ namespace eth
           _notify = handler;
           return;
         }
+        async_receive(
+          buffer(&_recved, sizeof(_recved)),
+          std::bind(
+            &socket::on_wait, shared_from_this(), placeholders1, placeholders2, keep_on, (handler_t)handler
+          )
+        );
+        /* async_wait has a bug for ssl socket
         parent::async_wait(
           wait_read,
           std::bind(
             &socket::dequeue, shared_from_this(), placeholders1, keep_on, (handler_t)handler
           )
         );
+        */
       }
     };
   } //end of namespace tcp
@@ -1510,6 +1522,11 @@ namespace eth
       error_code ec;
       size_t n = _tcp ? _tcp->available(ec) : _udp->available(ec);
       return ec ? 0 : n;
+    }
+
+    const char* receive() const
+    {
+      return _tcp ? _tcp->receive() : nullptr;
     }
 
     size_t receive(char* buf, size_t size)

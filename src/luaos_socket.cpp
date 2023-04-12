@@ -138,28 +138,19 @@ static error_code on_read(size_t size, int index, socket_type peer)
   lua_State* L = luaos_local.lua_state();
   stack_rollback rollback(L);
 
-  if (data.size() < size) {
-    data.resize(size);
-  }
-  error_code ec;
-  size = peer->receive((char*)data.c_str(), size, ec);
-  if (ec || size == 0) {
-    return ec;
-  }
-
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   if (!lua_isfunction(L, -1)) {
     return error::invalid_argument;
   }
 
   lua_pushinteger(L, 0); //no error
-  lua_pushlstring(L, data.c_str(), size);
+  lua_pushlstring(L, peer->receive(), size);
   if (luaos_pcall(L, 2, 0) != LUA_OK) {
     luaos_error("%s\n", lua_tostring(L, -1));
     lua_pop(L, 1);
     peer->close();
   }
-  return ec;
+  return error_code();
 }
 
 static void on_receive(const error_code& ec, size_t size, int index, socket_type peer)
