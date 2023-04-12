@@ -353,6 +353,7 @@ int main(int argc, char* argv[])
     lua_close(logluaL);
   }
   luaos_trace("LuaOS has exited, see you...\n\n");
+  luaos_close(L);
   return (int)error;
 }
 
