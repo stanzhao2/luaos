@@ -8,6 +8,8 @@
 #include <asio/ssl.hpp>
 #include <functional>
 
+#define DEF_RBUFF_SIZE 8192
+
 /********************************************************************************/
 namespace openssl {
 /********************************************************************************/
@@ -119,7 +121,7 @@ class socket : public ip::tcp::socket
 
   bool _sending = false;
   bool _closing = false;
-  char _prevrcv[8192];
+  char _prevrcv[DEF_RBUFF_SIZE];
   std::list<cache_node> _sendqueue;
   std::shared_ptr<ssl_stream> _stream;
 
@@ -152,7 +154,8 @@ private:
   }
 
   void on_wait(const error_code& ec, const callback_t& handler) {
-    handler(ec, available());
+    size_t bytes = available();
+    handler(ec, bytes > DEF_RBUFF_SIZE ? DEF_RBUFF_SIZE : bytes);
   }
 
 public:

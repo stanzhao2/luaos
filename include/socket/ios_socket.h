@@ -68,7 +68,8 @@ class socket final : public udp::socket
 
   void on_wait(const error_code& ec, const callback_t& handler)
   {
-    handler(ec, available());
+    size_t bytes = available();
+    handler(ec, bytes > DEF_RBUFF_SIZE ? DEF_RBUFF_SIZE : bytes);
   }
 
   void on_select(const error_code& ec, size_t bytes, const callback_t& handler)
