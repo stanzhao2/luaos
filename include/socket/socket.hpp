@@ -714,6 +714,7 @@ namespace eth
 
       void on_wait(const error_code& ec, size_t n, bool keep_on, handler_t handler)
       {
+        _tmrecv = 0;
         handler(ec, n);
         if (keep_on && !ec) {
           async_wait(socket::wait_read, handler);
@@ -1060,6 +1061,7 @@ namespace eth
 
       size_t receive(char* buf, size_t size, error_code& ec)
       {
+        _tmrecv = 0;
         if (_asyned != false) {
           ec.clear();
           memcpy(buf, _recved, size);
