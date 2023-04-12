@@ -631,6 +631,7 @@ namespace eth
         , _tmrecv  (0)
         , _expires (0)
         , _widx    (0)
+        , _asyned (false)
         , _closed (false)
         , _sending(false) {
       }
@@ -831,6 +832,7 @@ namespace eth
       size_t             _tmrecv;
       bool               _sending;
       bool               _closed;
+      bool               _asyned;
       int                _widx;
       char               _recved[8192];
       circular_buffer    _buffers[2];
@@ -1046,7 +1048,7 @@ namespace eth
 
       const char* receive() const
       {
-        return _recved;;
+        return _recved;
       }
 
       size_t receive(char* buf, size_t size)
@@ -1058,9 +1060,12 @@ namespace eth
 
       size_t receive(char* buf, size_t size, error_code& ec)
       {
-        ec.clear();
-        memcpy(buf, _recved, size);
-        return size;;
+        if (_asyned != false) {
+          ec.clear();
+          memcpy(buf, _recved, size);
+          return size;
+        }
+        return parent::receive(buffer(buf, size), 0, ec);
       }
 
       void async_send(const std::string& data)
@@ -1143,6 +1148,7 @@ namespace eth
           _notify = handler;
           return;
         }
+        _asyned = true;
         async_receive(
           buffer(&_recved, sizeof(_recved)),
           std::bind(

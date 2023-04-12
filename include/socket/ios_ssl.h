@@ -121,6 +121,7 @@ class socket : public ip::tcp::socket
 
   bool _sending = false;
   bool _closing = false;
+  bool _asynced = false;
   char _prevrcv[DEF_RBUFF_SIZE];
   std::list<cache_node> _sendqueue;
   std::shared_ptr<ssl_stream> _stream;
@@ -128,11 +129,13 @@ class socket : public ip::tcp::socket
 private:
   inline socket(io::service::value ios)
     : parent(*ios)
+    , _asynced(false)
     , _stream(nullptr) {
   }
 
   inline socket(io::service::value ios, context::value ctx)
     : parent(*ios)
+    , _asynced(false)
     , _stream(nullptr)
   {
     assign(ctx);
@@ -275,6 +278,7 @@ public:
       return;
     }
     //async_wait has a bug for ssl socket
+    _asynced = true;
     async_read_some(_prevrcv, sizeof(_prevrcv), handler);
   }
 
@@ -296,6 +300,9 @@ public:
   size_t read_some(const MutableBufferSequence& buffers, error_code& ec) {
     if (!_stream) {
       return parent::read_some(buffers, ec);
+    }
+    if (!_asynced) {
+      return _stream->read_some(buffers, ec);
     }
     size_t bytes = buffers.size();
     assert(bytes <= sizeof(_prevrcv));
