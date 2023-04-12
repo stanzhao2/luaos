@@ -102,28 +102,31 @@ static results_type resolve(
 
 /********************************************************************************/
 
+typedef std::function<
+  void(const error_code&, size_t)
+> callback_t;
+
 class socket : public ip::tcp::socket
   , public std::enable_shared_from_this<socket> {
   typedef ip::tcp::socket parent;
   typedef ssl::stream<parent&> ssl_stream;
-  typedef std::function<
-    void(const error_code&, size_t)
-  > send_callback_t;
 
   typedef struct {
     std::string data;
-    send_callback_t handler;
+    callback_t handler;
   } cache_node;
   friend class acceptor;
 
   bool _sending = false;
   bool _closing = false;
+  char _prevrcv[8192];
   std::list<cache_node> _sendqueue;
   std::shared_ptr<ssl_stream> _stream;
 
 private:
   inline socket(io::service::value ios)
-    : parent(*ios) {
+    : parent(*ios)
+    , _stream(nullptr) {
   }
 
   inline socket(io::service::value ios, context::value ctx)
@@ -148,6 +151,10 @@ private:
     }
   }
 
+  void on_wait(const error_code& ec, const callback_t& handler) {
+    handler(ec, available());
+  }
+
 public:
   typedef std::shared_ptr<socket> value;
   virtual ~socket() {
@@ -169,11 +176,6 @@ public:
     }
     auto handle = _stream->native_handle();
     SSL_set_SSL_CTX(handle, ctx->native_handle());
-  }
-
-  void async_send(const char* data, size_t size) {
-    assert(data);
-    async_send(data, size, [](const error_code&, size_t) {});
   }
 
   size_t read_some(char* buff, size_t size, error_code& ec) {
@@ -261,13 +263,22 @@ public:
 
   template <typename Handler>
   void async_wait(wait_type what, Handler&& handler) {
-    parent::async_wait(what, handler);
+    if (!_stream) {
+      parent::async_wait(what,
+        std::bind(
+          &socket::on_wait, shared_from_this(), std::placeholders::_1, (callback_t)handler
+        )
+      );
+      return;
+    }
+    //async_wait has a bug for ssl socket
+    async_read_some(_prevrcv, sizeof(_prevrcv), handler);
   }
 
   template <typename Handler>
   void async_send(const std::string& data, Handler&& handler) {
     post(get_executor(),
-      std::bind(&socket::on_async_send, shared_from_this(), data, handler)
+      std::bind(&socket::on_async_send, shared_from_this(), data, (callback_t)handler)
     );
   }
 
@@ -280,7 +291,13 @@ public:
 
   template<typename MutableBufferSequence>
   size_t read_some(const MutableBufferSequence& buffers, error_code& ec) {
-    return _stream ? _stream->read_some(buffers, ec) : parent::read_some(buffers, ec);
+    if (!_stream) {
+      return parent::read_some(buffers, ec);
+    }
+    size_t bytes = buffers.size();
+    assert(bytes <= sizeof(_prevrcv));
+    memcpy(buffers.data(), _prevrcv, bytes);
+    return bytes;
   }
 
   template<typename ConstBufferSequence>
@@ -323,7 +340,7 @@ private:
     _sending = true;
   }
 
-  void on_async_send(std::string& data, send_callback_t&& handler) {
+  void on_async_send(std::string& data, const callback_t& handler) {
     if (_closing) {
       return;
     }
