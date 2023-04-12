@@ -720,7 +720,7 @@ namespace eth
           async_wait(socket::wait_read, handler);
         }
       }
-
+      /*
       void dequeue(const error_code& ec, bool keep_on, handler_t handler)
       {
         error_code _ec;
@@ -731,7 +731,7 @@ namespace eth
           async_wait(socket::wait_read, handler);
         }
       }
-
+      */
       void enqueue(const char* data, size_t size, handler_t handler)
       {
         size_t n = cache(_widx).write(data, size);
@@ -859,6 +859,10 @@ namespace eth
 
       inline void close(bool linger = true)
       {
+        if (!_asyned) {
+          shutdown(false);
+          return;
+        }
         service()->post(
           std::bind(
             &socket::shutdown, shared_from_this(), linger
@@ -1061,7 +1065,6 @@ namespace eth
 
       size_t receive(char* buf, size_t size, error_code& ec)
       {
-        _tmrecv = 0;
         if (_asyned != false) {
           ec.clear();
           memcpy(buf, _recved, size);
