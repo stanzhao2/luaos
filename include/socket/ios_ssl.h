@@ -119,23 +119,22 @@ class socket : public ip::tcp::socket
   } cache_node;
   friend class acceptor;
 
-  bool _sending = false;
-  bool _closing = false;
-  bool _asynced = false;
-  char _prevrcv[DEF_RBUFF_SIZE];
+  char   _prevrcv[DEF_RBUFF_SIZE];
+  char*  _rcvdata = _prevrcv;
+  size_t _rcvsize = 0;
+  bool   _sending = false;
+  bool   _closing = false;
   std::list<cache_node> _sendqueue;
   std::shared_ptr<ssl_stream> _stream;
 
 private:
   inline socket(io::service::value ios)
     : parent(*ios)
-    , _asynced(false)
     , _stream(nullptr) {
   }
 
   inline socket(io::service::value ios, context::value ctx)
     : parent(*ios)
-    , _asynced(false)
     , _stream(nullptr)
   {
     assign(ctx);
@@ -158,7 +157,12 @@ private:
 
   void on_wait(const error_code& ec, const callback_t& handler) {
     size_t bytes = available();
-    handler(ec, bytes > DEF_RBUFF_SIZE ? DEF_RBUFF_SIZE : bytes);
+    bytes = bytes > DEF_RBUFF_SIZE ? DEF_RBUFF_SIZE : bytes;
+    handler(ec, bytes);
+  }
+
+  void on_receive(const error_code& ec, size_t bytes, const callback_t& handler) {
+    handler(ec, _rcvsize += bytes);
   }
 
 public:
@@ -268,21 +272,6 @@ public:
   }
 
   template <typename Handler>
-  void async_wait(wait_type what, Handler&& handler) {
-    if (!_stream) {
-      parent::async_wait(what,
-        std::bind(
-          &socket::on_wait, shared_from_this(), std::placeholders::_1, (callback_t)handler
-        )
-      );
-      return;
-    }
-    //async_wait has a bug for ssl socket
-    _asynced = true;
-    async_read_some(_prevrcv, sizeof(_prevrcv), handler);
-  }
-
-  template <typename Handler>
   void async_send(const std::string& data, Handler&& handler) {
     post(get_executor(),
       std::bind(&socket::on_async_send, shared_from_this(), data, (callback_t)handler)
@@ -296,18 +285,47 @@ public:
     async_send(packet, handler);
   }
 
+  template <typename Handler>
+  void async_wait(wait_type what, Handler&& handler) {
+    if (!_stream) {
+      parent::async_wait(what,
+        std::bind(
+          &socket::on_wait, shared_from_this(), std::placeholders::_1, (callback_t)handler
+        )
+      );
+      return;
+    }
+    /* async_wait has a bug for ssl socket */
+    if (_rcvsize > 0) {
+      post(get_executor(),
+        std::bind(handler, error_code(), _rcvsize)
+      );
+      return;
+    }
+    async_read_some(_prevrcv, sizeof(_prevrcv),
+      std::bind(
+        &socket::on_receive, shared_from_this(), std::placeholders::_1, std::placeholders::_2, (callback_t)handler
+      )
+    );
+  }
+
   template<typename MutableBufferSequence>
   size_t read_some(const MutableBufferSequence& buffers, error_code& ec) {
     if (!_stream) {
       return parent::read_some(buffers, ec);
     }
-    if (!_asynced) {
-      return _stream->read_some(buffers, ec);
+    /* if it is asynchronous reception */
+    if (_rcvsize > 0) {
+      size_t bytes = buffers.size();
+      if (bytes > _rcvsize) {
+        bytes = _rcvsize;
+      }
+      memcpy(buffers.data(), _rcvdata, bytes);
+      _rcvsize -= bytes;
+      _rcvdata = _rcvsize ? (_rcvdata + bytes) : _prevrcv;
+      return bytes;
     }
-    size_t bytes = buffers.size();
-    assert(bytes <= sizeof(_prevrcv));
-    memcpy(buffers.data(), _prevrcv, bytes);
-    return bytes;
+    return _stream->read_some(buffers, ec);
   }
 
   template<typename ConstBufferSequence>

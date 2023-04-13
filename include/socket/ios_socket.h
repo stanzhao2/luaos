@@ -59,37 +59,20 @@ class socket final : public udp::socket
     return type() == family::sock_stream;
   }
 
-  void on_callback(const error_code& ec, size_t bytes)
-  {
-    if (_sent) {
-      _sent(ec, bytes);
-    }
+  void on_callback(const error_code& ec, size_t bytes) {
+    if (_sent) _sent(ec, bytes);
   }
 
-  void on_wait(const error_code& ec, const callback_t& handler)
-  {
+  void on_wait(const error_code& ec, const callback_t& handler) {
     size_t bytes = available();
     handler(ec, bytes > DEF_RBUFF_SIZE ? DEF_RBUFF_SIZE : bytes);
   }
 
-  void on_select(const error_code& ec, size_t bytes, const callback_t& handler)
-  {
+  void on_select(const error_code& ec, size_t bytes, const callback_t& handler) {
     handler(ec, bytes);
     if (!ec) {
       async_select(wait_type::wait_read, handler);
     }
-  }
-
-  static results_type resolve(
-    const char* host, unsigned short port, error_code& ec) {
-    char service[8];
-    sprintf(service, "%u", port);
-    if (!host || !host[0]) {
-      host = "::";
-    }
-    io_context ios;
-    ip::udp::resolver resolver(ios);
-    return resolver.resolve(host, service, ec);
   }
 
 private:
@@ -103,11 +86,6 @@ private:
   openssl::acceptor::value  _acceptor;
 
 public:
-  typedef struct {
-    std::string addr;
-    unsigned short port;
-  } address_t;
-
   typedef std::shared_ptr<socket> value;
   typedef openssl::socket::wait_type wait_type;
   typedef openssl::context context;
@@ -146,8 +124,7 @@ public:
 
   void close(bool linger = false)
   {
-    if (is_udp_socket())
-    {
+    if (is_udp_socket()) {
       error_code ec;
       parent::shutdown(shutdown_type::shutdown_both);
       parent::close(ec);
@@ -249,11 +226,23 @@ public:
     return _acceptor->listen(port, host, backlog);
   }
 
+  error_code accept(socket::value peer)
+  {
+    assert(peer);
+    if (is_udp_socket()) {
+      return error::operation_not_supported;
+    }
+    if (!_acceptor) {
+      return error::bad_descriptor;
+    }
+    peer->init_socket(_context);
+    return _acceptor->accept(peer->_socket);
+  }
+
   error_code connect(const char* host, unsigned short port)
   {
     assert(host && port);
-    if (is_udp_socket())
-    {
+    if (is_udp_socket()) {
       error_code ec;
       auto remote = resolve(host, port, ec);
       if (!ec) {
@@ -268,12 +257,139 @@ public:
     return _socket->connect(host, port);
   }
 
-  error_code local_endpoint(tcp::endpoint& local)
+  error_code wait(wait_type what)
   {
     if (is_udp_socket()) {
-      return error::operation_not_supported;
+      error_code ec;
+      parent::wait(what, ec);
+      return ec;
     }
+    if (_socket) {
+      return _socket->wait(what);
+    }
+    return error::not_connected;
+  }
+
+  size_t available() const
+  {
     error_code ec;
+    return available(ec);
+  }
+
+  size_t available(error_code& ec) const
+  {
+    if (_socket) {
+      return _socket->available(ec);
+    }
+    if (_acceptor) {
+      ec = error::operation_not_supported;
+      return 0;
+    }
+    return parent::available(ec);
+  }
+
+  size_t receive(char* data, size_t size)
+  {
+    error_code ec;
+    return receive(data, size, ec);
+  }
+
+  size_t receive(char* data, size_t size, error_code& ec)
+  {
+    assert(data);
+    if (is_udp_socket()) {
+      return parent::receive(buffer(data, size), 0, ec);
+    }
+    if (_socket) {
+      return _socket->read_some(buffer(data, size), ec);
+    }
+    ec = error::not_connected;
+    return 0;
+  }
+
+  size_t receive_from(char* data, size_t size, udp::endpoint& remote)
+  {
+    error_code ec;
+    return receive_from(data, size, remote, ec);
+  }
+
+  size_t receive_from(char* data, size_t size, udp::endpoint& remote, error_code& ec)
+  {
+    assert(data);
+    if (is_tcp_socket()) {
+      ec = error::operation_not_supported;
+      return 0;
+    }
+    return parent::receive_from(buffer(data, size), remote, 0, ec);
+  }
+
+  size_t send(const char* data, size_t size)
+  {
+    error_code ec;
+    return send(data, size, ec);
+  }
+
+  size_t send(const char* data, size_t size, error_code& ec)
+  {
+    assert(data);
+    if (is_udp_socket()) {
+      return parent::send(buffer(data, size), 0, ec);
+    }
+    if (_socket) {
+      return write(*_socket, buffer(data, size), ec);
+    }
+    ec = error::not_connected;
+    return 0;
+  }
+
+  size_t send_to(const char* data, size_t size, const udp::endpoint& remote)
+  {
+    error_code ec;
+    return send_to(data, size, remote, ec);
+  }
+
+  size_t send_to(const char* data, size_t size, const udp::endpoint& remote, error_code& ec)
+  {
+    assert(data);
+    if (is_tcp_socket()) {
+      ec = error::operation_not_supported;
+      return 0;
+    }
+    return parent::send_to(buffer(data, size), remote, 0, ec);
+  }
+
+public:
+  static results_type resolve(
+    const char* host, unsigned short port, error_code& ec) {
+    char service[8];
+    sprintf(service, "%u", port);
+    if (!host || !host[0]) {
+      host = "::";
+    }
+    io_context ios;
+    ip::udp::resolver resolver(ios);
+    return resolver.resolve(host, service, ec);
+  }
+
+  error_code local_endpoint(udp::endpoint& local)
+  {
+    error_code ec(
+      error::operation_not_supported
+    );
+    if (is_udp_socket()) {
+      local = parent::local_endpoint(ec);
+    }
+    return ec;
+  }
+
+  error_code local_endpoint(tcp::endpoint& local)
+  {
+    error_code ec(
+      error::operation_not_supported
+    );
+    if (is_udp_socket()) {
+      return ec;
+    }
     if (_socket) {
       local = _socket->local_endpoint(ec);
       return ec;
@@ -285,290 +401,30 @@ public:
     return error::not_connected;
   }
 
-  error_code local_endpoint(udp::endpoint& local)
+  error_code remote_endpoint(udp::endpoint& local)
   {
-    if (is_tcp_socket()) {
-      return error::operation_not_supported;
-    }
-    error_code ec;
-    local = parent::local_endpoint(ec);
-    return ec;
-  }
-
-  error_code local_endpoint(address_t& local)
-  {
-    error_code ec;
-    if (is_udp_socket())
-    {
-      udp::endpoint end;
-      end = parent::local_endpoint(ec);
-      if (!ec) {
-        local.addr = end.address().to_string();
-        local.port = end.port();
-      }
-      return ec;
-    }
-    tcp::endpoint end;
-    ec = local_endpoint(end);
-    if (!ec) {
-      local.addr = end.address().to_string();
-      local.port = end.port();
+    error_code ec(
+      error::operation_not_supported
+    );
+    if (is_udp_socket()) {
+      local = parent::remote_endpoint(ec);
     }
     return ec;
   }
 
   error_code remote_endpoint(tcp::endpoint& local)
   {
+    error_code ec(
+      error::operation_not_supported
+    );
     if (is_udp_socket()) {
-      return error::operation_not_supported;
+      return ec;
     }
-    error_code ec;
     if (_socket) {
       local = _socket->remote_endpoint(ec);
       return ec;
     }
     return error::not_connected;
-  }
-
-  error_code remote_endpoint(udp::endpoint& local)
-  {
-    if (is_tcp_socket()) {
-      return error::operation_not_supported;
-    }
-    error_code ec;
-    local = parent::remote_endpoint(ec);
-    return ec;
-  }
-
-  error_code remote_endpoint(address_t& remote)
-  {
-    error_code ec;
-    if (is_udp_socket())
-    {
-      udp::endpoint end;
-      ec = remote_endpoint(end);
-      if (!ec) {
-        remote.addr = end.address().to_string();
-        remote.port = end.port();
-      }
-      return ec;
-    }
-    tcp::endpoint end;
-    ec = remote_endpoint(end);
-    if (!ec) {
-      remote.addr = end.address().to_string();
-      remote.port = end.port();
-    }
-    return ec;
-  }
-
-  size_t available() const
-  {
-    size_t size = 0;
-    available(&size);
-    return size;;
-  }
-
-  error_code available(size_t* size) const
-  {
-    assert(size);
-    if (_acceptor) {
-      return error::operation_not_supported;
-    }
-    error_code ec;
-    size_t n = 0;
-    if (_socket) {
-      n = _socket->available(ec);
-    }
-    else {
-      n = parent::available(ec);
-    }
-    if (size) *size = n;
-    return ec;
-  }
-
-  error_code accept(socket::value peer)
-  {
-    assert(peer);
-    if (is_udp_socket()) {
-      return error::operation_not_supported;
-    }
-    if (!_acceptor) {
-      return error::bad_descriptor;
-    }
-    peer->init_socket(_context);
-    return _acceptor->accept(peer->_socket);
-  }
-
-  error_code wait(wait_type what)
-  {
-    if (is_udp_socket())
-    {
-      error_code ec;
-      parent::wait(what, ec);
-      return ec;
-    }
-    if (_socket) {
-      return _socket->wait(what);
-    }
-    return error::not_connected;
-  }
-
-  size_t receive(char* data, size_t size)
-  {
-    size_t bytes = 0;
-    receive(data, size, &bytes);
-    return bytes;
-  }
-
-  error_code receive(char* data, size_t size, size_t* bytes)
-  {
-    assert(data && bytes);
-    error_code ec;
-    if (is_udp_socket()) {
-      *bytes = parent::receive(buffer(data, size), 0, ec);
-    }
-    else if (_socket) {
-      *bytes = _socket->read_some(buffer(data, size), ec);
-    }
-    else {
-      ec = error::not_connected;
-    }
-    return ec;
-  }
-
-  size_t receive_from(char* data, size_t size, address_t& remote)
-  {
-    assert(data);
-    size_t bytes = 0;
-    receive_from(data, size, remote, &bytes);
-    return bytes;
-  }
-
-  error_code receive_from(char* data, size_t size, address_t& remote, size_t* bytes)
-  {
-    assert(data && bytes);
-    udp::endpoint peer;
-    error_code ec = receive_from(data, size, peer, bytes);
-    if (!ec) {
-      remote.addr = peer.address().to_string();
-      remote.port = peer.port();
-    }
-    return ec;
-  }
-
-  size_t receive_from(char* data, size_t size, udp::endpoint& remote)
-  {
-    assert(data);
-    size_t bytes = 0;
-    receive_from(data, size, remote, &bytes);
-    return bytes;
-  }
-
-  error_code receive_from(char* data, size_t size, udp::endpoint& remote, size_t* bytes)
-  {
-    assert(data && bytes);
-    if (is_tcp_socket()) {
-      return error::operation_not_supported;
-    }
-    error_code ec;
-    *bytes = parent::receive_from(buffer(data, size), remote, 0, ec);
-    return ec;
-  }
-
-  size_t send(const char* data, size_t size)
-  {
-    size_t bytes = 0;
-    send(data, size, &bytes);
-    return bytes;
-  }
-
-  error_code send(const char* data, size_t size, size_t* bytes)
-  {
-    assert(data && bytes);
-    error_code ec;
-    if (is_udp_socket()) {
-      *bytes = parent::send(buffer(data, size), 0, ec);
-    }
-    else if (_socket) {
-      *bytes = write(*_socket, buffer(data, size), ec);
-    }
-    else {
-      ec = error::not_connected;
-    }
-    return ec;
-  }
-
-  void async_send(const char* data, size_t size)
-  {
-    assert(data);
-    async_send(data, size,
-      std::bind(
-        &socket::on_callback, shared_from_this(),
-        std::placeholders::_1,
-        std::placeholders::_2
-      )
-    );
-  }
-
-  size_t send_to(const char* data, size_t size, const address_t& remote)
-  {
-    size_t bytes = 0;
-    send_to(data, size, remote, &bytes);
-    return bytes;
-  }
-
-  error_code send_to(const char* data, size_t size, const address_t& remote, size_t* bytes)
-  {
-    assert(data);
-    error_code ec;
-    auto peer = resolve(remote.addr.c_str(), remote.port, ec);
-    if (ec) {
-      return ec;
-    }
-    return send_to(data, size, *peer.begin(), bytes);
-  }
-
-  void async_send_to(const char* data, size_t size, const address_t& remote)
-  {
-    assert(data);
-    async_send_to(data, size, remote,
-      std::bind(
-        &socket::on_callback, shared_from_this(),
-        std::placeholders::_1,
-        std::placeholders::_2
-      )
-    );
-  }
-
-  size_t send_to(const char* data, size_t size, const udp::endpoint& remote)
-  {
-    size_t bytes = 0;
-    send_to(data, size, remote, &bytes);
-    return bytes;
-  }
-
-  error_code send_to(const char* data, size_t size, const udp::endpoint& remote, size_t* bytes)
-  {
-    assert(data);
-    if (is_tcp_socket()) {
-      return error::operation_not_supported;
-    }
-    error_code ec;
-    *bytes = parent::send_to(buffer(data, size), remote, 0, ec);
-    return ec;
-  }
-
-  void async_send_to(const char* data, size_t size, const udp::endpoint& remote)
-  {
-    assert(data);
-    async_send_to(data, size, remote,
-      std::bind(
-        &socket::on_callback, shared_from_this(),
-        std::placeholders::_1,
-        std::placeholders::_2
-      )
-    );
   }
 
 public:
@@ -677,6 +533,17 @@ public:
     });
   }
 
+  void async_send(const char* data, size_t size)
+  {
+    async_send(data, size,
+      std::bind(
+        &socket::on_callback, shared_from_this(),
+        std::placeholders::_1,
+        std::placeholders::_2
+      )
+    );
+  }
+
   template <typename Handler>
   void async_send(const char* data, size_t size, Handler&& handler)
   {
@@ -694,19 +561,15 @@ public:
     });
   }
 
-  template <typename Handler>
-  void async_send_to(const char* data, size_t size, const address_t& remote, Handler&& handler)
+  void async_send_to(const char* data, size_t size, const udp::endpoint& remote)
   {
-    assert(data);
-    error_code ec;
-    auto peer = resolve(remote.addr.c_str(), remote.port, ec);
-    if (ec) {
-      service()->post([ec, handler]() {
-        handler(ec, 0);
-      });
-      return;
-    }
-    async_send_to(data, size, *peer.begin(), handler);
+    async_send_to(data, size, remote,
+      std::bind(
+        &socket::on_callback, shared_from_this(),
+        std::placeholders::_1,
+        std::placeholders::_2
+      )
+    );
   }
 
   template <typename Handler>
