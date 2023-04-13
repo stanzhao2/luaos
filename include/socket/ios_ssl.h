@@ -5,6 +5,7 @@
 /********************************************************************************/
 
 #include "ios.h"
+#include <vector>
 #include <asio/ssl.hpp>
 #include <functional>
 
@@ -18,6 +19,7 @@ typedef ssl::stream_base::handshake_type handshake_type;
 
 class context : public ssl::context {
   typedef ssl::context parent;
+  typedef void(*sni_callback)(const char*);
 
 private:
   context(method what = ssl::context::tlsv12)
@@ -40,15 +42,16 @@ private:
     return ec;
   }
 
+  static void sni_handler(SSL* ssl, int* al, void* arg) {
+    auto handler = (sni_callback)arg;
+    handler(SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name));
+  }
+
 public:
-  template <typename Handler>
-  void use_sni_callback(Handler handler) {
-    SSL_CTX_set_tlsext_servername_callback(
-      native_handle(),
-      [handler](SSL* ssl, int* al, void* arg) {
-        handler(SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name));
-      }
-    );
+  void use_sni_callback(sni_callback handler) {
+    auto hssl = native_handle();
+    SSL_CTX_set_tlsext_servername_arg(hssl, handler);
+    SSL_CTX_set_tlsext_servername_callback(hssl, sni_handler);
   }
 
   error_code load_verify_file(const char* filename) {
@@ -112,6 +115,7 @@ class socket : public ip::tcp::socket
   , public std::enable_shared_from_this<socket> {
   typedef ip::tcp::socket parent;
   typedef ssl::stream<parent&> ssl_stream;
+  typedef std::function<void(const error_code&)> connected_t;
 
   typedef struct {
     std::string data;
@@ -159,6 +163,10 @@ private:
     size_t bytes = available();
     bytes = bytes > DEF_RBUFF_SIZE ? DEF_RBUFF_SIZE : bytes;
     handler(ec, bytes);
+  }
+
+  void on_connect(const error_code& ec, const connected_t& handler) {
+    ec ? handler(ec) : async_handshake(handshake_type::client, handler);
   }
 
   void on_receive(const error_code& ec, size_t bytes, const callback_t& handler) {
@@ -248,27 +256,33 @@ public:
 
 public:
   template <typename Handler>
-  void async_connect(const endpoint_type& peer, Handler&& handler) {
-    assert(!is_open());
-    parent::async_connect(peer,
-      [handler](const error_code& ec) {
-        ec ? handler(ec) : async_handshake(handshake_type::client, handler);
-      }
+  void async_connect(const endpoint_type& remote, Handler&& handler) {
+    parent::async_connect(remote,
+      std::bind(
+        &socket::on_connect, shared_from_this(), std::placeholders::_1, (connected_t)handler
+      )
     );
   }
 
   template <typename Handler>
   void async_connect(const char* host, unsigned short port, Handler&& handler) {
-    assert(!is_open());
     assert(host && port);
     error_code ec;
     auto remote = resolve(host, port, ec);
     if (ec) {
-      post(get_executor(), handler);
+      post(get_executor(),
+        std::bind(
+          [ec](const connected_t& handler) { handler(ec); }, (connected_t)handler
+        )
+      );
       return;
     }
+    std::vector<endpoint_type> list;
+    for (auto iter = remote.begin(); iter != remote.end(); iter++) {
+      list.push_back(*iter);
+    }
     set_server_name(host);
-    async_connect(remote, remote.begin(), handler);
+    async_connect(list, 0, handler);
   }
 
   template <typename Handler>
@@ -419,20 +433,41 @@ private:
   void async_handshake(handshake_type what, Handler&& handler) {
     _stream ? _stream->async_handshake(what, handler) : dispatch(
       get_executor(),
-      std::bind([handler](const error_code& ec) { handler(ec); }, error_code())
+      std::bind(
+        [handler](const error_code& ec) { handler(ec); }, error_code()
+      )
     );
   }
 
   template <typename Handler>
-  void async_connect(const results_type& remote, results_type::const_iterator& iter, Handler&& handler) {
-    async_connect(*iter,
-      [remote, iter, handler](const error_code& ec) {
-        if (!ec) {
-          handler(ec);
-          return;
-        }
-        async_connect(remote, ++iter, handler);
-      }
+  void async_connect(const std::vector<endpoint_type>& list, size_t i, Handler&& handler) {
+    if (i == list.size()) {
+      post(get_executor(),
+        std::bind(
+          [](const connected_t& handler) {
+            handler(error::timed_out);
+          },
+          (connected_t)handler
+        )
+      );
+      return;
+    }
+    const endpoint_type& remote = list[i];
+    async_connect(remote,
+      std::bind(
+        [list, i](const error_code& ec, const value& self, const connected_t& handler) {
+          if (!ec) {
+            handler(ec);
+            return;
+          }
+          if (!self->is_open()) {
+            handler(ec);
+            return;
+          }
+          self->async_connect(list, i + 1, handler);
+        },
+        std::placeholders::_1, shared_from_this(), (connected_t)handler
+      )
     );
   }
 };

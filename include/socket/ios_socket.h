@@ -39,7 +39,7 @@ class socket final : public udp::socket
     , parent(*ios) {
   }
 
-  void init_socket(openssl::context::value ctx = nullptr) {
+  void init_socket(openssl::context::value ctx) {
     if (_socket)
       return;
     _socket = ctx ? openssl::socket::create(_ios, ctx) : openssl::socket::create(_ios);
@@ -49,14 +49,6 @@ class socket final : public udp::socket
     if (_acceptor)
       return;
     _acceptor = openssl::acceptor::create(_ios);
-  }
-
-  bool is_udp_socket() const {
-    return type() == family::sock_dgram;
-  }
-
-  bool is_tcp_socket() const {
-    return type() == family::sock_stream;
   }
 
   void on_callback(const error_code& ec, size_t bytes) {
@@ -116,6 +108,14 @@ public:
 
   inline family type() const {
     return _family;
+  }
+
+  inline bool is_udp_socket() const {
+    return type() == family::sock_dgram;
+  }
+
+  inline bool is_tcp_socket() const {
+    return type() == family::sock_stream;
   }
 
   inline context::value ssl_context() const {
