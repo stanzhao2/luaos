@@ -12,10 +12,15 @@
 #define eport_api
 #endif
 
-#define eport_none      0
-#define eport_true      1
-#define eport_false     0
-#define eport_error_ok  0
+#define eport_ver_major	    1
+#define eport_ver_minor	    0
+#define eport_ver_release	  1
+#define eport_version       (eport_ver_major * 10000 + eport_ver_minor * 100 + eport_ver_release)
+
+#define eport_none          0
+#define eport_true          1
+#define eport_false         0
+#define eport_error_ok      0
 
 /*******************************************************************************/
 
@@ -27,9 +32,9 @@ enum struct eport_wait_t {
   read, write
 };
 
-typedef size_t  eport_handle;
-typedef size_t  eport_errno;
-typedef size_t  eport_count;
+typedef size_t      eport_handle;
+typedef size_t      eport_errno;
+typedef size_t      eport_count;
 typedef const void* eport_context;
 
 struct eport_endpoint {
@@ -53,7 +58,7 @@ eport_api eport_errno  eport_stop           (eport_handle handle);
 eport_api eport_errno  eport_stopped        (eport_handle handle);
 eport_api eport_count  eport_run            (eport_handle handle, size_t expires);
 eport_api eport_count  eport_run_one        (eport_handle handle, size_t expires);
-eport_api eport_errno  eport_release        (eport_handle handle);
+eport_api eport_errno  eport_check_version  (size_t version = eport_version);
 
 eport_api eport_handle eport_socket         (eport_handle handle, eport_family family = eport_family::stream);
 eport_api eport_errno  eport_resolve        (const char* host, unsigned short port, eport_endpoint& endpoint);
@@ -80,7 +85,7 @@ eport_api eport_errno  eport_async_send_to  (eport_handle fd, const char* data, 
 eport_api eport_errno  eport_receive_from   (eport_handle fd, char* buffer, size_t size, eport_endpoint& remote, eport_count* count);
 eport_api eport_errno  eport_local_endpoint (eport_handle fd, eport_endpoint& local);
 eport_api eport_errno  eport_remote_endpoint(eport_handle fd, eport_endpoint& remote);
-eport_api eport_errno  eport_close          (eport_handle fd, int linger = 0);
+eport_api eport_errno  eport_close          (eport_handle fd, size_t linger = eport_false);
 
 /*******************************************************************************/
 /* libeport end */

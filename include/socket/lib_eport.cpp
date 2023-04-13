@@ -3,7 +3,7 @@
 #include <mutex>
 #include <map>
 
-#include "eport.h"
+#include "lib_eport.h"
 #include "ios_socket.h"
 
 /*******************************************************************************/
@@ -48,6 +48,13 @@ static void copy_endpoint(const eport_endpoint& end, _EndpointType& out) {
 
 /*******************************************************************************/
 
+eport_errno eport_check_version(size_t version)
+{
+  return version == eport_version ? eport_true : eport_false;
+}
+
+/*******************************************************************************/
+
 eport_handle eport_create()
 {
   auto ios = io::service::create();
@@ -70,7 +77,7 @@ eport_errno eport_release(eport_handle handle)
       return eport_error_ok;
     }
   }
-  return error::bad_descriptor;
+  return error::service_not_found;
 }
 
 /*******************************************************************************/
@@ -85,7 +92,7 @@ eport_errno eport_post(eport_handle handle, eport_cb_dispatch callback, eport_co
     ios->post([callback, argv]() { callback(argv); });
     return eport_error_ok;
   }
-  return error::bad_descriptor;
+  return error::service_not_found;
 }
 
 /*******************************************************************************/
@@ -100,7 +107,7 @@ eport_errno eport_dispatch(eport_handle handle, eport_cb_dispatch callback, epor
     ios->dispatch([callback, argv]() { callback(argv); });
     return eport_error_ok;
   }
-  return error::bad_descriptor;
+  return error::service_not_found;
 }
 
 /*******************************************************************************/
@@ -112,7 +119,7 @@ eport_errno eport_restart(eport_handle handle)
     ios->restart();
     return eport_error_ok;
   }
-  return error::bad_descriptor;
+  return error::service_not_found;
 }
 
 /*******************************************************************************/
@@ -124,7 +131,7 @@ eport_errno eport_stop(eport_handle handle)
     ios->stop();
     return eport_error_ok;
   }
-  return error::bad_descriptor;
+  return error::service_not_found;
 }
 
 /*******************************************************************************/
@@ -135,7 +142,7 @@ eport_errno eport_stopped(eport_handle handle)
   if (ios) {
     return ios->stopped() ? eport_true : eport_false;
   }
-  return error::bad_descriptor;
+  return error::service_not_found;
 }
 
 /*******************************************************************************/
@@ -245,7 +252,7 @@ eport_handle eport_socket(eport_handle handle, eport_family family)
 
 /*******************************************************************************/
 
-eport_errno eport_close(eport_handle fd, int linger)
+eport_errno eport_close(eport_handle fd, size_t linger)
 {
   auto socket = find_socket(fd);
   if (socket) {
@@ -255,7 +262,7 @@ eport_errno eport_close(eport_handle fd, int linger)
       return eport_error_ok;
     }
   }
-  return error::bad_descriptor;
+  return eport_release(fd);
 }
 
 /*******************************************************************************/
@@ -271,6 +278,7 @@ eport_errno eport_ssl_enable(eport_handle fd)
     if (!ctx) {
       ec = error::operation_not_supported;
     } else {
+      ec.clear();
       socket->assign(ctx);
     }
   }
@@ -286,11 +294,11 @@ eport_errno eport_on_hostname(eport_handle fd, eport_cb_hostname callback, eport
   );
   auto socket = find_socket(fd);
   if (socket) {
-    ec.clear();
     auto ctx = socket->ssl_context();
     if (!ctx) {
       ec = error::operation_not_supported;
     } else {
+      ec.clear();
       ctx->use_sni_callback(callback, argv);
     }
   }
@@ -476,6 +484,7 @@ eport_errno eport_select(eport_handle fd, eport_wait_t what, eport_cb_select cal
   );
   auto socket = find_socket(fd);
   if (socket) {
+    ec.clear();
     socket->async_select(
       ip::socket::wait_type(what),
       std::bind(
@@ -622,16 +631,14 @@ eport_errno eport_remote_endpoint(eport_handle fd, eport_endpoint& remote)
   );
   auto socket = find_socket(fd);
   if (socket) {
-    if (socket->is_tcp_socket())
-    {
+    if (socket->is_tcp_socket()) {
       ip::tcp::endpoint peer;
       ec = socket->remote_endpoint(peer);
       if (!ec) {
         copy_endpoint(peer, remote);
       }
     }
-    if (socket->is_udp_socket())
-    {
+    if (socket->is_udp_socket()) {
       ip::udp::endpoint peer;
       ec = socket->remote_endpoint(peer);
       if (!ec) {
@@ -651,16 +658,14 @@ eport_errno eport_local_endpoint(eport_handle fd, eport_endpoint& local)
   );
   auto socket = find_socket(fd);
   if (socket) {
-    if (socket->is_tcp_socket())
-    {
+    if (socket->is_tcp_socket()) {
       ip::tcp::endpoint peer;
       ec = socket->local_endpoint(peer);
       if (!ec) {
         copy_endpoint(peer, local);
       }
     }
-    if (socket->is_udp_socket())
-    {
+    if (socket->is_udp_socket()) {
       ip::udp::endpoint peer;
       ec = socket->local_endpoint(peer);
       if (!ec) {
