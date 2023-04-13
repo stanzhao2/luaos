@@ -19,7 +19,9 @@ typedef ssl::stream_base::handshake_type handshake_type;
 
 class context : public ssl::context {
   typedef ssl::context parent;
-  typedef void(*sni_callback)(const char*);
+  typedef void(*sni_callback)(const char*, const void*);
+  const void*  _argv = 0;
+  sni_callback _callback = 0;
 
 private:
   context(method what = ssl::context::tlsv12)
@@ -43,15 +45,21 @@ private:
   }
 
   static void sni_handler(SSL* ssl, int* al, void* arg) {
-    auto handler = (sni_callback)arg;
-    handler(SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name));
+    context* _this = (context*)arg;
+    _this->_callback(
+      SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name),
+      _this->_argv
+    );
   }
 
 public:
-  void use_sni_callback(sni_callback handler) {
-    auto hssl = native_handle();
-    SSL_CTX_set_tlsext_servername_arg(hssl, handler);
-    SSL_CTX_set_tlsext_servername_callback(hssl, sni_handler);
+  void use_sni_callback(sni_callback handler, const void* argv) {
+    auto handle = native_handle();
+    _callback = handler;
+    _argv     = argv;
+
+    SSL_CTX_set_tlsext_servername_arg(handle, this);
+    SSL_CTX_set_tlsext_servername_callback(handle, sni_handler);
   }
 
   error_code load_verify_file(const char* filename) {

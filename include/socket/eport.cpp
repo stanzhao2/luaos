@@ -279,7 +279,7 @@ eport_errno eport_ssl_enable(eport_handle fd)
 
 /*******************************************************************************/
 
-eport_errno eport_on_hostname(eport_handle fd, eport_cb_hostname callback)
+eport_errno eport_on_hostname(eport_handle fd, eport_cb_hostname callback, eport_context argv)
 {
   error_code ec(
     error::bad_descriptor
@@ -291,7 +291,7 @@ eport_errno eport_on_hostname(eport_handle fd, eport_cb_hostname callback)
     if (!ctx) {
       ec = error::operation_not_supported;
     } else {
-      ctx->use_sni_callback(callback);
+      ctx->use_sni_callback(callback, argv);
     }
   }
   return ec.value();
