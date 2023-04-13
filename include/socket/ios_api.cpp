@@ -2,8 +2,9 @@
 
 #include <mutex>
 #include <map>
+#include <memory>
 
-#include "lib_eport.h"
+#include "ios_api.h"
 #include "ios_socket.h"
 
 /*******************************************************************************/
