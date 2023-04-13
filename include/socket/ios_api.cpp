@@ -475,7 +475,7 @@ eport_errno eport_async_connect(eport_handle fd, const char* host, unsigned shor
 
 /*******************************************************************************/
 
-eport_errno eport_select(eport_handle fd, eport_wait_t what, eport_cb_select callback, eport_context argv)
+eport_errno eport_select(eport_handle fd, eport_event what, eport_cb_select callback, eport_context argv)
 {
   if (!callback) {
     return error::invalid_argument;

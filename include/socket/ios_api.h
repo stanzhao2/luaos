@@ -31,7 +31,7 @@ enum struct eport_family {
   stream, dgram
 };
 
-enum struct eport_wait_t {
+enum struct eport_event {
   read, write
 };
 
@@ -79,7 +79,7 @@ eport_api eport_errno  eport_accept         (eport_handle fd, eport_handle new_f
 eport_api eport_errno  eport_async_accept   (eport_handle fd, eport_handle new_fd, eport_cb_accept callback, eport_context argv = eport_null);
 eport_api eport_errno  eport_connect        (eport_handle fd, const char* host, unsigned short port);
 eport_api eport_errno  eport_async_connect  (eport_handle fd, const char* host, unsigned short port, eport_cb_connect callback, eport_context argv = eport_null);
-eport_api eport_errno  eport_select         (eport_handle fd, eport_wait_t what, eport_cb_select callback, eport_context argv = eport_null);
+eport_api eport_errno  eport_select         (eport_handle fd, eport_event what, eport_cb_select callback, eport_context argv = eport_null);
 eport_api eport_errno  eport_send           (eport_handle fd, const char* data, size_t length, eport_count* count = eport_null);
 eport_api eport_errno  eport_async_send     (eport_handle fd, const char* data, size_t length);
 eport_api eport_errno  eport_receive        (eport_handle fd, char* buffer, size_t size, eport_count* count);
