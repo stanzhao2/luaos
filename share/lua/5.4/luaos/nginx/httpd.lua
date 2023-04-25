@@ -514,12 +514,15 @@ local function ws_insert(cache, size, length)
     end
 end
 
-local function ws_frame(data, fin, op, deflate, first)    
+local function ws_frame(data, fin, op, deflate, first)
     local flag = fin;
-    if first and deflate then
-        flag = flag | 0x40;
-    end
-    
+    if first then
+        if deflate then
+            flag = flag | 0x40;
+        end
+    else
+        op = op_code.frame;
+    end    
     local size = #data;
     local cache = {};
     table_insert(cache, string_pack("B", op | flag))
@@ -545,7 +548,7 @@ local function ws_opcode(data)
 end
 
 local function ws_encode(data, op, deflate)
-    if op == nil then
+    if op == nil or op == 0 then
         op = ws_opcode(data);
     end
     
@@ -731,14 +734,8 @@ local function on_ws_receive(session, data)
         local fin = (v1 & 0x80) ~= 0;
         local deflate = (v1 & 0x40) ~= 0;
         
-        --如果设置压缩标记,则只能在第一帧设置
         if deflate then
-            if session.deflate then
-                ws_close(peer, 1002);
-                return;
-            end
-            --标记当前帧数据需要解压缩
-            session.deflate = deflate;
+            session.deflate = true;
         end
         
         --rsv2 unused, must be zero
@@ -756,6 +753,9 @@ local function on_ws_receive(session, data)
         end
         
         local opcode = (v1 & 0x0f);
+        if (opcode > 0) then
+            session.opcode = opcode;
+        end
         
         --客户端发来的数据包必须设置 mask 位
         local mask = (v2 & 0x80) ~= 0;
@@ -806,8 +806,8 @@ local function on_ws_receive(session, data)
             packet = convert(packet, masking_key);
         end
         
-        on_ws_request(session, fin, packet, opcode);
-        
+        on_ws_request(session, fin, packet, session.opcode);
+        session.opcode = 0;
         cache_size = cache_size - frame_size;
         offset = offset + frame_size;
     end
@@ -908,6 +908,7 @@ local function on_ws_accept(session, request)
         if x then
             deflate = true;
             headers[_HEADER_WEBSOCKET_EXTENSIONS] = "permessage-deflate; client_no_context_takeover; server_max_window_bits=15";
+            session.ws_peer.deflate = true;
         end
     end
     
