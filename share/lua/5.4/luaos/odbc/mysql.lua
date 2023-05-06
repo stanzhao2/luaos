@@ -100,8 +100,8 @@ function mysql:execute(sql, ...)
     local result = nil;
     try {
         bind(function(...)
-            stmt = self.conn:prepare(sql);
-            assert(stmt and stmt:bind(...));
+            stmt = assert(self.conn:prepare(sql));
+            assert(stmt:bind(...));
             result = assert(stmt:execute({}));
         end, ...)
     }
