@@ -524,7 +524,7 @@ static int read_line (lua_State *L, FILE *f, int chop) {
     char *buff = luaL_prepbuffer(&b);  /* preallocate buffer space */
     int i = 0;
     l_lockfile(f);  /* no memory errors can happen inside the lock */
-    while (i < LUAL_BUFFERSIZE && (c = l_getc(f)) != EOF && c != '\r' && c != '\n')
+    while (i < LUAL_BUFFERSIZE && (c = l_getc(f)) != EOF && c != '\n')
       buff[i++] = c;  /* read up to end of line or buffer limit */
     l_unlockfile(f);
     luaL_addsize(&b, i);

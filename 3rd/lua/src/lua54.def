@@ -53,6 +53,7 @@ EXPORTS
 	lua_checkstack
 	lua_close
 	lua_closeslot
+	lua_closethread
 	lua_compare
 	lua_concat
 	lua_copy
