@@ -570,7 +570,7 @@ static std::string location(lua_State* L)
       break;
     }
     if (lua_getinfo(L, "Sl", &ar)) {
-      if (ar.currentline > 0){
+      if (ar.currentline > 0) {
         if (ar.source[0] == '@') {
           ar.source++;
         }
@@ -660,7 +660,7 @@ static int ll_printf(const std::string& str, color_type color)
 static int ll_printf(lua_State* L, color_type color)
 {
   int count = lua_gettop(L);
-  std::string strfmt(luaos_is_debug() ? location(L) : "");
+  std::string strfmt(location(L));
   lua_getglobal(L, "tostring");
 
   for (int i = 1; i <= count; i++)
