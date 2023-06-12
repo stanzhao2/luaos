@@ -89,7 +89,7 @@ local function on_local_publish(topic, publisher, mask, ...)
     local message     = {}
     message.type      = cmd_publish
     message.topic     = topic
-    message.argv      = {...};
+    message.argv      = pack.encode(...);
     message.mask      = mask
     message.publisher = publisher
     
@@ -170,9 +170,7 @@ local function on_remote_publish(message)
     else
         publisher = publisher << 16; -- <<16bits
     end
-    
-    local params = message.argv;
-    luaos_publish(message.topic, message.mask, publisher, unpack(params));
+    luaos_publish(message.topic, message.mask, publisher, pack.decode(message.argv));
 end
 
 local function on_remote_cancel(message)
