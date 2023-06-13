@@ -885,6 +885,7 @@ struct luaos_job final {
 };
 
 struct luaos_timer final {
+  bool closed = false;
   asio::steady_timer steady;
   inline luaos_timer(io_handler ios) : steady(*ios) { }
   virtual ~luaos_timer() { }
@@ -1220,6 +1221,7 @@ static int steady_cancel(lua_State* L)
 {
   luaos_timer* luaself = check_timerself(L);
   if (luaself) {
+    luaself->closed = true;
     luaself->steady.cancel();
   }
   return 0;
@@ -1245,22 +1247,25 @@ static int steady_timer(lua_State* L)
   auto timer = new (userdata) luaos_timer(ios);
 
   lua_pushvalue(L, -1);
-  int ref = luaL_ref(L, LUA_REGISTRYINDEX);
-  
+  int ref = luaL_ref(L, LUA_REGISTRYINDEX);  
   timer->steady.expires_after(
     std::chrono::milliseconds(expires)
   );
   timer->steady.async_wait([index, ref](const asio::error_code& ec)
   {
     lua_State* L = luaos_local.lua_state();
-    if (!ec)
-    {
-      lua_rawgeti(L, LUA_REGISTRYINDEX, index);
-      if (luaos_pcall(L, 0, 0) != LUA_OK) {
-        luaos_error("%s\n", lua_tostring(L, -1));
-        lua_pop(L, 1);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
+    luaos_timer* timer = (luaos_timer*)lua_touserdata(L, -1);
+    if (timer && !timer->closed) {
+      if (!ec) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, index);
+        if (luaos_pcall(L, 0, 0) != LUA_OK) {
+          luaos_error("%s\n", lua_tostring(L, -1));
+          lua_pop(L, 1);
+        }
       }
     }
+    lua_pop(L, 1);  //pop timer from stack
     luaL_unref(L, LUA_REGISTRYINDEX, ref);
     luaL_unref(L, LUA_REGISTRYINDEX, index);
   });
