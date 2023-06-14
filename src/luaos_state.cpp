@@ -610,6 +610,17 @@ static void printf_info(const char* msg, color_type color)
     printf("\033[1;36m%s\033[0m", msg);  //缺省色(青色)
   }
 #endif
+  const char* name = luaos_main_name();
+  if (!name || color != color_type::red) {
+    return;
+  }
+  char filename[256];
+  sprintf(filename, "~%s_err.log", name);
+  FILE* fp = fopen(filename, "a");
+  if (fp) {
+    fwrite(msg, 1, strlen(msg), fp);
+    fclose(fp);
+  }
 }
 
 static int ll_output(const std::string& str, color_type color)
