@@ -157,16 +157,9 @@ static void push_param(lua_State* L, const std::string& v)
 
 /***********************************************************************************/
 
-std::string mainModule;
-
 bool luaos_is_debug()
 {
   return _G_debug;
-}
-
-const char* luaos_main_name()
-{
-  return mainModule.empty() ? nullptr : mainModule.c_str();
 }
 
 static int pmain(lua_State* L)
@@ -175,7 +168,6 @@ static int pmain(lua_State* L)
   const char* name = luaL_checkstring(L, 1);
   auto argvs = (const std::vector<std::string>*)lua_touserdata(L, 2);
   name = normal(name);
-  mainModule.assign(name);
 
   if (argvs) {
     for (size_t i = 0; i < argvs->size(); i++) {
