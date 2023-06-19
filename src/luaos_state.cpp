@@ -1395,8 +1395,7 @@ int luaos_close(lua_State* L)
       if (alive_thread && alive_thread->joinable()) {
         alive_exit->poll();
         alive_exit->stop();
-        alive_thread->detach();
-        alive_thread.reset();
+        alive_thread->join();
       }
     }
     lua_close(L);
