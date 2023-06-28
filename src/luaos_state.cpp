@@ -448,6 +448,214 @@ static int ll_fread(lua_State* L, const char* filefind)
   return lua_gettop(L) - topidx;
 }
 
+/***********************************************************************************/
+
+typedef struct LoadF {
+  int n;  /* number of pre-read characters */
+  FILE *f;  /* file being read */
+  char buff[BUFSIZ];  /* area for reading file */
+} LoadF;
+
+typedef struct LoadS {
+  const char *s;
+  size_t size;
+} LoadS;
+
+static const char* getnextfilename(char **path, char *end) {
+  char *sep;
+  char *name = *path;
+  if (name == end)
+    return NULL;  /* no more names */
+  else if (*name == '\0') {  /* from previous iteration? */
+    *name = *LUA_PATH_SEP;  /* restore separator */
+    name++;  /* skip it */
+  }
+  sep = strchr(name, *LUA_PATH_SEP);  /* find next separator */
+  if (sep == NULL)  /* separator not found? */
+    sep = end;  /* name goes until the end */
+  *sep = '\0';  /* finish file name */
+  *path = sep;  /* will start next search from here */
+  return name;
+}
+
+static int readable(const char *filename) {
+  FILE *f = fopen(filename, "r");  /* try to open file */
+  if (f == NULL) return 0;  /* open failed */
+  fclose(f);
+  return 1;
+}
+
+static void pusherrornotfound(lua_State *L, const char *path) {
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
+  luaL_addstring(&b, "no file '");
+  luaL_addgsub(&b, path, LUA_PATH_SEP, "'\n\tno file '");
+  luaL_addstring(&b, "'");
+  luaL_pushresult(&b);
+}
+
+static const char *searchpath(lua_State *L, const char *name, const char *path, const char *sep, const char *dirsep) {
+  luaL_Buffer buff;
+  char *pathname;  /* path with name inserted */
+  char *endpathname;  /* its end */
+  const char *filename;
+  /* separator is non-empty and appears in 'name'? */
+  if (*sep != '\0' && strchr(name, *sep) != NULL)
+    name = luaL_gsub(L, name, sep, dirsep);  /* replace it by 'dirsep' */
+  luaL_buffinit(L, &buff);
+  /* add path to the buffer, replacing marks ('?') with the file name */
+  luaL_addgsub(&buff, path, LUA_PATH_MARK, name);
+  luaL_addchar(&buff, '\0');
+  pathname = luaL_buffaddr(&buff);  /* writable list of file names */
+  endpathname = pathname + luaL_bufflen(&buff) - 1;
+  while ((filename = getnextfilename(&pathname, endpathname)) != NULL) {
+    if (readable(filename))  /* does file exist and is readable? */
+      return lua_pushstring(L, filename);  /* save and return name */
+  }
+  luaL_pushresult(&buff);  /* push path to create error message */
+  pusherrornotfound(L, lua_tostring(L, -1));  /* create error message */
+  return NULL;  /* not found */
+}
+
+static const char *findfile(lua_State *L, const char *name, const char *pname, const char *dirsep) {
+  const char *path;
+  int i = lua_upvalueindex(1);
+  if (lua_istable(L, i)) { /* has upvalue */
+    lua_getfield(L, i, pname);
+  }
+  else {
+    lua_getglobal(L, LUA_LOADLIBNAME);
+    lua_getfield(L, -1, pname);
+    lua_remove(L, -2);
+  }
+  path = lua_tostring(L, -1);
+  if (luai_unlikely(path == NULL))
+    luaL_error(L, "'package.%s' must be a string", pname);
+  return searchpath(L, name, path, ".", dirsep);
+}
+
+static const char *getF(lua_State *L, void *ud, size_t *size) {
+  LoadF *lf = (LoadF *)ud;
+  (void)L;  /* not used */
+  if (lf->n > 0) {  /* are there pre-read characters to be read? */
+    *size = lf->n;  /* return them (chars already in buffer) */
+    lf->n = 0;  /* no more pre-read characters */
+  }
+  else {  /* read a block from file */
+          /* 'fread' can return > 0 *and* set the EOF flag. If next call to
+          'getF' called 'fread', it might still wait for user input.
+          The next check avoids this problem. */
+    if (feof(lf->f)) return NULL;
+    *size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);  /* read block */
+  }
+  return lf->buff;
+}
+
+static const char *getS(lua_State *L, void *ud, size_t *size) {
+  LoadS *ls = (LoadS *)ud;
+  (void)L;  /* not used */
+  if (ls->size == 0) return NULL;
+  *size = ls->size;
+  ls->size = 0;
+  return ls->s;
+}
+
+static int errfile(lua_State *L, const char *what, int fnameindex) {
+  const char *serr = strerror(errno);
+  const char *filename = lua_tostring(L, fnameindex) + 1;
+  lua_pushfstring(L, "cannot %s %s: %s", what, filename, serr);
+  lua_remove(L, fnameindex);
+  return LUA_ERRFILE;
+}
+
+static int skipBOM(LoadF *lf) {
+  const char *p = "\xEF\xBB\xBF";  /* UTF-8 BOM mark */
+  int c;
+  lf->n = 0;
+  do {
+    c = getc(lf->f);
+    if (c == EOF || c != *(const unsigned char *)p++) return c;
+    lf->buff[lf->n++] = c;  /* to be read by the parser */
+  } while (*p != '\0');
+  lf->n = 0;  /* prefix matched; discard it */
+  return getc(lf->f);  /* return next character */
+}
+
+static int skipcomment(LoadF *lf, int *cp) {
+  int c = *cp = skipBOM(lf);
+  if (c == '#') {  /* first line is a comment (Unix exec. file)? */
+    do {  /* skip first line */
+      c = getc(lf->f);
+    } while (c != EOF && c != '\n');
+    *cp = getc(lf->f);  /* skip end-of-line, if present */
+    return 1;  /* there was a comment */
+  }
+  else return 0;  /* no comment */
+}
+
+static int loadfile(lua_State *L, const char *filename, const char *mode) {
+  LoadF lf;
+  int status, readstatus;
+  int c;
+  int fnameindex = lua_gettop(L) + 1;  /* index of filename on the stack */
+  if (filename == NULL) {
+    lua_pushliteral(L, "=stdin");
+    lf.f = stdin;
+  }
+  else {
+    lua_pushfstring(L, "@%s", filename);
+    lf.f = fopen(filename, "r");
+    if (lf.f == NULL) return errfile(L, "open", fnameindex);
+  }
+  if (skipcomment(&lf, &c)) {  /* read initial portion */
+    lf.buff[lf.n++] = '\n';  /* add line to correct line numbers */
+  }
+  if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
+    lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
+    if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
+    skipcomment(&lf, &c);  /* re-read initial portion */
+  }
+  if (c != EOF) {
+    lf.buff[lf.n++] = c;  /* 'c' is the first character of the stream */
+  }
+  status = lua_load(L, getF, &lf, lua_tostring(L, -1), mode);
+  readstatus = ferror(lf.f);
+  if (filename) fclose(lf.f);  /* close file (even in case of errors) */
+  if (readstatus) {
+    lua_settop(L, fnameindex);  /* ignore results from 'lua_load' */
+    return errfile(L, "read", fnameindex);
+  }
+  lua_remove(L, fnameindex);
+  return status;
+}
+
+static int loadbuffer(lua_State *L, const char *buff, size_t size, const char *name, const char *mode) {
+  LoadS ls;
+  ls.s = buff;
+  ls.size = size;
+  return lua_load(L, getS, &ls, name, mode);
+}
+
+static int checkload(lua_State *L, int stat, const char *filename) {
+  if (luai_likely(stat)) {  /* module loaded successfully? */
+    lua_pushstring(L, filename);  /* will be 2nd argument to module */
+    return 2;  /* return open function and file name */
+  }
+  return luaL_error(L, "error loading module '%s' from file '%s':\n\t%s", lua_tostring(L, 1), filename, lua_tostring(L, -1));
+}
+
+static int searcher_Lua(lua_State *L) {
+  const char *filename;
+  const char *name = luaL_checkstring(L, 1);
+  filename = findfile(L, name, "path", LUA_DIRSEP);
+  if (filename == NULL) {
+    return 1;  /* module not found in this path */
+  }
+  return checkload(L, (loadfile(L, filename, NULL) == LUA_OK), filename);
+}
+
+/***********************************************************************************/
+
 static int ll_require(lua_State* L)
 {
   char filename[LUAOS_MAX_PATH];
