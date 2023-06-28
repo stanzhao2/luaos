@@ -128,7 +128,7 @@ l_noret luaX_syntaxerror (LexState *ls, const char *msg) {
 ** ensuring there is only one copy of each unique string.  The table
 ** here is used as a set: the string enters as the key, while its value
 ** is irrelevant. We use the string itself as the value only because it
-** is a TValue readily available. Later, the code generation can change
+** is a TValue readly available. Later, the code generation can change
 ** this value.
 */
 TString *luaX_newstring (LexState *ls, const char *str, size_t l) {
@@ -138,12 +138,12 @@ TString *luaX_newstring (LexState *ls, const char *str, size_t l) {
   if (!ttisnil(o))  /* string already present? */
     ts = keystrval(nodefromval(o));  /* get saved copy */
   else {  /* not in use yet */
-    TValue *stv = s2v(L->top.p++);  /* reserve stack space for string */
+    TValue *stv = s2v(L->top++);  /* reserve stack space for string */
     setsvalue(L, stv, ts);  /* temporarily anchor the string */
     luaH_finishset(L, ls->h, stv, o, stv);  /* t[string] = string */
     /* table is not a metatable, so it does not need to invalidate cache */
     luaC_checkGC(L);
-    L->top.p--;  /* remove string from stack */
+    L->top--;  /* remove string from stack */
   }
   return ts;
 }
@@ -537,11 +537,17 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         return TK_EOS;
       }
       default: {
-        if (lislalpha(ls->current)) {  /* identifier or reserved word? */
+        if (lislalpha(ls->current) || ls->current > 0x80) {  /* identifier or reserved word? */
           TString *ts;
           do {
-            save_and_next(ls);
-          } while (lislalnum(ls->current));
+			if(ls->current > 0x80) {                                                                      
+			  save_and_next(ls);                                                  
+			  save_and_next(ls);                                                  
+		    } else {
+              save_and_next(ls);
+			}
+          }
+		  while (lislalnum(ls->current) || ls->current > 0x80);
           ts = luaX_newstring(ls, luaZ_buffer(ls->buff),
                                   luaZ_bufflen(ls->buff));
           seminfo->ts = ts;
