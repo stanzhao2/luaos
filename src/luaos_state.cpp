@@ -450,6 +450,8 @@ static int ll_fread(lua_State* L, const char* filefind)
 
 /***********************************************************************************/
 
+#define LUA_SEARCHER "searcher"
+
 typedef struct LoadF {
   int n;  /* number of pre-read characters */
   FILE *f;  /* file being read */
@@ -517,17 +519,21 @@ static const char *searchpath(lua_State *L, const char *name, const char *path, 
   return NULL;  /* not found */
 }
 
-static const char *findfile(lua_State *L, const char *name, const char *pname, const char *dirsep) {
-  const char *path;
-  int i = lua_upvalueindex(1);
+static void libgetfield(lua_State *L, int i, const char* field) {
+  i = lua_upvalueindex(i);
   if (lua_istable(L, i)) { /* has upvalue */
-    lua_getfield(L, i, pname);
+    lua_getfield(L, i, field);
   }
   else {
     lua_getglobal(L, LUA_LOADLIBNAME);
-    lua_getfield(L, -1, pname);
+    lua_getfield(L, -1, field);
     lua_remove(L, -2);
   }
+}
+
+static const char *findfile(lua_State *L, const char *name, const char *pname, const char *dirsep) {
+  const char *path;
+  libgetfield(L, 1, pname);
   path = lua_tostring(L, -1);
   if (luai_unlikely(path == NULL))
     luaL_error(L, "'package.%s' must be a string", pname);
@@ -593,6 +599,15 @@ static int skipcomment(LoadF *lf, int *cp) {
   else return 0;  /* no comment */
 }
 
+static const char* skipcomment(const char* buff, size_t* size) {
+  if (*buff == '#') {
+    do {
+      (*size)--;
+    } while (*(++buff) != '\n');
+  }
+  return buff;
+}
+
 static int loadfile(lua_State *L, const char *filename, const char *mode) {
   LoadF lf;
   int status, readstatus;
@@ -631,7 +646,9 @@ static int loadfile(lua_State *L, const char *filename, const char *mode) {
 
 static int loadbuffer(lua_State *L, const char *buff, size_t size, const char *name, const char *mode) {
   LoadS ls;
-  ls.s = buff;
+  buff    = skipBOM(buff, &size);
+  buff    = skipcomment(buff, &size);
+  ls.s    = buff;
   ls.size = size;
   return lua_load(L, getS, &ls, name, mode);
 }
@@ -648,8 +665,8 @@ static int searcher_Lua(lua_State *L) {
   const char *filename;
   const char *name = luaL_checkstring(L, 1);
   filename = findfile(L, name, "path", LUA_DIRSEP);
-  if (filename == NULL) {
-    return 1;  /* module not found in this path */
+  if (!filename) {
+    return 1; /* file not found */
   }
   return checkload(L, (loadfile(L, filename, NULL) == LUA_OK), filename);
 }
