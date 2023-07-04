@@ -1683,6 +1683,23 @@ int luaos_pexec(lua_State* L, const char* filename, int n)
   return result;
 }
 
+int luaos_require(lua_State* L) {
+  if (luaL_optboolean(L, 2, false)) {
+    const char* name = luaL_checkstring(L, 1);
+    const char* filename = findfile(L, name, "path", LUA_DIRSEP);
+    if (filename) {
+      lua_getfield(L, LUA_REGISTRYINDEX, LUA_LOADED_TABLE);
+      lua_pushnil(L);
+      lua_setfield(L, -2, name);
+      lua_pop(L, 1);
+    }
+  }
+  lua_pushvalue(L, lua_upvalueindex(1));
+  lua_pushvalue(L, 1);
+  lua_call(L, 1, 2);
+  return 2;
+}
+
 /***********************************************************************************/
 
 static int luaopen_socket(lua_State* L)
@@ -1694,6 +1711,10 @@ static int luaopen_socket(lua_State* L)
 
 static int luaopen_others(lua_State* L)
 {
+  lua_getglobal(L, "require");
+  lua_pushcclosure(L, luaos_require, 1);
+  lua_setglobal(L, "require");
+
   rpcall::init_metatable(L);
   storage::init_metatable(L);
   subscriber::init_metatable(L);
