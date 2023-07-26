@@ -563,10 +563,12 @@ static void free_slist(lua_State* L, const char** key)
   lua_pushlightuserdata(L, (void*)key);
   lua_rawget(L, LUA_REGISTRYINDEX);
   slist = (struct curl_slist*)lua_topointer(L, -1);
-  if (slist) {
-    if (slist->data) {
-      curl_slist_free_all(slist);
-    }
+  if (slist)
+  {
+    curl_slist_free_all(slist);
+    lua_pushlightuserdata(L, (void*)key);
+    lua_pushnil(L);
+    lua_rawset(L, LUA_REGISTRYINDEX);
   }
 }
 
