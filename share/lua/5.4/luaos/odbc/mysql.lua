@@ -65,9 +65,9 @@ function mysql:is_open()
 end
 
 function mysql:begin()
-    if not self.conn then
+    if not self:keepalive() then
         return nil;
-    end    
+    end
     local pending = { conn = self.conn };    
     function pending.commit(self)
         assert(self);
@@ -107,7 +107,8 @@ function mysql:execute(sql, ...)
     }
     .catch {
         bind(function(...)
-            error(sql, ...);
+            error(self.conf.dbname, self.conf.host);
+            error(sql, "\n", ...);
         end, ...)
     }
     .finally {
