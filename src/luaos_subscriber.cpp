@@ -153,11 +153,23 @@ static int lua_os_cancel(lua_State* L)
       _topics.erase(topic);
     }
   }
+  return 0;
+}
 
-  auto watch_iter = _watchs.find(topic);
-  if (watch_iter != _watchs.end())
+static int lua_os_cancel_watch(lua_State* L)
+{
+  size_t topic = luaL_checkinteger(L, 1);
+  if (topic == 0) {
+    luaL_argerror(L, 1, "must be an integer greater than 0");
+  }
+
+  auto ios = luaos_local.lua_service();
+  std::unique_lock<std::mutex> lock(_mutex);
+
+  auto iter = _watchs.find(topic);
+  if (iter != _watchs.end())
   {
-    item_array& items = watch_iter->second;
+    item_array& items = iter->second;
     auto item = items.begin();
     for (; item != items.end(); ++item)
     {
@@ -314,10 +326,11 @@ namespace subscriber
   void init_metatable(lua_State* L)
   {
     struct luaL_Reg methods[] = {
-      { "subscribe",    lua_os_subscribe  },
-      { "cancel",       lua_os_cancel     },
-      { "watch",        lua_os_watch      },
-      { "publish",      lua_os_publish    },
+      { "subscribe",    lua_os_subscribe    },
+      { "cancel",       lua_os_cancel       },
+      { "watch",        lua_os_watch        },
+      { "cancel_watch", lua_os_cancel_watch },
+      { "publish",      lua_os_publish      },
       { NULL,           NULL },
     };
     lua_getglobal(L, "os");

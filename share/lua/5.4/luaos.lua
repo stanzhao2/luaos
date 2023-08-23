@@ -199,6 +199,12 @@ local luaos = {
         return os.watch(topic, handler);
     end,
     
+    ---取消一个消息监听(跨模块)
+    ---@param topic integer
+    cancel_watch = function(topic)
+        return os.cancel_watch(topic);
+    end,
+    
     ---订阅一个系统消息(跨模块)
     ---@param topic integer
     ---@param handler fun(publisher:integer, mask:integer, ...):void
