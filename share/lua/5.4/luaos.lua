@@ -307,6 +307,7 @@ luaos.nginx = {
         
         local ok, reason = server.start(host, port, wwwroot, sslctx);
         if not ok then
+            server.stop();
             return nil, reason;
         end
         
