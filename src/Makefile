@@ -56,7 +56,7 @@ LIBLOADPATH := -Wl,-rpath=./ -Wl,-rpath=../lib -Wl,-rpath=L$(LUA_LIBDIR)
 LINKOPTION := -o $(OUTPUT) $(LIBLOADPATH)
 
 #dependency librarys
-LIBS := -llua -ldl -lcrypto -lssl -lpthread -ltcmalloc
+LIBS := -llua -ldl -lcrypto -lssl -lpthread
 
 ########################## OPTIONS END ############################
 

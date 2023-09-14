@@ -25,8 +25,8 @@
 /***********************************************************************************/
 
 #ifndef _MSC_VER
-#include <gperftools/malloc_extension.h>
-#include <gperftools/tcmalloc.h>
+//#include <gperftools/malloc_extension.h>
+//#include <gperftools/tcmalloc.h>
 #else
 #include "dumper/ifdumper.h"
 static CMiniDumper _G_dumper(true);
@@ -228,7 +228,7 @@ lua_State* init_main_state()
 int main(int argc, char* argv[])
 {
 #ifndef _MSC_VER
-  MallocExtension::instance()->SetMemoryReleaseRate(0);
+  //MallocExtension::instance()->SetMemoryReleaseRate(0);
 #else
   SetConsoleOutputCP(65001);  /* set charset to utf8 */
 #endif
