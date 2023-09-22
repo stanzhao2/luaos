@@ -193,6 +193,9 @@ local function default_headers()
 end
 
 local function http_encode_data(headers, data)
+	if data == nil or data == "" then
+		return "";
+	end
     local encoding = headers[_HEADER_CONTENT_ENCODING]
     if encoding == "gzip" then
         data = gzip.deflate(data, true)
@@ -258,19 +261,22 @@ local function on_http_success(peer, headers, code)
     head = string_format("HTTP/1.1 %d %s\r\n", code, text)
     table_insert(cache, head);
     
-    local data
+    local data = "";
+	local data_length = 0;
+	
     if #headers > 0 then
-        data = table_concat(headers)
-        data = http_encode_data(headers, data)
+        data = table_concat(headers);
+        data = http_encode_data(headers, data);
+		data_length = #data;
     end
     
     local has_body = false
-    if code == 200 and data and #data > 0 then
+    if code == 200 then
         has_body = true
     end
     
     if has_body then
-        head = string_format(_HEADER_CONTENT_LENGTH .. ": %d\r\n", #data)
+        head = string_format(_HEADER_CONTENT_LENGTH .. ": %d\r\n", data_length)
         table_insert(cache, head);
     end
     
@@ -284,7 +290,8 @@ local function on_http_success(peer, headers, code)
     
     table_insert(cache, "\r\n");
     send_message(peer, table_concat(cache))
-    if has_body then
+	
+    if has_body and data_length > 0 then
         send_message(peer, data)
     end
     
