@@ -410,7 +410,7 @@ static int lcurl_easy_init(lua_State* L)
   /* open curl handle */
   global_update(1);
   c->curl = curl_easy_init();
-  curl_easy_setopt(c->curl, CURLOPT_NOSIGNAL);
+  curl_easy_setopt(c->curl, CURLOPT_NOSIGNAL, 1);
   /* set metatable to curlT object */
   luaL_getmetatable(L, CURLHANDLE);
   lua_setmetatable(L, -2);
