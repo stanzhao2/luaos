@@ -266,6 +266,7 @@ static void on_accept(const error_code& ec, socket_type peer, int index, socket_
 
   lua_rawgeti(L, LUA_REGISTRYINDEX, index);
   if (!lua_isfunction(L, -1)) {
+    delete lua_sock;
     return;
   }
 

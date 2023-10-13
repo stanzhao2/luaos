@@ -12,14 +12,11 @@
  *******************************************************************************************/
 
 #include <string.h>
+#include <mutex>
 #include <stdlib.h>
 #include <curl/curl.h>
 #include <curl/easy.h>
-
-
-#include "lua.h"
-#include "lualib.h"
-#include "lauxlib.h"
+#include <lua.hpp>
 
 #if !defined LUA_VERSION_NUM
 # define luaL_Reg luaL_reg
@@ -369,6 +366,39 @@ curlioerr ioctlCallback(CURL* handle, int cmd, void* clientp)
 }
 #endif
 
+/*
+** type == 1: curl_easy_init
+** type == 0: curl_easy_cleanup
+*/
+static void global_update(int type) {
+  static std::mutex mutex;
+  static size_t used_count = 0;
+  static time_t init_time  = 0;
+  static bool global_init  = false;
+
+  std::unique_lock<std::mutex> lock(mutex);
+  used_count += (type ? 1 : -1);
+  if (used_count > 0) { /* is using */
+    if (global_init) {
+      return;
+    }
+  }
+  time_t now = time(0);
+
+  if (type) { /* init */
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    init_time = now;
+    global_init = true;
+    return;
+  }
+
+  if (now - init_time > 60) {
+    curl_global_cleanup();
+    init_time = now;
+    global_init = false;
+  }
+}
+
 /* Initializes CURL connection */
 static int lcurl_easy_init(lua_State* L)
 {
@@ -378,7 +408,9 @@ static int lcurl_easy_init(lua_State* L)
   c->rud.nval = c->wud.nval = c->pud.nval = c->hud.nval = c->iud.nval = 0;
   c->rudtype = c->wudtype = c->pudtype = c->hudtype = c->iudtype = LUA_TNIL;
   /* open curl handle */
+  global_update(1);
   c->curl = curl_easy_init();
+  curl_easy_setopt(c->curl, CURLOPT_NOSIGNAL);
   /* set metatable to curlT object */
   luaL_getmetatable(L, CURLHANDLE);
   lua_setmetatable(L, -2);
@@ -859,13 +891,12 @@ static int lcurl_easy_close(lua_State* L)
 static int lcurl_gc(lua_State* L)
 {
   curlT* c = (curlT*)luaL_checkudata(L, 1, CURLHANDLE);
-  if (c && c->curl)
-  {
+  if (c && c->curl) {
     curl_easy_cleanup(c->curl);
+    global_update(0);
   }
   return 0;
 }
-
 
 static const struct luaL_Reg luacurl_meths[] =
 {

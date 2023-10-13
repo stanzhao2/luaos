@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\luacurl.c">
+    <ClCompile Include="..\src\luacurl.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

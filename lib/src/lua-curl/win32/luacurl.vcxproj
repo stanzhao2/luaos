@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\luacurl.c" />
+    <ClCompile Include="..\src\luacurl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\libcurl.h" />
