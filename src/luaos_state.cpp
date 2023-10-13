@@ -1884,7 +1884,7 @@ int luaos_openlibs(lua_State* L)
 
 lua_State* luaos_newstate(lua_CFunction loader)
 {
-  lua_State* L = luaL_newstate();
+  lua_State* L = alloc_new_state(0);
   luaL_openlibs(L);
   init_luapath(L);
   ll_install(L, loader);

@@ -37,6 +37,7 @@ public:
 };
 
 io_handler luaos_main_ios();
+lua_State* alloc_new_state(void* ud);
 
 #define luaos_local local_values::instance()
 
