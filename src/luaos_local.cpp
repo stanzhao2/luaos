@@ -18,6 +18,7 @@
 
 /********************************************************************************/
 
+static thread_local lua_State* LL = 0;
 static void warnfoff (void *ud, const char *message, int tocont);
 static void warnfon  (void *ud, const char *message, int tocont);
 static void warnfcont(void *ud, const char *message, int tocont);
@@ -68,7 +69,7 @@ static void warnfoff(void *ud, const char *message, int tocont) {
 }
 
 static char* ll_stack(char *buffer, size_t size) {
-  lua_State* L = luaos_local.lua_state();
+  lua_State* L = LL;
   if (!L) {
     return 0;
   }
@@ -235,7 +236,7 @@ local_values::local_values()
     signal(SIGINT,  luaos_signal);
     signal(SIGTERM, luaos_signal);
   }
-  _L = luaos_newstate(luaos_loader);
+  LL = _L = luaos_newstate(luaos_loader);
   luaos_openlibs(_L);
 }
 
