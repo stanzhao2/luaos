@@ -91,13 +91,17 @@ static char* ll_stack(char *buffer, size_t size) {
 #include <map>
 #include <string>
 
-static thread_local std::map<
-  void*, std::string
->  mp_pointers;
+typedef struct {
+  size_t count, size;
+} mem_trunk;
 
 static thread_local std::map<
-  std::string, size_t
-> mp_alloced;
+  std::string, mem_trunk
+> mem_used;
+
+static thread_local std::map<
+  void*, std::string
+> mem_address;
 
 static int skynet_snapshot(lua_State* L) {
   if (!luaos_is_debug()) {
@@ -113,9 +117,10 @@ static int skynet_snapshot(lua_State* L) {
   }
 
   char buffer[8192];
-  auto iter = mp_alloced.begin();
-  for (; iter != mp_alloced.end(); ++iter) {
-    snprintf(buffer, sizeof(buffer), "memory(not free): % 8llu\t\t%s\n", iter->second, iter->first.c_str());
+  auto iter = mem_used.begin();
+  for (; iter != mem_used.end(); ++iter) {
+    const auto& trunk = iter->second;
+    snprintf(buffer, sizeof(buffer), "% 8llu\t% 8llu\t%s\n", trunk.count, trunk.size, iter->first.c_str());
     fwrite(buffer, 1, strlen(buffer), fp);
   }
 
@@ -124,63 +129,76 @@ static int skynet_snapshot(lua_State* L) {
   return 1;
 }
 
-static void ll_record(const char* file, void* op, void* np, size_t ltype) {
+static void ll_record(const char* file, void* op, void* np, size_t osize, size_t nsize) {
+  /* malloc */
+  if (np) {
+    if (op == nullptr) {
+      switch (osize) {
+      case LUA_TNIL:
+      case LUA_TBOOLEAN:
+      case LUA_TLIGHTUSERDATA:
+      case LUA_TNUMBER:
+      case LUA_TSTRING:
+      case LUA_TTHREAD:
+      case LUA_NUMTYPES:
+        return;
+      }
+    }
+    auto iter = mem_used.find(file);
+    mem_address[np] = file;
+
+    if (iter != mem_used.end()) {
+      iter->second.count++;
+      iter->second.size += nsize;
+    } else {
+      mem_trunk trunk;
+      trunk.count = 1;
+      trunk.size  = nsize;
+      mem_used[file] = trunk;
+    }
+  }
   /* free */
   if (op) {
-    auto pp = mp_pointers.find(op);
-    if (pp == mp_pointers.end()) {
+    auto pp = mem_address.find(op);
+    if (pp == mem_address.end()) {
       return;
     }
-    auto iter = mp_alloced.find(pp->second.c_str());
-    mp_pointers.erase(pp);
+    auto iter = mem_used.find(pp->second.c_str());
+    mem_address.erase(pp);
 
-    if (iter == mp_alloced.end()) {
+    if (iter == mem_used.end()) {
       return;
     }
-    auto count = iter->second;
+    auto count = iter->second.count;
     if (count > 0) {
-      iter->second--;
+      iter->second.count--;
+      iter->second.size -= osize;
     } if (count == 1) {
-      mp_alloced.erase(iter);
+      mem_used.erase(iter);
     }
-    return;
-  }
-
-  /* malloc */
-  if (file && np && op == NULL) {
-    switch (ltype) {
-    case LUA_TTHREAD:
-    case LUA_NUMTYPES:
-      return;
-    }
-
-    auto iter = mp_alloced.find(file);
-    mp_pointers[np] = file;
-
-    if (iter != mp_alloced.end()) {
-      iter->second++;
-    } else {
-      mp_alloced[file] = 1;
-    }
-    return;
   }
 }
 
 static void* ll_alloc(void* ud, void* ptr, size_t osize, size_t nsize) {
   char str[1024];
   const char* file = 0;
-  if (luaos_is_debug()) {
+  bool is_debug = luaos_is_debug();
+  if (is_debug) {
     file = ll_stack(str, sizeof(str));
   }
 
   if (nsize == 0) {
-    ll_record(file, ptr, 0, 0);
-    free(ptr);
+    if (is_debug) {
+      ll_record(file, ptr, 0, osize, nsize);
+    }
+    ::free(ptr);
     return NULL;
   }
 
-  void* pnew = realloc(ptr, nsize);
-  if (file) ll_record(file, ptr, pnew, osize);
+  void* pnew = ::realloc(ptr, nsize);
+  if (is_debug && file) {
+    ll_record(file, ptr, pnew, osize, nsize);
+  }
   return pnew;
 }
 
