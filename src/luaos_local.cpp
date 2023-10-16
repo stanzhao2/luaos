@@ -139,18 +139,17 @@ static void ll_record(const char* file, void* op, void* np, size_t osize, size_t
       case LUA_TLIGHTUSERDATA:
       case LUA_TNUMBER:
       case LUA_TSTRING:
-      case LUA_TTHREAD:
       case LUA_NUMTYPES:
         return;
       }
     }
-    auto iter = mem_used.find(file);
     mem_address[np] = file;
-
+    auto iter = mem_used.find(file);
     if (iter != mem_used.end()) {
       iter->second.count++;
       iter->second.size += nsize;
-    } else {
+    }
+    else {
       mem_trunk trunk;
       trunk.count = 1;
       trunk.size  = nsize;
@@ -173,31 +172,33 @@ static void ll_record(const char* file, void* op, void* np, size_t osize, size_t
     if (count > 0) {
       iter->second.count--;
       iter->second.size -= osize;
-    } if (count == 1) {
+    }
+    if (count == 1) {
       mem_used.erase(iter);
     }
   }
 }
 
 static void* ll_alloc(void* ud, void* ptr, size_t osize, size_t nsize) {
-  char str[1024];
-  const char* file = 0;
-  bool is_debug = luaos_is_debug();
-  if (is_debug) {
-    file = ll_stack(str, sizeof(str));
-  }
+  bool debugging = luaos_is_debug();
 
+  /* free memory */
   if (nsize == 0) {
-    if (is_debug) {
-      ll_record(file, ptr, 0, osize, nsize);
+    if (debugging) {
+      ll_record(nullptr, ptr, nullptr, osize, nsize);
     }
-    ::free(ptr);
+    free(ptr);
     return NULL;
   }
 
-  void* pnew = ::realloc(ptr, nsize);
-  if (is_debug && file) {
-    ll_record(file, ptr, pnew, osize, nsize);
+  /* alloc memory */
+  void* pnew = realloc(ptr, nsize);
+  if (!debugging) {
+    char name[1024];
+    const char* file = ll_stack(name, sizeof(name));
+    if (file) {
+      ll_record(file, ptr, pnew, osize, nsize);
+    }
   }
   return pnew;
 }
