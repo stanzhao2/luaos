@@ -18,7 +18,7 @@
 
 /********************************************************************************/
 
-static thread_local lua_State* LL = 0;
+static thread_local lua_State* GL = 0;
 static void warnfoff (void *ud, const char *message, int tocont);
 static void warnfon  (void *ud, const char *message, int tocont);
 static void warnfcont(void *ud, const char *message, int tocont);
@@ -69,7 +69,7 @@ static void warnfoff(void *ud, const char *message, int tocont) {
 }
 
 static char* ll_stack(char *buffer, size_t size) {
-  lua_State* L = LL;
+  lua_State* L = GL;
   if (!L) {
     return 0;
   }
@@ -88,22 +88,10 @@ static char* ll_stack(char *buffer, size_t size) {
   return buffer;
 }
 
-#include <map>
-#include <string>
-
-typedef struct {
-  size_t count, size;
-} mem_trunk;
-
-static thread_local std::map<
-  std::string, mem_trunk
-> mem_used;
-
-static thread_local std::map<
-  void*, std::string
-> mem_address;
-
 static int skynet_snapshot(lua_State* L) {
+  auto& mem_address = local_used_address;
+  auto& mem_used = local_used;
+
   if (!luaos_is_debug()) {
     lua_pushboolean(L, 0);
     return 1;
@@ -130,6 +118,8 @@ static int skynet_snapshot(lua_State* L) {
 }
 
 static void ll_record(const char* file, void* op, void* np, size_t osize, size_t nsize) {
+  auto& mem_address = local_used_address;
+  auto& mem_used = local_used;
   /* malloc */
   if (np) {
     if (op == nullptr) {
@@ -184,7 +174,7 @@ static void* ll_alloc(void* ud, void* ptr, size_t osize, size_t nsize) {
 
   /* free memory */
   if (nsize == 0) {
-    if (debugging) {
+    if (debugging && GL) {
       ll_record(nullptr, ptr, nullptr, osize, nsize);
     }
     free(ptr);
@@ -193,7 +183,7 @@ static void* ll_alloc(void* ud, void* ptr, size_t osize, size_t nsize) {
 
   /* alloc memory */
   void* pnew = realloc(ptr, nsize);
-  if (!debugging) {
+  if (debugging && GL) {
     char name[1024];
     const char* file = ll_stack(name, sizeof(name));
     if (file) {
@@ -255,18 +245,22 @@ local_values::local_values()
     signal(SIGINT,  luaos_signal);
     signal(SIGTERM, luaos_signal);
   }
-  LL = _L = luaos_newstate(luaos_loader);
+  _L = luaos_newstate(luaos_loader);
   luaos_openlibs(_L);
 }
 
 local_values::~local_values()
 {
-  luaos_close(_L);
+  if (_L) {
+    luaos_close(_L);
+    GL = _L = nullptr;
+  }
 }
 
 local_values& local_values::instance()
 {
   static thread_local local_values _instance;
+  GL = _instance._L;
   return _instance;
 }
 
