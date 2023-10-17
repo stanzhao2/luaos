@@ -129,6 +129,7 @@ static void ll_record(const char* file, void* op, void* np, size_t osize, size_t
       case LUA_TLIGHTUSERDATA:
       case LUA_TNUMBER:
       case LUA_TSTRING:
+      case LUA_TFUNCTION:
       case LUA_NUMTYPES:
         return;
       }
