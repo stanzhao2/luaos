@@ -68,11 +68,20 @@ static void warnfoff(void *ud, const char *message, int tocont) {
   checkcontrol((lua_State *)ud, message, tocont);
 }
 
+static lua_State *getthread(lua_State *L) {
+  return lua_isthread(L, 1) ? lua_tothread(L, 1) : L;
+}
+
 static char* ll_stack(char *buffer, size_t size) {
   lua_State* L = GL;
   if (!L) {
     return 0;
   }
+  if (lua_gethookmask(L)) {
+    return nullptr;
+  }
+  L = getthread(L);
+
   lua_Debug ar;
   int result = lua_getstack(L, 0, &ar);
   if (result == 0) {
