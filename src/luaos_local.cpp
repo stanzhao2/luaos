@@ -89,7 +89,7 @@ static char* ll_stack(lua_State* L, char *buffer, size_t size, std::string& what
   char temp[128];
   what.clear();
   if (ar.name && ar.namewhat) {
-    snprintf(temp, sizeof(temp), "<%s %s>", ar.name, ar.namewhat);
+    snprintf(temp, sizeof(temp), "%s %s", ar.name, ar.namewhat);
     what.assign(temp);
   }
   else if (ar.what) {
@@ -183,7 +183,7 @@ static int skynet_snapshot(lua_State* L) {
     lua_pushstring(L, iter->first.c_str());
     lua_setfield(L, -2, "file");
 
-    lua_pushfstring(L, "[%s]", lua_typename(L, iter->second.type));
+    lua_pushfstring(L, "%s", lua_typename(L, iter->second.type));
     lua_setfield(L, -2, "typename");
     lua_rawseti(L, -2, i++);
   }
