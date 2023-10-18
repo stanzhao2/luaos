@@ -23,6 +23,7 @@
 
 typedef struct {
   int type;
+  std::string what;
   size_t tmms;
   size_t count, size;
 } mem_trunk;
