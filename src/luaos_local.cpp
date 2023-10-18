@@ -75,20 +75,25 @@ static lua_State *getthread(lua_State *L) {
 static char* ll_stack(lua_State* L, char *buffer, size_t size) {
   L = getthread(L);
   lua_Debug ar;
-  if (!lua_getstack(L, 0, &ar)) {
-    return 0;
+  for (int i = 0; i < 100; i++) {
+    if (!lua_getstack(L, i, &ar)) {
+      break;
+    }
+    if (!lua_getinfo(L, "Sl", &ar)) {
+      break;
+    }
+    if (ar.currentline > 0) {
+      break;
+    }
   }
-  if (!lua_getinfo(L, "Sl", &ar)) {
-    return 0;
-  }
-  if (ar.currentline < 0) {
-    return 0;
+  if (ar.currentline < 1) {
+    return nullptr;
   }
   snprintf(buffer, size, "%s:%d", ar.short_src, ar.currentline);
   return buffer;
 }
 
-static const char* skynet_mem_free(local_values* lua, void* ptr, size_t osize) {
+static const char* skynet_mem_free(local_values* lua, void* ptr, size_t osize, int& luaT) {
   static thread_local std::string fline;
   memused_type& mmused = lua->mused();
   memaddr_type& mmaddr = lua->maddr();
@@ -105,6 +110,7 @@ static const char* skynet_mem_free(local_values* lua, void* ptr, size_t osize) {
   if (iter != mmused.end()) {
     auto count = iter->second.count;
     if (count > 0) {
+      luaT = iter->second.type;
       iter->second.count--;
       iter->second.size -= osize;
       if (iter->second.count == 0) {
@@ -119,6 +125,15 @@ static  void skynet_mem_alloc(local_values* lua, int type, void* pnew, size_t ns
   memused_type& mmused = lua->mused();
   memaddr_type& mmaddr = lua->maddr();
 
+  switch (type) {
+  case LUA_TNONE:
+  case LUA_TNIL:
+  case LUA_TBOOLEAN:
+  case LUA_TLIGHTUSERDATA:
+  case LUA_TNUMBER:
+  case LUA_TSTRING:
+    return;
+  }
   mmaddr[pnew] = fline;
   auto iter = mmused.find(fline);
   if (iter != mmused.end()) {
@@ -129,31 +144,30 @@ static  void skynet_mem_alloc(local_values* lua, int type, void* pnew, size_t ns
     mem_trunk trunk;
     trunk.type  = type;
     trunk.count = 1;
+    trunk.tmms  = os::milliseconds();
     trunk.size  = nsize;
     mmused[fline] = trunk;
   }
 }
 
-static void skynet_on_hook(lua_State* L, lua_Debug* ar) {
+static void ll_on_hook(lua_State* L, lua_Debug* ar) {
   /* to do nothine */
 }
 
 static int skynet_snapshot(lua_State* L) {
+  lua_gc(L, LUA_GCCOLLECT);
   memused_type& mmused = local_used;
   lua_newtable(L);
   for (auto iter = mmused.begin(); iter != mmused.end(); ++iter) {
     lua_newtable(L);
     lua_pushinteger(L, (lua_Integer)iter->second.count);
     lua_setfield(L, -2, "count");
+    lua_pushinteger(L, (lua_Integer)iter->second.tmms);
+    lua_setfield(L, -2, "time");
     lua_pushinteger(L, (lua_Integer)iter->second.size);
-    lua_setfield(L, -2, "bytes");
-    if (iter->second.type) {
-      const char* type_name = lua_typename(L, iter->second.type);
-      lua_pushstring(L, type_name);
-    }
-    else {
-      lua_pushstring(L, "C");
-    }
+    lua_setfield(L, -2, "usage");
+    const char* type_name = lua_typename(L, iter->second.type);
+    lua_pushfstring(L, "[%s]", type_name);
     lua_setfield(L, -2, "typename");
     lua_setfield(L, -2, iter->first.c_str());
   }
@@ -162,12 +176,17 @@ static int skynet_snapshot(lua_State* L) {
 
 static void* ll_alloc(void* ud, void* ptr, size_t osize, size_t nsize) {
   local_values* lua = (local_values*)ud;
+  /* the same size */
+  if (ptr && osize == nsize) {
+    return ptr;
+  }
 
   /* free memory */
+  int  luaT = 0;
   bool snapshot = luaos_is_debug();
   if (nsize == 0) {
     if (snapshot) {
-      skynet_mem_free(lua, ptr, osize);
+      skynet_mem_free(lua, ptr, osize, luaT);
     }
     free(ptr);
     return NULL;
@@ -175,28 +194,28 @@ static void* ll_alloc(void* ud, void* ptr, size_t osize, size_t nsize) {
 
   /* alloc memory */
   void* pnew = realloc(ptr, nsize);
-  if (!snapshot) {
+  if (!snapshot || !pnew) {
     return pnew;
   }
   if (snapshot && gL){
     if (!lua_gethookmask(gL)) {
-      lua_sethook(gL, skynet_on_hook, LUA_MASKLINE, 0);
+      lua_sethook(gL, ll_on_hook, LUA_MASKLINE, 0);
     }
   }
 
-  int  luaT = 0;
   char temp[1024];
   const char* fline = nullptr;
   if (ptr) {
-    if (pnew != ptr) {
-      fline = skynet_mem_free(lua, ptr, osize);
+    if (pnew == ptr) {
+      return pnew;
     }
+    fline = skynet_mem_free(lua, ptr, osize, luaT);
   }
   else if (gL) {
     fline = ll_stack(gL, temp, sizeof(temp));
     luaT = (int)osize;
   }
-  if (fline) {
+  if (fline && luaT) {
     skynet_mem_alloc(lua, luaT, pnew, nsize, fline);
   }
   return pnew;
