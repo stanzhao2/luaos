@@ -164,8 +164,7 @@ static void ll_on_hook(lua_State* L, lua_Debug* ar) {
 static int skynet_snapshot(lua_State* L) {
   lua_gc(L, LUA_GCCOLLECT);
   memused_type& mmused = local_used;
-  int i = 1;
-  lua_createtable(L, (int)mmused.size(), 0);
+  lua_newtable(L);
   for (auto iter = mmused.begin(); iter != mmused.end(); ++iter) {
     lua_newtable(L);
     lua_pushinteger(L, (lua_Integer)iter->second.count);
@@ -180,12 +179,9 @@ static int skynet_snapshot(lua_State* L) {
     lua_pushstring(L, iter->second.what.c_str());
     lua_setfield(L, -2, "what");
 
-    lua_pushstring(L, iter->first.c_str());
-    lua_setfield(L, -2, "file");
-
     lua_pushfstring(L, "%s", lua_typename(L, iter->second.type));
     lua_setfield(L, -2, "typename");
-    lua_rawseti(L, -2, i++);
+    lua_setfield(L, -2, iter->first.c_str());
   }
   return 1;
 }
