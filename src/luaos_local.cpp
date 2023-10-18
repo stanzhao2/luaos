@@ -79,7 +79,7 @@ static char* ll_stack(lua_State* L, char *buffer, size_t size) {
     if (!lua_getstack(L, i, &ar)) {
       break;
     }
-    if (!lua_getinfo(L, "Sl", &ar)) {
+    if (!lua_getinfo(L, "Sln", &ar)) {
       break;
     }
     if (ar.currentline > 0) {
@@ -89,7 +89,13 @@ static char* ll_stack(lua_State* L, char *buffer, size_t size) {
   if (ar.currentline < 1) {
     return nullptr;
   }
-  snprintf(buffer, size, "%s:%d", ar.short_src, ar.currentline);
+  if (ar.name && ar.namewhat) {
+    snprintf(buffer, size, "%s:%d <%s %s>", ar.short_src, ar.currentline, ar.name, ar.namewhat);
+  } else if (ar.what) {
+    snprintf(buffer, size, "%s:%d <%s>", ar.short_src, ar.currentline, ar.what);
+  } else {
+    snprintf(buffer, size, "%s:%d", ar.short_src, ar.currentline);
+  }
   return buffer;
 }
 
