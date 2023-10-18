@@ -77,17 +77,14 @@ static char* ll_stack(lua_State* L, char *buffer, size_t size) {
   lua_Debug ar;
   for (int i = 0; i < 100; i++) {
     if (!lua_getstack(L, i, &ar)) {
-      break;
+      return nullptr;
     }
     if (!lua_getinfo(L, "Sln", &ar)) {
+      return nullptr;
+    }
+    if (ar.currentline > 0 && ar.short_src) {
       break;
     }
-    if (ar.currentline > 0) {
-      break;
-    }
-  }
-  if (ar.currentline < 1) {
-    return nullptr;
   }
   if (ar.name && ar.namewhat) {
     snprintf(buffer, size, "%s:%d <%s %s>", ar.short_src, ar.currentline, ar.name, ar.namewhat);
