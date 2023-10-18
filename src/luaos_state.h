@@ -34,7 +34,7 @@ int  is_fullname(const char* filename);
 void chdir_fpath(const char* filename);
 const char* skip_pathroot(const char* p);
 
-lua_State* luaos_newstate(lua_CFunction loader);
+lua_State* luaos_newstate(lua_CFunction loader, void* ud);
 int luaos_openlibs(lua_State* L);
 int luaos_pcall   (lua_State* L, int n, int r);
 int luaos_pexec   (lua_State* L, const char* filename, int n);
