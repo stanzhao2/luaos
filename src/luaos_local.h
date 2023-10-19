@@ -16,6 +16,7 @@
 #pragma once
 
 #include <map>
+#include <set>
 #include "luaos_io.h"
 #include "luaos_state.h"
 
@@ -26,6 +27,7 @@ typedef struct {
   std::string what;
   size_t tmms;
   size_t count, size;
+  std::set<void*> pointers;
 } mem_trunk;
 
 typedef std::map<std::string, mem_trunk> memused_type;

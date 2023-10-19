@@ -18,6 +18,235 @@
 
 /********************************************************************************/
 
+static void ll_mark_object(lua_State *L, lua_State *dL, const void * parent, const char * desc);
+
+#define UNKNOWN		0
+#define TABLE			1
+#define FUNCTION	2
+#define THREAD		3
+#define USERDATA	4
+#define MARK			5
+
+/********************************************************************************/
+
+static bool ll_is_marked(lua_State* dL, const void* p) {
+  lua_rawgetp(dL, MARK, p);
+  if (lua_isnil(dL, -1)) {    /* if not marked */
+    lua_pop(dL, 1);           /* pop nil */
+    lua_pushboolean(dL, 1);   /* push true */
+    lua_rawsetp(dL, MARK, p); /* set marked: t[p] = true */
+    return false;
+  }
+  lua_pop(dL, 1); /*pop true */
+  return true;
+}
+
+static bool ll_is_lightcfunction(lua_State *L, int i) {
+  if (lua_iscfunction(L, i)) {
+    if (lua_getupvalue(L, i, 1) == NULL) {
+      return true; /* not have upvalue */
+    }
+    lua_pop(L, 1);
+  }
+  return false;
+}
+
+static int ll_checktype(lua_State *L, int i) {
+  switch (lua_type(L, i)) {
+  case LUA_TTABLE:
+    return TABLE;
+  case LUA_TFUNCTION:
+    if (ll_is_lightcfunction(L, i)) break;
+    return FUNCTION;
+  case LUA_TTHREAD:
+    return THREAD;
+  case LUA_TUSERDATA:
+    return USERDATA;
+  }
+  lua_pop(L, 1);
+  return UNKNOWN;
+}
+
+static const void* ll_read_object(lua_State *L, lua_State *dL, const void *parent, const char *desc) {
+  int tidx = ll_checktype(L, -1);
+  if (tidx == UNKNOWN) {
+    return NULL;
+  }
+  const void *pv = lua_topointer(L, -1);
+  if (ll_is_marked(dL, pv)) {
+    lua_rawgetp(dL, tidx, pv);
+    if (!lua_isnil(dL, -1)) {
+      lua_pushstring(dL, desc);
+      lua_rawsetp(dL, -2, parent);
+    }
+    lua_pop(dL, 1);
+    lua_pop(L,  1);
+    return NULL;
+  }
+  lua_newtable(dL);
+  lua_pushstring(dL, desc);
+  lua_rawsetp(dL, -2, parent);
+  lua_rawsetp(dL, tidx, pv);
+  return pv;
+}
+
+static const char* ll_key_tostring(lua_State *L, int i, char * buffer, size_t size) {
+  int type = lua_type(L, i);
+  switch (type) {
+  case LUA_TSTRING:
+    return lua_tostring(L, i);
+  case LUA_TNUMBER:
+    snprintf(buffer, size, "[%lg]", lua_tonumber(L, i));
+    break;
+  case LUA_TBOOLEAN:
+    snprintf(buffer, size, "[%s]", lua_toboolean(L, i) ? "true" : "false");
+    break;
+  case LUA_TNIL:
+    snprintf(buffer, size, "[nil]");
+    break;
+  default:
+    snprintf(buffer, size, "[%s:%p]", lua_typename(L, type), lua_topointer(L, i));
+    break;
+  }
+  return buffer;
+}
+
+static void ll_mark_table(lua_State *L, lua_State *dL, const void * parent, const char * desc) {
+  const void * pv = ll_read_object(L, dL, parent, desc);
+  if (pv == NULL) {
+    return;
+  }
+  bool weakk = false;
+  bool weakv = false;
+  if (lua_getmetatable(L, -1)) {
+    lua_pushliteral(L, "__mode");
+    lua_rawget(L, -2);
+    if (lua_isstring(L,-1)) {
+      const char *mode = lua_tostring(L, -1);
+      if (strchr(mode, 'k')) {
+        weakk = true;
+      }
+      if (strchr(mode, 'v')) {
+        weakv = true;
+      }
+    }
+    lua_pop(L,1);
+    luaL_checkstack(L, LUA_MINSTACK, NULL);
+    ll_mark_table(L, dL, pv, "[metatable]");
+  }
+  lua_pushnil(L);
+  while (lua_next(L, -2) != 0) {
+    if (weakv) {
+      lua_pop(L, 1);
+    }
+    else {
+      char key[32];
+      const char *desc = ll_key_tostring(L, -2, key, sizeof(key));
+      ll_mark_object(L, dL, pv , desc);
+    }
+    if (!weakk) {
+      lua_pushvalue(L, -1);
+      ll_mark_object(L, dL, pv , "[key]");
+    }
+  }
+  lua_pop(L, 1);
+}
+
+static void ll_mark_userdata(lua_State *L, lua_State *dL, const void * parent, const char *desc) {
+  const void * pv = ll_read_object(L, dL, parent, desc);
+  if (pv == NULL) {
+    return;
+  }
+  if (lua_getmetatable(L, -1)) {
+    ll_mark_table(L, dL, pv, "[metatable]");
+  }
+  lua_getuservalue(L, -1);
+  if (lua_isnil(L,-1)) {
+    lua_pop(L,2);
+  }
+  else {
+    ll_mark_object(L, dL, pv, "[userdata]");
+    lua_pop(L,1);
+  }
+}
+
+static void ll_mark_function(lua_State *L, lua_State *dL, const void * parent, const char *desc) {
+  const void * pv = ll_read_object(L, dL, parent, desc);
+  if (pv == NULL) {
+    return;
+  }
+  for (int i = 1; ; i++) {
+    const char *name = lua_getupvalue(L, -1, i);
+    if (name == NULL) {
+      break;
+    }
+    ll_mark_object(L, dL, pv, name[0] ? name : "[upvalue]");
+  }
+  lua_pop(L,1); /* get upvalue only */
+}
+
+static void ll_mark_thread(lua_State *L, lua_State *dL, const void * parent, const char *desc) {
+  const void * pv = ll_read_object(L, dL, parent, desc);
+  if (pv == NULL) {
+    return;
+  }
+  int level = 0;
+  lua_State *cL = lua_tothread(L, -1);
+  if (cL == L) {
+    level = 1;
+  }
+  else {
+    int top = lua_gettop(cL);
+    luaL_checkstack(cL, 1, NULL);
+    char tmp[16];
+    for (int i = 0; i < top; i++) {
+      lua_pushvalue(cL, i + 1);
+      sprintf(tmp, "[%d]", i + 1);
+      ll_mark_object(cL, dL, cL, tmp);
+    }
+  }
+  lua_Debug ar;
+  while (lua_getstack(cL, level, &ar)) {
+    lua_getinfo(cL, "Sl", &ar);
+    for (int j = 1; j > -1; j -= 2) {
+      for (int i = j; ; i += j) {
+        const char * name = lua_getlocal(cL, &ar, i);
+        if (name == NULL) {
+          break;
+        }
+        char tmp[128];
+        snprintf(tmp, sizeof(tmp), "%s:%s:%d", name, ar.short_src, ar.currentline);
+        ll_mark_object(cL, dL, pv, tmp);
+      }
+    }
+    ++level;
+  }
+  lua_pop(L, 1);
+}
+
+static void ll_mark_object(lua_State *L, lua_State *dL, const void * parent, const char *desc) {
+  luaL_checkstack(L, LUA_MINSTACK, NULL);
+  switch (lua_type(L, -1)) {
+  case LUA_TTABLE:
+    ll_mark_table(L, dL, parent, desc);
+    break;
+  case LUA_TUSERDATA:
+    ll_mark_userdata(L, dL, parent, desc);
+    break;
+  case LUA_TFUNCTION:
+    ll_mark_function(L, dL, parent, desc);
+    break;
+  case LUA_TTHREAD:
+    ll_mark_thread(L, dL, parent, desc);
+    break;
+  default:
+    lua_pop(L, 1);
+    break;
+  }
+}
+
+/********************************************************************************/
+
 static thread_local lua_State* gL = 0;
 static void warnfoff (void *ud, const char *message, int tocont);
 static void warnfon  (void *ud, const char *message, int tocont);
@@ -119,6 +348,8 @@ static const char* skynet_mem_free(local_values* lua, void* ptr, size_t osize, i
       luaT = iter->second.type;
       iter->second.count--;
       iter->second.size -= osize;
+      iter->second.pointers.erase(ptr);
+
       if (iter->second.count == 0) {
         mmused.erase(iter);
       }
@@ -127,7 +358,7 @@ static const char* skynet_mem_free(local_values* lua, void* ptr, size_t osize, i
   return fline.c_str();
 }
 
-static  void skynet_mem_alloc(local_values* lua, int type, void* pnew, size_t nsize, const char* fline, const char* what) {
+static void skynet_mem_alloc(local_values* lua, int type, void* pnew, size_t nsize, const char* fline, const char* what) {
   memused_type& mmused = lua->mused();
   memaddr_type& mmaddr = lua->maddr();
 
@@ -145,6 +376,7 @@ static  void skynet_mem_alloc(local_values* lua, int type, void* pnew, size_t ns
   if (iter != mmused.end()) {
     iter->second.count++;
     iter->second.size += nsize;
+    iter->second.pointers.insert(pnew);
   }
   else {
     mem_trunk trunk;
@@ -153,6 +385,7 @@ static  void skynet_mem_alloc(local_values* lua, int type, void* pnew, size_t ns
     trunk.count = 1;
     trunk.tmms  = os::milliseconds();
     trunk.size  = nsize;
+    trunk.pointers.insert(pnew);
     mmused[fline] = trunk;
   }
 }
@@ -163,10 +396,38 @@ static void ll_on_hook(lua_State* L, lua_Debug* ar) {
 
 static int skynet_snapshot(lua_State* L) {
   lua_gc(L, LUA_GCCOLLECT);
+  lua_State *dL = luaL_newstate();
+  for (int i = 0; i < MARK; i++) {
+    lua_newtable(dL);
+  }
+  lua_pushvalue(L, LUA_REGISTRYINDEX);
+  ll_mark_table(L, dL, NULL, "[registry]");
+
   memused_type& mmused = local_used;
-  lua_newtable(L);
+  lua_createtable(L, 0, (int)mmused.size());
   for (auto iter = mmused.begin(); iter != mmused.end(); ++iter) {
-    lua_newtable(L);
+    lua_newtable(L); /* files table */
+    lua_newtable(L); /* leaks table */
+    auto& ps = iter->second.pointers;
+
+    for (auto addr = ps.begin(); addr != ps.end(); ++addr) {
+      lua_rawgetp(dL, TABLE, *addr); /* get parent table */
+      if (!lua_istable(dL, -1)) {
+        lua_pop(dL, 1);
+        continue;
+      }
+      lua_newtable(L); /* parent table */
+      lua_pushnil(dL);
+      while (lua_next(dL, -2)) {
+        lua_pushstring(L, lua_tostring(dL, -1));
+        lua_rawsetp(L, -2, lua_topointer(dL, -2));
+        lua_pop(dL, 1);
+      }
+      lua_rawsetp(L, -2, *addr);
+      lua_pop(dL, 1);	/* pop parent table */
+    }
+    lua_setfield(L, -2, "leaks");
+
     lua_pushinteger(L, (lua_Integer)iter->second.count);
     lua_setfield(L, -2, "count");
 
@@ -183,6 +444,7 @@ static int skynet_snapshot(lua_State* L) {
     lua_setfield(L, -2, "typename");
     lua_setfield(L, -2, iter->first.c_str());
   }
+  lua_close(dL);
   return 1;
 }
 
@@ -253,13 +515,11 @@ static io_handler main_handler;
 
 /***********************************************************************************/
 
-static int luaos_loader(lua_State* L)
-{
+static int luaos_loader(lua_State* L) {
   return luaos_loadlua(L, luaL_checkstring(L, 1));
 }
 
-static void luaos_signal(int code)
-{
+static void luaos_signal(int code) {
   signal(code, luaos_signal);
   if (code == SIGINT) {
     printf("\n");
@@ -271,13 +531,11 @@ static void luaos_signal(int code)
 
 /***********************************************************************************/
 
-io_handler luaos_main_ios()
-{
+io_handler luaos_main_ios() {
   return main_handler;
 }
 
-local_values::local_values()
-{
+local_values::local_values() {
   _pid = 0;
   _ios = luaos_ionew();
   if (main_handler == nullptr)
@@ -290,8 +548,7 @@ local_values::local_values()
   luaos_openlibs(_L);
 }
 
-local_values::~local_values()
-{
+local_values::~local_values() {
   if (_L) {
     gL = nullptr;
     luaos_close(_L);
@@ -299,8 +556,7 @@ local_values::~local_values()
   }
 }
 
-local_values& local_values::instance()
-{
+local_values& local_values::instance() {
   static thread_local local_values _instance;
   gL = _instance._L;
   return _instance;
