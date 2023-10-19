@@ -416,14 +416,17 @@ static int skynet_snapshot(lua_State* L) {
         lua_pop(dL, 1);
         continue;
       }
+      char hex[32];
       lua_newtable(L); /* parent table */
       lua_pushnil(dL);
       while (lua_next(dL, -2)) {
         lua_pushstring(L, lua_tostring(dL, -1));
-        lua_rawsetp(L, -2, lua_topointer(dL, -2));
+        sprintf(hex, "%p", lua_topointer(dL, -2));
+        lua_setfield(L, -2, hex);
         lua_pop(dL, 1);
       }
-      lua_rawsetp(L, -2, *addr);
+      sprintf(hex, "%p", *addr);
+      lua_setfield(L, -2, hex);
       lua_pop(dL, 1);	/* pop parent table */
     }
     lua_setfield(L, -2, "leaks");
@@ -457,7 +460,7 @@ static void* ll_alloc(void* ud, void* ptr, size_t osize, size_t nsize) {
 
   /* free memory */
   int  luaT = 0;
-  bool snapshot = luaos_is_debug();
+  bool snapshot = luaos_is_leaks();
   if (nsize == 0) {
     if (snapshot) {
       skynet_mem_free(lua, ptr, osize, luaT);

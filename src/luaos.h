@@ -36,6 +36,7 @@ public:
 };
 
 bool luaos_is_debug();
+bool luaos_is_leaks();
 void luaos_savelog(const std::string& data, color_type color);
 
 /***********************************************************************************/

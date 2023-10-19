@@ -36,8 +36,10 @@ static CMiniDumper _G_dumper(true);
 
 #ifdef _DEBUG
 static bool _G_debug = true;
+static bool _G_leaks_check = true;
 #else
 static bool _G_debug = false;
+static bool _G_leaks_check = false;
 #endif
 
 static identifier  _G_;
@@ -157,9 +159,12 @@ static void push_param(lua_State* L, const std::string& v)
 
 /***********************************************************************************/
 
-bool luaos_is_debug()
-{
+bool luaos_is_debug() {
   return _G_debug;
+}
+
+bool luaos_is_leaks() {
+  return _G_leaks_check;
 }
 
 static int pmain(lua_State* L)
@@ -250,13 +255,14 @@ int main(int argc, char* argv[])
   auto cmd = (
     option("-h", "--help").set(cmd_help).doc("display this help") | (
       (opt_value("module", main_name)),
-      (option("-f", "--file"  ).set(cmd_filename ).doc("name of image file") & value("filename", filename)),
-      (option("-d", "--debug" ).set(_G_debug     ).doc("run in debug mode")),
-      (option("-k", "--key"   ).set(cmd_key      ).doc("password of image file") & value("key", filekey)),
-      (option("-a", "--argv"  ).set(cmd_params   ).doc("parameters to be passed to lua") & repeatable(opt_value("parameters", luaparams))),
-      (option("-l", "--log"   ).set(cmd_loghosten).doc("host and port of remote log server") & value("host", loghost) & value("port", logport)),
-      (option("-p", "--pack"  ).set(cmd_compile  ).doc("package files to image file") & repeatable(opt_value("all", filestype))) |
-      (option("-u", "--unpack").set(cmd_unpack   ).doc("unpack image file"))
+      (option("-f", "--file"  ).set(cmd_filename  ).doc("name of image file") & value("filename", filename)),
+      (option("-d", "--debug" ).set(_G_debug      ).doc("run in debug mode")),
+      (option("-D", "--dump"  ).set(_G_leaks_check).doc("record memory leaks")),
+      (option("-k", "--key"   ).set(cmd_key       ).doc("password of image file") & value("key", filekey)),
+      (option("-a", "--argv"  ).set(cmd_params    ).doc("parameters to be passed to lua") & repeatable(opt_value("parameters", luaparams))),
+      (option("-l", "--log"   ).set(cmd_loghosten ).doc("host and port of remote log server") & value("host", loghost) & value("port", logport)),
+      (option("-p", "--pack"  ).set(cmd_compile   ).doc("package files to image file") & repeatable(opt_value("all", filestype))) |
+      (option("-u", "--unpack").set(cmd_unpack    ).doc("unpack image file"))
     )
   );
 
