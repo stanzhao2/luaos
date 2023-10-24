@@ -423,7 +423,9 @@ static int lcurl_escape(lua_State* L)
   if (!lua_isnil(L, 1))
   {
     const char* s = luaL_checkstring(L, 1);
-    lua_pushstring(L, curl_escape(s, (int)lua_strlen(L, 1)));
+    s = curl_escape(s, (int)lua_strlen(L, 1));
+    lua_pushstring(L, s);
+    curl_free((void*)s);
     return 1;
   }
   else
@@ -439,7 +441,9 @@ static int lcurl_unescape(lua_State* L)
   if (!lua_isnil(L, 1))
   {
     const char* s = luaL_checkstring(L, 1);
-    lua_pushstring(L, curl_unescape(s, (int)lua_strlen(L, 1)));
+    s = curl_unescape(s, (int)lua_strlen(L, 1));
+    lua_pushstring(L, s);
+    curl_free((void*)s);
     return 1;
   }
   else
