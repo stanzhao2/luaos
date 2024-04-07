@@ -18,6 +18,7 @@ LUAHIREDIS    = $(LUAEXT)/lua-hiredis
 LUAHTTPPARSER = $(LUAEXT)/lua-http-parser
 LUARANDOM     = $(LUAEXT)/lua-random
 LUASKIPLIST   = $(LUAEXT)/lua-skiplist
+LUALZF        = $(LUAEXT)/lua-lzf
 LUAUUID       = $(LUAEXT)/lua-uuid
 LUAIKCP       = $(LUAEXT)/lua-kcp
 LUAXSTRING    = $(LUAEXT)/lua-xstring
@@ -47,6 +48,7 @@ all:
 	cd $(LUAHTTPPARSER) && $(MAKE)
 	cd $(LUARANDOM) && $(MAKE)
 	cd $(LUASKIPLIST) && $(MAKE)
+	cd $(LUALZF) && $(MAKE)
 	cd $(LUAUUID) && $(MAKE)
 	cd $(LUAIKCP) && $(MAKE)
 	cd $(LUAXSTRING) && $(MAKE)
