@@ -799,7 +799,7 @@ static std::string location(lua_State* L)
         if (ar.source[0] == '@') {
           ar.source++;
         }
-        sprintf(filename, "<%s:%d> ", ar.source, ar.currentline);
+        snprintf(filename, sizeof(filename), "<%s:%d> ", ((ar.srclen > LUAOS_MAX_PATH - 8) ? ar.short_src : ar.source), ar.currentline);
         data.append(filename);
         break;
       }
