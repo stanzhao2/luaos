@@ -783,26 +783,41 @@ static int ll_install(lua_State* L, lua_CFunction loader)
 //lua print, trace, error, throw
 /***********************************************************************************/
 
+static const char* fixstr(const char* in, size_t inlen, char* out, size_t outlen)
+{
+  if (inlen < outlen) {
+    return in;
+  }
+  size_t first = outlen / 3;
+  size_t second = outlen - first - 4;
+  strncpy(out, in, first);
+  strncpy(out + first, "...", 4);
+  strncpy(out + first + 3, in + inlen - second, second + 1);
+  return out;
+}
+
 static std::string location(lua_State* L)
 {
   std::string data;
-  char filename[LUAOS_MAX_PATH] = { 0 };
-  for (int i = 1; i < 100; i++)
-  {
+  char filename[1024] = { 0 };
+  for (int i = 1; i < 100; i++) {
     lua_Debug ar;
-    int result = lua_getstack(L, i, &ar);
-    if (result == 0) {
+    if (!lua_getstack(L, i, &ar)) {
       break;
     }
-    if (lua_getinfo(L, "Sl", &ar)) {
-      if (ar.currentline > 0) {
-        if (ar.source[0] == '@') {
-          ar.source++;
-        }
-        snprintf(filename, sizeof(filename), "<%s:%d> ", ((ar.srclen > LUAOS_MAX_PATH - 8) ? ar.short_src : ar.source), ar.currentline);
-        data.append(filename);
-        break;
+    if (!lua_getinfo(L, "Sl", &ar)) {
+      break;
+    }
+    if (ar.currentline > 0) {
+      if (*ar.source == '@') {
+        ar.source++;
+        ar.srclen--;
       }
+      char temp[512];
+      auto str = fixstr(ar.source, ar.srclen, temp, sizeof(temp));
+      snprintf(filename, sizeof(filename), "<%s:%d> ", str, ar.currentline);
+      data.append(filename);
+      break;
     }
   }
   return data;
