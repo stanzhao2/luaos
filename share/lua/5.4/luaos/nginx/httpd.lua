@@ -834,12 +834,12 @@ local function on_ws_accept(session, request)
     local rheader = request:headers();
     
     local conn = rheader[_HEADER_CONNECTION];
-    if not conn then
+    if not conn or string_lower(conn) ~= "upgrade" then
         on_http_error(peer, _STATE_BAD_REQUEST);
         return;
     end
     
-    local upgrade = string_lower(rheader[conn]);
+    local upgrade = string_lower(rheader["Upgrade"]);
     if upgrade ~= "websocket" then
         on_http_error(peer, _STATE_BAD_REQUEST);
         return;
