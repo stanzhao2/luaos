@@ -493,8 +493,13 @@ static void mp_encode_lua_table(lua_State *L, mp_buf *buf, int level) {
   }
   if (table_is_an_array(L))
     mp_encode_lua_table_as_array(L,buf,level);
-  else
+  else {
     mp_encode_lua_table_as_map(L,buf,level);
+  }
+  if (luaos_is_debug()) {
+    const void* p = lua_topointer(L, -1);
+    readed.erase(p);
+  }
 }
 
 static void mp_encode_lua_type(lua_State *L, mp_buf *buf, int level) {
