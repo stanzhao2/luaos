@@ -485,9 +485,7 @@ static void mp_encode_lua_table(lua_State *L, mp_buf *buf, int level) {
       readed.insert(p);
     }
     else {
-      lua_pop(L, 1);
-      lua_pushnil(L);
-      mp_encode_lua_null(L, buf);
+      luaL_error(L, "circular reference");
       return;
     }
   }
